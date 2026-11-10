@@ -1,0 +1,10 @@
+name = "fitcheck-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+[vars]
+APP_VERSION = "dev"
+
+# Secret (KHÔNG ghi vào file này):
+#   npx wrangler secret put ANTHROPIC_API_KEY
+# Dev local: tạo proxy/.dev.vars với ANTHROPIC_API_KEY=... (đã gitignore)

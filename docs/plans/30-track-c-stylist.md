@@ -27,7 +27,7 @@ Màn hình **"Hôm nay"** là trung tâm demo: mở app → thấy thời tiết
 ### C3. `feature:today`
 - Header thời tiết + chip chọn dịp (nhớ lựa chọn cuối).
 - Carousel 3 outfit: ảnh các món xếp dạng flat-lay, đoạn giải thích, badge "Đồ bạn lâu chưa mặc".
-- Hành động: **Mặc bộ này** (→ `WearLogRepository.logWear` + `WardrobeRepository.markWorn`), 👍/👎, **Phối lại**.
+- Hành động: **Mặc bộ này** (→ chỉ gọi `WearLogRepository.logWear`; impl của D tự gọi `WardrobeRepository.markWorn`), 👍/👎, **Phối lại**.
 - Trạng thái loading có skeleton (không màn trắng), error state rõ ràng.
 - Event: `outfit_requested`, `outfit_shown` (latency, source), `outfit_worn`, `outfit_feedback`, thời gian từ mở màn hình → "Mặc bộ này" (**metric chính cho tiêu chí 2**).
 

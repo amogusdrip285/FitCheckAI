@@ -1,0 +1,35 @@
+# Mỗi thư mục có 1 owner. PR chạm thư mục của người khác cần họ duyệt.
+# TODO: thay <track-x> bằng username GitHub thật (dạng @username) rồi bỏ dấu # đầu dòng.
+
+* @amogusdrip285
+
+# Hotspot — cả nhóm duyệt
+# /core/model/                @<track-a> @<track-b> @<track-c> @<track-d>
+# /gradle/libs.versions.toml  @<track-a> @<track-b> @<track-c> @<track-d>
+# /settings.gradle.kts        @<track-a> @<track-b> @<track-c> @<track-d>
+# /app/                       @<track-a> @<track-b> @<track-c> @<track-d>
+# /build-logic/               @<track-a> @<track-b> @<track-c> @<track-d>
+
+# Track A — Wardrobe & Imaging
+# /core/database/             @<track-a>
+# /core/imaging/              @<track-a>
+# /feature/wardrobe/          @<track-a>
+
+# Track B — AI & Proxy
+# /core/ai/                   @<track-b>
+# /proxy/                     @<track-b>
+# /eval/                      @<track-b>
+# /docs/contracts/            @<track-b>
+
+# Track C — Stylist & Weather
+# /core/weather/              @<track-c>
+# /core/stylist/              @<track-c>
+# /feature/today/             @<track-c>
+
+# Track D — Profile, Insights & Evidence
+# /core/ui/                   @<track-d>
+# /core/datastore/            @<track-d>
+# /core/analytics/            @<track-d>
+# /feature/onboarding/        @<track-d>
+# /feature/insights/          @<track-d>
+# /docs/research/             @<track-d>

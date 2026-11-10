@@ -86,8 +86,8 @@ data class Outfit(val id: String, val itemIds: List<String>, val explanation: St
 | `ClothingTagger` (tag(imagePath) → `Result<ClothingAttributes>`) | B | A |
 | `AiOutfitGenerator` (generate(req) → `Result<List<Outfit>>`) | B | C |
 | `WeatherProvider` (current() → `Result<WeatherSnapshot>`) | C | C |
-| `OutfitService` (suggest(occasion) → `List<Outfit>`; AI → fallback rules) | C | C, D |
-| `WearLogRepository` (logWear(outfit), observeLogs, feedback) | D | C, D |
+| `OutfitService` (suggest(occasion, focusItemId) → `OutfitSuggestions`; AI → fallback rules) | C | C, D |
+| `WearLogRepository` (logWear(outfit) — tự gọi `markWorn`, observeLogs, recordFeedback) | D | C, D |
 | `ProfileRepository` (observe, save) | D | C, D |
 | `MetricsTracker` (track(event)) | D | A, C, D |
 
@@ -116,15 +116,15 @@ Mỗi interface có class `Stub…` trong **module của owner**, đã được 
 - `main` luôn build được APK cài lên máy thật.
 
 ## 7. Sprint 0 — checklist (1 người làm, ~1 ngày, 3 người còn lại làm việc không-code/đọc tài liệu)
-- [ ] Gradle multi-module đủ module ở mục 3, version catalog đủ dependency
-- [ ] `core:model`: model + interface + `Routes` (gồm `ImageSegmenter.warmUp()`, route `today?focusItemId=` cho deep link từ Insights)
-- [ ] Mỗi module owner: `Stub…` impl + Hilt module bind
-- [ ] Mỗi feature: 1 màn hình placeholder + `xxxGraph()`; `app` có bottom nav: Hôm nay / Tủ đồ / Insights
-- [ ] `core:ui`: theme cơ bản (màu, typography) — D tinh chỉnh sau
-- [ ] Seed data: 15–20 `ClothingItem` mẫu kèm ảnh trong `core:database` (debug) để C/D làm UI thật
-- [ ] `docs/contracts/proxy-api.md`
-- [ ] CI + CODEOWNERS + PR template
-- [ ] APK debug cài chạy trên máy thật
+- [x] Gradle multi-module đủ module ở mục 3, version catalog đủ dependency
+- [x] `core:model`: model + interface + `Routes` (gồm `ImageSegmenter.warmUp()`, route `today?focusItemId=` cho deep link từ Insights)
+- [x] Mỗi module owner: `Stub…` impl + Hilt module bind
+- [x] Mỗi feature: 1 màn hình placeholder + `xxxGraph()`; `app` có bottom nav: Hôm nay / Tủ đồ / Insights
+- [x] `core:ui`: theme cơ bản (màu, typography) — D tinh chỉnh sau
+- [x] Seed data: 18 `ClothingItem` mẫu (ô màu thay ảnh, `seed://`) trong `core:database` (debug) để C/D làm UI thật
+- [x] `docs/contracts/proxy-api.md`
+- [x] CI + CODEOWNERS + PR template
+- [ ] APK debug cài chạy trên máy thật (build OK — cần thử trên điện thoại)
 
 ## 8. Mốc tích hợp chung
 

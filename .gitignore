@@ -1,0 +1,33 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Secrets — KHÔNG commit
+google-services.json
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.kotlin/
+
+# Node (proxy)
+node_modules/
+.wrangler/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
