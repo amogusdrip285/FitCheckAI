@@ -20,7 +20,7 @@ Lệnh tải bản v1 vào `data/raw/kaggle/fashion-product-images-small-v1.zip`
 | `audit.json` | Thống kê lọc, phân bố nhóm, kích thước, nguồn và SHA-256. [Báo cáo đã chạy trên bản v1](reports/kaggle-fashion-small-audit.json). |
 | `sample-2-per-category/` | 12 ảnh đã giải nén để thử chọn ảnh trong app. Mỗi mục trong `manifest.json` có `file` tương đối tới JPEG và nhãn để đối chiếu. |
 
-Để thử trên Android, đưa một ảnh từ thư mục mẫu vào thư viện trên máy hoặc emulator, rồi vào **Tủ đồ → Thêm món → Chọn ảnh**. Dùng `category` và `colors` trong manifest để điền và kiểm lại sau khi lưu. ZIP, ảnh xuất và chỉ mục đầy đủ nằm trong các thư mục local được `.gitignore` quản lý.
+Để thử trên Android, đưa một ảnh từ thư mục mẫu vào thư viện trên máy hoặc emulator. Vào **Tủ đồ → Thêm đồ**, rồi chọn **Chọn ảnh** trong ô **Mặt trước**. Dùng `category` và `colors` trong manifest để điền và kiểm lại sau khi lưu. ZIP, ảnh xuất và chỉ mục đầy đủ nằm trong các thư mục local được `.gitignore` quản lý.
 
 ### Quy tắc nhãn và phạm vi
 

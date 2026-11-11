@@ -28,6 +28,7 @@ Media recovery không tự xóa file hỏng đang được item tham chiếu ho�
 - Database line coverage: **341/377 = 90,45%**, đạt gate 80%.
 - Fixtures: **21 món, 24 ảnh, 3 cặp đã đối chiếu nguồn, 6 category**; validator hash/quyền/provenance PASS.
 - Catalog Kaggle: tải mới từ nguồn, kiểm hash, giải mã JPEG và xuất 12 ảnh **PASS**. Audit giữ **24.856 ảnh** từ 44.446 dòng. Hai ca Python kiểm dấu phẩy trong CSV, ID thiếu ảnh, JPEG hỏng, phạm vi và trùng ảnh đều PASS. [Báo cáo audit](../../data/reports/kaggle-fashion-small-audit.json).
+- Photo Picker API 35 hiển thị đúng ảnh Kaggle ID `1163` (60 × 80 px) ở ô ảnh mặt trước. Bỏ bản nháp quay về tủ 51 món, rồi dọn JPEG thử trên emulator. Ảnh kiểm chứng local ở `build/outputs/track-a-reference-review/kaggle-editor-preview.png`.
 - App thật trên emulator: mở món có cặp ảnh, yêu cầu tách nền, thấy trạng thái model đang tải và ảnh gốc; bỏ chỉnh sửa giữ nguyên toàn bộ row `wardrobe_v2`.
 - Force-stop/reopen **3 lần**, kiểm integrity/bytes PASS: **51 món active, 1 tombstone, 30 row legacy, 54 media hash**. Evidence tại `build/outputs/track-a-device/independent-followup/summary.json`.
 
