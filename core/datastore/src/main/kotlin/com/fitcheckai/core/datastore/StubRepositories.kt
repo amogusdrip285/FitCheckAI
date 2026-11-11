@@ -2,8 +2,6 @@ package com.fitcheckai.core.datastore
 
 import com.fitcheckai.core.model.OutfitFeedback
 import com.fitcheckai.core.model.Outfit
-import com.fitcheckai.core.model.ProfileRepository
-import com.fitcheckai.core.model.StyleProfile
 import com.fitcheckai.core.model.WardrobeRepository
 import com.fitcheckai.core.model.WearLogEntry
 import com.fitcheckai.core.model.WearLogRepository
@@ -15,22 +13,6 @@ import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-
-/**
- * SPRINT 0 STUB — in-memory: onboarding hiện lại mỗi lần mở app.
- * TODO(Track D): DataStoreProfileRepository (Preferences DataStore).
- */
-@Singleton
-class StubProfileRepository @Inject constructor() : ProfileRepository {
-    private val profile = MutableStateFlow<StyleProfile?>(null)
-
-    override fun observe(): Flow<StyleProfile?> = profile.asStateFlow()
-
-    override suspend fun save(profile: StyleProfile): Result<Unit> {
-        this.profile.value = profile
-        return Result.success(Unit)
-    }
-}
 
 /**
  * SPRINT 0 STUB — in-memory.

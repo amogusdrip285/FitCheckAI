@@ -82,16 +82,16 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
 | [ ] | [PRE-006](tracks/D.md#pre-006) — Wireflow Profile → Wardrobe → Today → Try-On | P0 | readiness | M0 | 30–45 | — | TODO | — |
-| [ ] | [PRE-007](tracks/D.md#pre-007) — Chốt contract v2 và compatibility fixtures | P0 | readiness | M0 | 40–60 | PRE-006 | TODO | — |
+| [ ] | [PRE-007](tracks/D.md#pre-007) — Chốt contract v2 và compatibility fixtures | P0 | readiness | M0 | 40–60 | PRE-006 | PARTIAL | CT-02/04/06 Kotlin types + profile fixtures in `core:model` (`profile/`, `recommendation/`, `tryon/`); A/B/C chưa review JSON/interface. |
 | [ ] | [S-001](tracks/D.md#s-001) — Dựng project tối thiểu và cài APK đầu | P0 | foundation | M1 | 45–75 | PRE-001, PRE-002, PRE-008 | TODO | — |
-| [ ] | [S-002](tracks/D.md#s-002) — Khai báo contract và fake wiring | P0 | foundation | M1 | 30–45 | S-001, PRE-007 | TODO | — |
-| [ ] | [D-004](tracks/D.md#d-004) — ProfileStorage local và xóa ảnh cá nhân | P0 | core | M2 | 75–120 | S-002 | TODO | — |
-| [ ] | [D-006](tracks/D.md#d-006) — Fake ProfileStorage và preview app experience | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
-| [ ] | [BACK-008](tracks/D.md#back-008) — Onboarding và form hồ sơ tối giản | P0 | core | M2 | 60–90 | D-006 | TODO | — |
+| [ ] | [S-002](tracks/D.md#s-002) — Khai báo contract và fake wiring | P0 | foundation | M1 | 30–45 | S-001, PRE-007 | PARTIAL | Contracts v2 compile, routes Profile/TryOn; B/C fake chưa có chỗ cắm (chờ B-005/C-206); v1 interfaces còn cho consumer cũ. |
+| [ ] | [D-004](tracks/D.md#d-004) — ProfileStorage local và xóa ảnh cá nhân | P0 | core | M2 | 75–120 | S-002 | REVIEW | `FileProfileStorage` atomic file trong noBackupFilesDir, xóa ảnh sau commit + invalidation; 11 unit tests. Chưa kiểm restart trên máy thật. |
+| [ ] | [D-006](tracks/D.md#d-006) — Fake ProfileStorage và preview app experience | P0 | foundation | M1 | 25–40 | S-002 | REVIEW | `FakeProfileStorage` minimal/full/missing-back/save-fail/load-fail trong testFixtures. |
+| [ ] | [BACK-008](tracks/D.md#back-008) — Onboarding và form hồ sơ tối giản | P0 | core | M2 | 60–90 | D-006 | REVIEW | Onboarding/Profile form: mọi field optional, skip tới Today, edit/reset có xác nhận; VM + Robolectric tests. |
 | [ ] | [C-001](tracks/D.md#c-001) — Today: yêu cầu và danh sách outfit trực quan | P0 | core | M3 | 75–120 | D-006, B-005 | TODO | — |
 | [ ] | [C-003](tracks/D.md#c-003) — Nối service AI và kiểm soát request | P0 | core | M3 | 60–90 | C-001, D-006, B-005 | TODO | — |
 | [ ] | [C-004](tracks/D.md#c-004) — Kiểm tra offline và vòng đời UI | P0 | core | M6 | 30–50 | C-003 | TODO | — |
-| [ ] | [D-005](tracks/D.md#d-005) — Ảnh toàn thân trước/sau và consent UI | P0 | core | M2 | 45–75 | BACK-008, A-005 | TODO | — |
+| [ ] | [D-005](tracks/D.md#d-005) — Ảnh toàn thân trước/sau và consent UI | P0 | core | M2 | 45–75 | BACK-008, A-005 | PARTIAL | Ảnh FRONT/BACK độc lập qua MediaStore PERSON, xóa có xác nhận + invalidation; chưa kiểm picker trên máy, consent boundary chờ C. |
 | [ ] | [D-007](tracks/D.md#d-007) — Tích hợp journey và chọn release mode | P0 | core | M5 | 45–75 | INT-002, D-005, C-205, C-210 | TODO | — |
 | [ ] | [INT-004](tracks/D.md#int-004) — Đóng gói APK và kiểm tra bản nộp | P0 | core | M6 | 25–40 | INT-003 | TODO | — |
 | [ ] | [D-003](tracks/D.md#d-003) — Diễn tập và bàn giao nộp bài | P0 | core | M6 | 20–35 | INT-004, C-205 | TODO | — |
