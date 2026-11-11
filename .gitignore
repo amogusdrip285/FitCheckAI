@@ -17,6 +17,10 @@ google-services.json
 !.env.example
 .dev.vars
 
+# Eval AI — ảnh và nhãn thật không commit (PRE-004)
+eval/ai/images/
+eval/ai/recognition/labels.json
+
 # IDE
 .idea/
 *.iml

@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy thành eval/ai/recognition/labels.json (gitignored) rồi điền. Ảnh đặt trong eval/ai/images/ (gitignored). PRE-004 (A): ảnh garment nhóm tự chụp, có quyền dùng, KHÔNG có người/mặt, JPEG/PNG/WebP ≤1 MiB, cạnh dài ≤1024px. Nhãn do người gán TRƯỚC khi chạy eval và giữ cố định.",
+  "items": [
+    { "id": "g1", "front": "g1-front.jpg", "back": "g1-back.jpg", "labels": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID" } },
+    { "id": "g2", "front": "g2-front.jpg", "back": "g2-back.jpg", "labels": { "category": "OUTERWEAR", "colors": ["BLUE"], "pattern": "SOLID" } },
+    { "id": "g3", "front": "g3-front.jpg", "back": "g3-back.jpg", "labels": { "category": "TOP", "colors": ["BLACK"], "pattern": "PRINTED" } },
+    { "id": "g4", "front": "g4-front.jpg", "back": null, "labels": { "category": "BOTTOM", "colors": ["BLUE"], "pattern": "SOLID" } },
+    { "id": "g5", "front": "g5-front.jpg", "back": null, "labels": { "category": "DRESS", "colors": ["RED"], "pattern": "PRINTED" } },
+    { "id": "g6", "front": "g6-front.jpg", "back": null, "labels": { "category": "SHOES", "colors": ["WHITE"], "pattern": "SOLID" } }
+  ],
+  "cases": [
+    { "id": "N01-front-only", "kind": "front-only", "front": "g4", "expectItem": "g4" },
+    { "id": "N02-matched-pair", "kind": "matched-pair", "front": "g2", "back": "g2", "expectItem": "g2" },
+    { "id": "N03-conflicting-pair", "kind": "conflicting-pair", "front": "g1", "back": "g3", "expectItem": "g1", "expectReview": true }
+  ]
+}
