@@ -1,6 +1,6 @@
 # Track A v2 — nghiệm thu phần độc lập
 
-Ngày chạy: **11/11/2026**, múi giờ Asia/Ho_Chi_Minh. Nhánh `track/a-wardrobe-imaging`, base `origin/main` `7d995a5`.
+Ngày chạy: **11/11/2026**, múi giờ Asia/Ho_Chi_Minh. Nhánh `track/a-wardrobe-imaging`, base `origin/main` `7d995a5`, source bàn giao `80d33d8`.
 Người dùng xác nhận chưa có điện thoại Android thật hoặc nhánh B/D riêng; làm phần độc lập trước.
 Đây là evidence của implementation A trong checkout hiện tại, **không phải 23/23 card DONE hoặc sản phẩm AI end-to-end**.
 
@@ -52,12 +52,15 @@ không cấp URI cho original private, reject PERSON/missing ref, cleanup collag
 | Edit / BACK-012 | Món QA revision 1 → 2; sửa tên/category TOP/màu WHITE+RED có MANUAL provenance; thay riêng back, front ref giữ nguyên, file back cũ bị dọn | PASS local |
 | Cancel delete / BACK-012 | Mở dialog rồi Giữ lại; toàn bộ rows không đổi | PASS local |
 | Delete / BACK-012 | Chỉ xóa món QA do phép thử tạo; tombstone revision 3, payload trống, hai ảnh đã lưu bị dọn; item khác và rows v1 không đổi | PASS local |
-| Durability / A-004 | Trước sửa: 3 force-stop/reopen giữ 52 item và 56 hash ảnh, 30 rows legacy. Kiểm cuối được ghi bên dưới | PASS storage |
+| Durability / A-004 | Trước sửa: 3 force-stop/reopen giữ 52 item/56 hash. Bản cuối sau xóa: 3 lần nữa giữ 51 item, 1 tombstone, 30 rows legacy và 54 hash ảnh | PASS storage |
 | Camera / BACK-002 | Deny/permanent-deny vẫn có picker; cấp quyền lại mở CameraX, chụp một frame AVD vào front draft và discard; không đưa ảnh cảnh giả lập vào dataset | PASS emulator smoke; physical matrix NOT RUN |
 | OutfitVisual / A-006 | Component tests chọn đúng card thứ 5, missing/stale không cho chọn; resolver kiểm ID/revision; chưa nối real Today v2 | PASS component; integration NOT RUN |
 | Recognition UI / BACK-005 | Unit/fake: consent khớp purpose/provider/config/request/generation/views; stale preview bị chặn; sửa tay thắng response muộn; timeout/cancel/restore không upload | PASS local; AI live NOT RUN |
 
-Bản APK cuối đã cài nâng cấp thành công. Kiểm UI offline với font 1,3×, 360 dp và dark mode thấy đủ 51 item/ảnh, search/filter/add có thể truy cập; đây là smoke layout, không phải accessibility audit đầy đủ. Lần force-stop/hash sau xóa sẽ bổ sung trong commit QA tiếp theo; không gán PASS trước khi chạy.
+Bản APK cuối đã cài nâng cấp thành công. Kiểm UI offline với font 1,3×, 360 dp và dark mode thấy đủ 51 item/ảnh, search/filter/add có thể truy cập;
+đây là smoke layout, không phải accessibility audit đầy đủ. Đã trả font/density/theme/network về cấu hình ban đầu.
+`v2-final/summary.json` báo PASS cho 3 force-stop và toàn bộ 54 hash; mở lại màn Tủ đồ vẫn hiển thị 51 món.
+Logcat AndroidRuntime không có exception trong lần kiểm cuối. Kiểm 465 đường dẫn Markdown nội bộ không có đích file bị thiếu.
 
 Evidence cục bộ (ignored, không commit DB/ảnh private): `build/outputs/ui-review/` có migration, dataset import,
 `v2-fast-search-fixed.png`, `v2-corrected-manually.png`, `v2-delete-confirmation.png`, `v2-edit-delete-result.json` và DB snapshots trước/sau.

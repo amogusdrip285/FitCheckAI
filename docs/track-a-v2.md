@@ -91,3 +91,17 @@ Evidence và hạn chế thực tế nằm ở [QA](qa/track-a-acceptance.md), t
 
 Điểm D/B/C cần review: namespace/API v2, singleton media ownership, ProfileStorage chưa có, binding recognition, invalidation/stale outfit,
 consent/revoke qua job, adapter đường dẫn sang request bytes và gate artifact máy thật. Không có API key hoặc paid resource được tự provision.
+
+## Điểm nhận việc để làm song song
+
+Nhánh bàn giao trên remote: `track/a-wardrobe-imaging`, implementation ở commit `80d33d8`; documentation QA có thể được cập nhật ở commit sau.
+Lấy nhánh bằng `git fetch origin`, review diff với `origin/main` trước khi merge vào nhánh riêng. Không tự coi branch A đã được merge vào main.
+
+- **B:** implement `ClothingRecognition`/`RecognitionCapability` từ `core:model/.../wardrobe/WardrobeContracts.kt`, kiểm `RecognitionRequest.validate` trước gửi;
+  thay `UnavailableRecognition` trong `feature:wardrobe/.../v2/WardrobeBindings.kt` khi có client v2 thật. Fake và lỗi/timeout fixtures đã có trong testFixtures.
+- **D:** review shared contracts/DI/schema migration; dùng cùng `MediaStore` cho PERSON và cùng v2 repository cho Today. Nối `OutfitVisualList` qua DTO/callback,
+  kiểm snapshot/ID/revision lại trước selection, share hoặc chuyển VTO; bridge v1 chưa giải quyết Today invalidation v2.
+- **C:** nhận `MediaRef`/scope từ owner, dùng API đọc media thay vì tự dựng path; review cleanup/retention ảnh người và kết quả cùng D.
+  `OutfitVisual` hiện là ảnh garment, không phải kết quả try-on.
+
+Mỗi track giữ branch riêng; thay đổi file model/shared root cần review chung như alignment hiện hành. Không ghi nhận consumer review thay người chưa tham gia.
