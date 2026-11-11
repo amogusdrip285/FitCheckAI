@@ -182,6 +182,7 @@ describe("POST /v2/outfits", () => {
     ["field lạ ở root", { imagePath: "/sdcard/x.jpg" }],
     ["id trùng", { items: [wardrobe[0], wardrobe[0], wardrobe[2]] }],
     ["màu lạ", { items: [{ ...wardrobe[0], attributes: { category: "TOP", colors: ["#FFFFFF"] } }, wardrobe[2]] }],
+    ["mùa không thuộc enum", { items: [{ ...wardrobe[0], attributes: { category: "TOP", seasonTags: ["hạ"] } }, wardrobe[2]] }],
   ])("%s ⇒ 400, không gọi AI", async (_label, overrides) => {
     const t = setup();
     const res = await t.post("/v2/outfits", fullRequest(overrides));

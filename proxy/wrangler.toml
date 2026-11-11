@@ -4,8 +4,12 @@ compatibility_date = "2025-04-01"
 
 [vars]
 APP_VERSION = "dev"
-# Model cho recognition/recommendation (PRE-003 chốt). Đổi model = cập nhật eval B-004/B-006.
-AI_MODEL = "claude-opus-5-5"
+# Provider: "anthropic" hoặc "gemini". Gemini free tier CHỈ để test: Google được dùng dữ liệu gửi lên
+# để cải thiện sản phẩm ⇒ không gửi ảnh người dùng thật.
+AI_PROVIDER = "anthropic"
+# Bỏ trống = mặc định theo provider (anthropic: claude-opus-5-5, gemini: gemini-3.5-flash-lite).
+# Đổi model = chạy lại eval B-004/B-006.
+AI_MODEL = ""
 # Kill switch theo service: chỉ "on" mới bật. Mặc định TẮT để không gọi provider ngoài ý muốn.
 SERVICE_RECOGNITION = "off"
 SERVICE_OUTFITS = "off"
@@ -19,7 +23,8 @@ RATE_LIMIT_PER_MINUTE = "20"
 SESSION_TTL_SECONDS = "43200"
 
 # Secrets (KHÔNG ghi vào file này, KHÔNG commit):
-#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put ANTHROPIC_API_KEY   # khi AI_PROVIDER = "anthropic"
+#   npx wrangler secret put GEMINI_API_KEY      # khi AI_PROVIDER = "gemini" (key lấy ở Google AI Studio)
 #   npx wrangler secret put SESSION_SECRET      # chuỗi ngẫu nhiên ≥32 ký tự
 #   npx wrangler secret put DEMO_ACCESS_CODE    # mã demo đổi lấy session token
 # Dev local: copy .dev.vars.example thành proxy/.dev.vars (đã gitignore) rồi điền giá trị.

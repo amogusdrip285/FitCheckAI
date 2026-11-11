@@ -1,7 +1,7 @@
 // OWNER: Track B. Wire schema POST /v2/outfits — CONTRACTS.md v2 CT-02.
 // `.strict()` toàn bộ: field lạ (vd. weightKg, ảnh, local path) bị từ chối thay vì âm thầm gửi cho LLM.
 import { z } from "zod";
-import { CATEGORIES, COLORS, LIMITS, OCCASIONS, PATTERNS, idSchema, shortTagSchema } from "../shared/domain";
+import { CATEGORIES, COLORS, LIMITS, OCCASIONS, PATTERNS, SEASONS, idSchema, shortTagSchema } from "../shared/domain";
 
 export const ItemAttributesSchema = z
   .object({
@@ -11,7 +11,7 @@ export const ItemAttributesSchema = z
     styleTags: z.array(shortTagSchema).max(LIMITS.maxStyleTags).default([]),
     material: z.string().trim().min(1).max(LIMITS.maxMaterialChars).nullable().default(null),
     formality: z.number().int().min(1).max(5).nullable().default(null),
-    seasonTags: z.array(shortTagSchema).max(LIMITS.maxSeasonTags).default([]),
+    seasonTags: z.array(z.enum(SEASONS)).max(LIMITS.maxSeasonTags).default([]),
   })
   .strict();
 

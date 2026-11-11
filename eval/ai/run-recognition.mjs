@@ -88,6 +88,7 @@ function checkResultShape(request, body) {
   if (!Array.isArray(a.colors) || a.colors.length > 3 || a.colors.some((c) => !ENUMS.colors.includes(c))) v.push("colors sai enum hoặc >3");
   if (!ENUMS.pattern.includes(a.pattern)) v.push("pattern ngoài enum");
   if (a.formality !== null && !(Number.isInteger(a.formality) && a.formality >= 1 && a.formality <= 5)) v.push("formality ngoài 1–5");
+  if (!Array.isArray(a.seasonTags) || a.seasonTags.some((s) => !["SPRING", "SUMMER", "AUTUMN", "WINTER"].includes(s))) v.push("seasonTags ngoài enum (core/model sẽ từ chối)");
   if (!request.back && JSON.stringify(body.viewEvidence ?? {}).includes("BACK")) v.push("viewEvidence có BACK dù không gửi ảnh sau");
   return v;
 }
@@ -97,6 +98,7 @@ async function main() {
   const config = requireConfig(args);
   const confirmSpend = args["confirm-spend"] === true;
   const maxAiCalls = Number(args["max-ai-calls"] ?? 9);
+  const delayMs = Number(args["delay-ms"] ?? 0);
   const labelsPath = path.resolve(EVAL_DIR, "recognition", String(args.labels ?? "labels.json"));
   if (typeof args["images-dir"] === "string") imagesDir = path.resolve(args["images-dir"]);
   if (!existsSync(labelsPath)) {
@@ -145,7 +147,11 @@ async function main() {
     const front = loadImage(frontItem.front, "FRONT", `m-${frontItem.id}-f`);
     const back = isPair ? loadImage(backItem.back, "BACK", `m-${backItem.id}-b`) : null;
     const request = buildRequest(c.id, front, back);
-    if (!(isPair && frontOnlyServer)) aiCalls++;
+    if (!(isPair && frontOnlyServer)) {
+      // --delay-ms: giãn call để không chạm rate limit của proxy (mặc định 20/phút) và free tier provider.
+      if (aiCalls > 0 && delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+      aiCalls++;
+    }
     const r = await postJson(config.baseUrl, token, "/v2/recognition", request);
 
     if (isPair && frontOnlyServer) {

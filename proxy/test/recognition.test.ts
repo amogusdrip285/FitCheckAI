@@ -77,6 +77,13 @@ describe("POST /v2/recognition", () => {
     ]);
   });
 
+  it("seasonTags là enum SPRING…WINTER (khớp ClothingAttributes của core/model), bỏ trùng, thứ tự cố định", async () => {
+    const t = setup();
+    t.model.respond({ ...modelRecognition.matchedPair, attributes: { ...modelRecognition.matchedPair.attributes, seasonTags: ["WINTER", "AUTUMN", "WINTER"] } });
+    const body = (await (await t.post("/v2/recognition", recognitionRequest({}, true))).json()) as RecognitionResultDto;
+    expect(body.suggestedAttributes.seasonTags).toEqual(["AUTUMN", "WINTER"]);
+  });
+
   it("cặp mâu thuẫn ⇒ field cần review, không last-write-wins", async () => {
     const t = setup();
     t.model.respond(modelRecognition.conflictingPair);

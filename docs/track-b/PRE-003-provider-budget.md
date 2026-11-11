@@ -26,6 +26,17 @@ Proxy hiện có adapter **Anthropic** (`proxy/src/shared/model.ts`). Đổi pro
 
 Giá lấy từ bảng giá Anthropic (bản cache 2026-11-03) — **kiểm lại trên trang giá chính thức trước khi chốt**.
 
+### Giai đoạn test: Gemini free tier (quyết định 11/11/2026)
+
+Để phát triển/test không tốn tiền, proxy có thêm adapter **Gemini** (`AI_PROVIDER = "gemini"`, model mặc định `gemini-3.5-flash-lite`, có free tier theo trang giá Google AI Studio kiểm ngày 11/11/2026).
+
+- Đo ngày 11/11/2026 với key free tier của nhóm: `gemini-3.8-flash` timeout >40s / HTTP 503 ngay cả với request tối thiểu; `gemini-3.5-flash-lite` trả 200 trong ~1–3s qua proxy; `gemini-2.5-flash` trả 404 (không còn cho người dùng mới). ⇒ mặc định flash-lite. Có thể thử lại 3.8-flash bằng `AI_MODEL` khi hết quá tải.
+- Request format `generateContent` + `responseJsonSchema` đã xác nhận chạy live (eval B-004 lần đầu, xem `eval/ai/results/`).
+
+- **Privacy:** ở free tier, Google ghi "Used to improve our products: Yes" ⇒ chỉ gửi ảnh garment test nhóm tự chụp, **không** gửi ảnh/dữ liệu người dùng thật. Demo với người dùng thật cần chuyển sang tier trả phí hoặc provider khác.
+- **Giới hạn:** free tier có rate limit thấp (trang giá không ghi số cụ thể) ⇒ có thể gặp `429 RATE_LIMITED`; eval chạy tuần tự, ít call.
+- **Evidence:** kết quả eval phải ghi provider/model thật đã dùng. Chất lượng đo trên Gemini **không** chứng minh chất lượng trên Claude và ngược lại; đổi provider ⇒ chạy lại B-004/B-006.
+
 ## 3. Ước lượng chi phí mỗi call (THÔ — phải thay bằng số đo usage thật ở B-004/B-006)
 
 Giả định: ảnh derivative ≤1024px cạnh dài ⇒ ~1.4K token/ảnh (≈ rộng×cao/750); system prompt ~0.6–0.8K token; output gồm cả thinking.

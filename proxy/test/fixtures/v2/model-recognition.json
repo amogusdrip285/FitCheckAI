@@ -2,7 +2,7 @@
   "_comment": "Output giả lập của model (đúng ModelRecognitionSchema). Dùng cho test; KHÔNG phải evidence live.",
   "frontOnly": {
     "sameItem": null,
-    "attributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["Tối giản", "cơ bản"], "material": null, "formality": 2, "seasonTags": ["hạ"] },
+    "attributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["Tối giản", "cơ bản"], "material": null, "formality": 2, "seasonTags": ["SUMMER"] },
     "evidence": [
       { "field": "category", "views": ["FRONT"] },
       { "field": "colors", "views": ["FRONT", "BACK"] }
@@ -12,7 +12,7 @@
   },
   "matchedPair": {
     "sameItem": true,
-    "attributes": { "category": "OUTERWEAR", "colors": ["BLUE"], "pattern": "SOLID", "styleTags": ["năng động"], "material": "denim", "formality": 2, "seasonTags": ["thu", "đông"] },
+    "attributes": { "category": "OUTERWEAR", "colors": ["BLUE"], "pattern": "SOLID", "styleTags": ["năng động"], "material": "denim", "formality": 2, "seasonTags": ["AUTUMN", "WINTER"] },
     "evidence": [
       { "field": "category", "views": ["FRONT", "BACK"] },
       { "field": "colors", "views": ["FRONT", "BACK"] },

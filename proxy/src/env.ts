@@ -7,9 +7,12 @@
  */
 export interface Env {
   APP_VERSION: string;
-  /** Secret. Thiếu ⇒ route gọi AI trả 503, không bao giờ nhúng vào APK. */
+  /** "anthropic" | "gemini". Mặc định "anthropic". Gemini free tier chỉ dùng để test (xem shared/gemini.ts). */
+  AI_PROVIDER?: string;
+  /** Secret. Thiếu key của provider đang chọn ⇒ route gọi AI trả 503, không bao giờ nhúng vào APK. */
   ANTHROPIC_API_KEY?: string;
-  /** Model cho recognition/recommendation; mặc định DEFAULT_AI_MODEL. PRE-003 chốt lựa chọn. */
+  GEMINI_API_KEY?: string;
+  /** Model cho recognition/recommendation; mặc định theo provider. PRE-003 chốt lựa chọn. */
   AI_MODEL?: string;
   /** Secret HMAC ký session token. Thiếu ⇒ mọi route cần auth bị từ chối. */
   SESSION_SECRET?: string;
@@ -29,7 +32,17 @@ export interface Env {
   RATE_LIMIT_PER_MINUTE?: string;
 }
 
-export const DEFAULT_AI_MODEL = "claude-opus-5-5";
+export type AiProvider = "anthropic" | "gemini";
+
+export const DEFAULT_MODELS: Record<AiProvider, string> = {
+  anthropic: "claude-opus-5-5",
+  // 11/11/2026: gemini-3.8-flash free tier quá tải (timeout/503); flash-lite trả lời ~1–3s.
+  gemini: "gemini-3.5-flash-lite",
+};
+
+export function aiProvider(env: Env): AiProvider {
+  return (env.AI_PROVIDER ?? "anthropic").trim().toLowerCase() === "gemini" ? "gemini" : "anthropic";
+}
 
 export type ServiceName = "recognition" | "outfits" | "tryon";
 

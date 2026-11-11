@@ -2,7 +2,8 @@
 // Thứ tự chặn trước khi tới handler: route → auth → kill switch → rate limit → body cap → validate (handler)
 // → daily cap → provider. Request bị chặn ở bất kỳ bước nào KHÔNG gọi upstream.
 import { z } from "zod";
-import { DEFAULT_AI_MODEL, type Env, SERVICES, dailyCap, intVar, recognitionViews, serviceEnabled } from "./env";
+import { DEFAULT_MODELS, type Env, SERVICES, aiProvider, dailyCap, intVar, recognitionViews, serviceEnabled } from "./env";
+import { GeminiModelClient } from "./shared/gemini";
 import { accessCodeMatches, bearerToken, issueSessionToken, verifySessionToken } from "./shared/auth";
 import { ApiError, errorResponse } from "./shared/errors";
 import { UsageGuard } from "./shared/guard";
@@ -20,13 +21,15 @@ const SessionRequestSchema = z.object({ accessCode: z.string().min(1).max(128) }
 function defaultModelFor(): (env: Env) => ModelClient | null {
   const cache = new Map<string, ModelClient>();
   return (env) => {
-    const apiKey = env.ANTHROPIC_API_KEY?.trim();
+    const provider = aiProvider(env);
+    const apiKey = (provider === "gemini" ? env.GEMINI_API_KEY : env.ANTHROPIC_API_KEY)?.trim();
     if (!apiKey) return null;
-    const model = env.AI_MODEL?.trim() || DEFAULT_AI_MODEL;
-    const cacheKey = `${model}:${apiKey.length}:${apiKey.slice(-6)}`;
+    const model = env.AI_MODEL?.trim() || DEFAULT_MODELS[provider];
+    const cacheKey = `${provider}:${model}:${apiKey.length}:${apiKey.slice(-6)}`;
     let client = cache.get(cacheKey);
     if (client === undefined) {
-      client = AnthropicModelClient.fromApiKey(apiKey, model);
+      client =
+        provider === "gemini" ? new GeminiModelClient(apiKey, model) : AnthropicModelClient.fromApiKey(apiKey, model);
       cache.clear();
       cache.set(cacheKey, client);
     }
@@ -83,6 +86,7 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       schemaVersion: 2,
       services,
       recognitionViews: recognitionViews(env),
+      provider: aiProvider(env),
       providerConfigured: deps.modelFor(env) !== null,
     });
   }

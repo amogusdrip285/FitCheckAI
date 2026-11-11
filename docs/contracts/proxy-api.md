@@ -52,7 +52,7 @@ Không cần auth.
 ```json
 { "status": "ok", "version": "dev", "schemaVersion": 2,
   "services": { "recognition": true, "outfits": true, "tryon": false },
-  "recognitionViews": "DUAL", "providerConfigured": true }
+  "recognitionViews": "DUAL", "provider": "gemini", "providerConfigured": true }
 ```
 
 Client dùng `services`/`recognitionViews` để ẩn CTA chưa khả dụng; đây không phải bằng chứng AI chạy tốt.
@@ -82,7 +82,7 @@ Request
 
 | Field | Ràng buộc |
 |---|---|
-| `items` | 1–50, `id` không trùng. `attributes`: `category` bắt buộc; `colors` ≤3 enum; `pattern`, `styleTags` ≤5×32, `material` ≤40, `formality` 1–5, `seasonTags` ≤4 — đều tùy chọn |
+| `items` | 1–50, `id` không trùng. `attributes`: `category` bắt buộc; `colors` ≤3 enum; `pattern`, `styleTags` ≤5×32, `material` ≤40, `formality` 1–5, `seasonTags` ≤4 trong `SPRING·SUMMER·AUTUMN·WINTER` — đều tùy chọn |
 | `profile` | `null` hoặc `{heightCm?, stylePreferences ≤5, preferredCategories}`. Không cân nặng/ảnh/UUID người dùng |
 | `occasion` | `CASUAL·SCHOOL·WORK·DATE·PARTY·SPORT·FORMAL_EVENT` |
 | `freeText` | ≤500 ký tự; là dữ liệu sở thích, không thể ghi đè luật |
@@ -139,7 +139,7 @@ Response `200`
 ```json
 { "requestId": "rec-1", "itemId": "item-1", "inputRevision": 3,
   "suggestedAttributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID",
-                           "styleTags": ["tối giản"], "material": null, "formality": 2, "seasonTags": ["hạ"] },
+                           "styleTags": ["tối giản"], "material": null, "formality": 2, "seasonTags": ["SUMMER"] },
   "needsReviewFields": ["material"],
   "viewEvidence": { "category": ["FRONT"], "colors": ["FRONT"] },
   "warnings": [],
@@ -151,6 +151,9 @@ Response `200`
 - `warnings`: `VIEWS_LOOK_LIKE_DIFFERENT_ITEMS` (hai ảnh có vẻ khác món ⇒ mọi field cần review), `CATEGORY_UNKNOWN`.
 - `viewEvidence`: field ⇒ ảnh nào cho thấy; không bao giờ chứa `BACK` khi không gửi ảnh sau.
 - `category: UNKNOWN` lưu nháp được nhưng recommendation không dùng như TOP.
+- `seasonTags` chỉ gồm `SPRING·SUMMER·AUTUMN·WINTER`, khớp `ClothingAttributes.validate()` trong `core/model/wardrobe` (Track A).
+
+**Map sang Kotlin `core/model/wardrobe` (B-007 client làm):** field trong `needsReviewFields`/`viewEvidence` — `category→CATEGORY`, `colors→COLORS`, `pattern→PATTERN`, `material→MATERIAL`, `formality→FORMALITY`, `seasonTags→SEASONS`, `styleTags→STYLES`. ConsentGrant Kotlin → wire: `id→grantId`, `confirmedByUser→userConfirmed`, `mediaIds`, `issuedAt`, `revokedAt`, `providerConfigVersion`, `purpose`.
 
 ## Mount route của track khác (Track C — Try-On)
 
@@ -158,7 +161,8 @@ C export `RouteDef[]` từ `proxy/src/tryon/**` (interface ở `proxy/src/shared
 
 ## Vận hành
 
-- Secrets: `ANTHROPIC_API_KEY`, `SESSION_SECRET`, `DEMO_ACCESS_CODE` (xem `proxy/wrangler.toml`, `proxy/.dev.vars.example`). Key không bao giờ nằm trong APK/git/log.
+- Provider: `AI_PROVIDER = "anthropic" | "gemini"` (adapter ở `proxy/src/shared/model.ts`, `proxy/src/shared/gemini.ts`; wire format client không đổi). `AI_MODEL` trống ⇒ mặc định `claude-opus-5-5` / `gemini-3.5-flash-lite`. **Gemini free tier chỉ để test**: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm — không gửi ảnh người dùng thật; `/health` báo `provider`.
+- Secrets: `ANTHROPIC_API_KEY` hoặc `GEMINI_API_KEY` (theo provider), `SESSION_SECRET`, `DEMO_ACCESS_CODE` (xem `proxy/wrangler.toml`, `proxy/.dev.vars.example`). Key không bao giờ nằm trong APK/git/log.
 - Bật/tắt: `SERVICE_RECOGNITION|OUTFITS|TRYON = "on"|"off"` (mặc định off). Đổi biến ⇒ redeploy.
 - `DAILY_CAP_*` và rate limit đếm **theo isolate**, best-effort — không phải quota toàn cục hay trần tiền. Trần tiền thật: spend limit ở console provider (PRE-003). Quota atomic/toàn cục: BACK-011.
 - Log mỗi request là một dòng JSON: `requestId, route, service, status, latencyMs, errorCode, model, inputTokens, outputTokens, accepted, rejected, promptVersion`. Không ảnh/base64/freeText/profile/token.

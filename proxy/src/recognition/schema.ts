@@ -1,6 +1,6 @@
 // OWNER: Track B. Wire schema POST /v2/recognition — CONTRACTS.md v2 CT-05.
 import { z } from "zod";
-import { ATTRIBUTE_FIELDS, CATEGORIES, COLORS, PATTERNS, VIEWS, idSchema } from "../shared/domain";
+import { ATTRIBUTE_FIELDS, CATEGORIES, COLORS, PATTERNS, SEASONS, VIEWS, idSchema } from "../shared/domain";
 
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
@@ -56,7 +56,7 @@ export const ModelRecognitionSchema = z.object({
     styleTags: z.array(z.string()),
     material: z.string().nullable(),
     formality: z.number().int().nullable(),
-    seasonTags: z.array(z.string()),
+    seasonTags: z.array(z.enum(SEASONS)),
   }),
   evidence: z.array(z.object({ field: z.enum(ATTRIBUTE_FIELDS), views: z.array(z.enum(VIEWS)) })),
   conflictFields: z.array(z.enum(ATTRIBUTE_FIELDS)),

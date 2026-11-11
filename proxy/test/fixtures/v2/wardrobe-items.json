@@ -1,8 +1,8 @@
 [
-  { "id": "t1", "revision": 1, "attributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["tối giản"], "material": null, "formality": 2, "seasonTags": ["hạ"] } },
+  { "id": "t1", "revision": 1, "attributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["tối giản"], "material": null, "formality": 2, "seasonTags": ["SUMMER"] } },
   { "id": "t2", "revision": 2, "attributes": { "category": "TOP", "colors": ["BLUE", "WHITE"], "pattern": "STRIPED", "styleTags": ["công sở"], "material": null, "formality": 3, "seasonTags": [] } },
   { "id": "b1", "revision": 1, "attributes": { "category": "BOTTOM", "colors": ["BLACK"], "pattern": "SOLID", "styleTags": ["công sở"], "material": null, "formality": 3, "seasonTags": [] } },
   { "id": "b2", "revision": 3, "attributes": { "category": "BOTTOM", "colors": ["BLUE"], "pattern": "SOLID", "styleTags": ["năng động"], "material": "denim", "formality": 1, "seasonTags": [] } },
-  { "id": "d1", "revision": 1, "attributes": { "category": "DRESS", "colors": ["RED"], "pattern": "PRINTED", "styleTags": ["nữ tính"], "material": null, "formality": 3, "seasonTags": ["xuân", "hạ"] } },
+  { "id": "d1", "revision": 1, "attributes": { "category": "DRESS", "colors": ["RED"], "pattern": "PRINTED", "styleTags": ["nữ tính"], "material": null, "formality": 3, "seasonTags": ["SPRING", "SUMMER"] } },
   { "id": "s1", "revision": 1, "attributes": { "category": "SHOES", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["sneaker"], "material": null, "formality": 1, "seasonTags": [] } }
 ]

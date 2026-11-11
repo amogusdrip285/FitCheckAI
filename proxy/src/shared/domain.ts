@@ -26,6 +26,10 @@ export type Pattern = (typeof PATTERNS)[number];
 export const OCCASIONS = ["CASUAL", "SCHOOL", "WORK", "DATE", "PARTY", "SPORT", "FORMAL_EVENT"] as const;
 export type Occasion = (typeof OCCASIONS)[number];
 
+/** Khớp `ClothingAttributes.validate()` ở core/model (Track A): seasonTags chỉ nhận 4 giá trị này. */
+export const SEASONS = ["SPRING", "SUMMER", "AUTUMN", "WINTER"] as const;
+export type Season = (typeof SEASONS)[number];
+
 export const VIEWS = ["FRONT", "BACK"] as const;
 export type View = (typeof VIEWS)[number];
 

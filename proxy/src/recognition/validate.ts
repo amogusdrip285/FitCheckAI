@@ -1,6 +1,16 @@
 // OWNER: Track B. Chuẩn hóa output recognition thành RecognitionResult CT-05.
 // Không bao giờ tự lưu: kết quả chỉ là gợi ý; field nghi ngờ/mâu thuẫn được đánh dấu cần review.
-import { ATTRIBUTE_FIELDS, type AttributeField, type Category, type Color, LIMITS, type Pattern, type View } from "../shared/domain";
+import {
+  ATTRIBUTE_FIELDS,
+  type AttributeField,
+  type Category,
+  type Color,
+  LIMITS,
+  type Pattern,
+  SEASONS,
+  type Season,
+  type View,
+} from "../shared/domain";
 import type { ModelRecognition } from "./schema";
 
 export interface SuggestedAttributes {
@@ -10,7 +20,7 @@ export interface SuggestedAttributes {
   styleTags: string[];
   material: string | null;
   formality: number | null;
-  seasonTags: string[];
+  seasonTags: Season[];
 }
 
 export type RecognitionWarning = "VIEWS_LOOK_LIKE_DIFFERENT_ITEMS" | "CATEGORY_UNKNOWN";
@@ -70,8 +80,8 @@ export function buildRecognitionResult(
 
   const style = cleanTags(a.styleTags, LIMITS.maxStyleTags);
   if (style.trimmed) review.add("styleTags");
-  const season = cleanTags(a.seasonTags, LIMITS.maxSeasonTags);
-  if (season.trimmed) review.add("seasonTags");
+  // Mùa là enum (không lowercase); bỏ trùng, giữ thứ tự cố định SPRING→WINTER.
+  const seasons = SEASONS.filter((s) => a.seasonTags.includes(s));
 
   if (a.category === "UNKNOWN") {
     review.add("category");
@@ -108,7 +118,7 @@ export function buildRecognitionResult(
       styleTags: style.tags,
       material,
       formality,
-      seasonTags: season.tags,
+      seasonTags: seasons,
     },
     needsReviewFields: ATTRIBUTE_FIELDS.filter((f) => review.has(f)),
     viewEvidence,
