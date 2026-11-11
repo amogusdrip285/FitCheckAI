@@ -6,15 +6,21 @@ import com.fitcheckai.core.model.ClothingAttributes
 import com.fitcheckai.core.model.ClothingItem
 import com.fitcheckai.core.model.Season
 import java.time.Instant
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
-/** Mã hóa list thành chuỗi bằng ký tự Unit Separator (không xuất hiện trong text người dùng). */
+/** Versioned JSON writes; still reads Sprint 0's Unit Separator encoding without a schema change. */
 object ListCodec {
     private const val SEPARATOR = '\u001F'
+    private const val PREFIX = "json:"
 
-    fun encode(values: Collection<String>): String = values.joinToString(SEPARATOR.toString())
+    fun encode(values: Collection<String>): String = PREFIX + Json.encodeToString(values.toList())
 
-    fun decode(raw: String): List<String> =
-        if (raw.isEmpty()) emptyList() else raw.split(SEPARATOR)
+    fun decode(raw: String): List<String> = when {
+        raw.startsWith(PREFIX) -> Json.decodeFromString(raw.removePrefix(PREFIX))
+        raw.isEmpty() -> emptyList()
+        else -> raw.split(SEPARATOR)
+    }
 }
 
 fun ClothingItemEntity.toModel(): ClothingItem = ClothingItem(

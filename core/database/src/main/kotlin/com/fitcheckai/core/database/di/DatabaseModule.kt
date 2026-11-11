@@ -3,7 +3,9 @@ package com.fitcheckai.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.fitcheckai.core.database.AppDatabase
-import com.fitcheckai.core.database.StubWardrobeRepository
+import com.fitcheckai.core.database.wardrobe.LegacyWardrobeBridge
+import com.fitcheckai.core.database.wardrobe.WardrobeMigration
+import com.fitcheckai.core.database.wardrobe.RoomWardrobeRepository
 import com.fitcheckai.core.database.dao.ClothingItemDao
 import com.fitcheckai.core.database.dao.FeedbackDao
 import com.fitcheckai.core.database.dao.OutfitDao
@@ -23,7 +25,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME).build()
+        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
+            .addMigrations(WardrobeMigration(context))
+            .build()
 
     @Provides fun clothingItemDao(db: AppDatabase): ClothingItemDao = db.clothingItemDao()
     @Provides fun outfitDao(db: AppDatabase): OutfitDao = db.outfitDao()
@@ -34,7 +38,8 @@ object DatabaseModule {
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class WardrobeModule {
-    // TODO(Track A): đổi sang RoomWardrobeRepository.
     @Binds
-    abstract fun bindWardrobeRepository(impl: StubWardrobeRepository): WardrobeRepository
+    abstract fun bindV2WardrobeRepository(impl: RoomWardrobeRepository): com.fitcheckai.core.model.wardrobe.WardrobeRepository
+    @Binds
+    abstract fun bindWardrobeRepository(impl: LegacyWardrobeBridge): WardrobeRepository
 }

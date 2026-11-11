@@ -1,0 +1,37 @@
+[
+  {
+    "id": "front_only",
+    "itemId": "f05a884a-5cbe-5f81-8fac-a82280a295fd",
+    "expected": "Save allowed; back absent, never invented."
+  },
+  {
+    "id": "missing_front",
+    "front": null,
+    "back": "images/9e8a5c51-7ff1-56fd-9ae5-30377c174e1c-front.jpg",
+    "expected": "INVALID_REQUEST"
+  },
+  {
+    "id": "mismatched_pair",
+    "front": "images/f05a884a-5cbe-5f81-8fac-a82280a295fd-front.jpg",
+    "back": "images/2b7c2338-7c4f-5a8f-b996-6537ba80b64b-front.jpg",
+    "expected": "Manual/provider review required; distinct-file validation alone cannot prove garment identity."
+  },
+  {
+    "id": "same_photo_both_views",
+    "front": "images/f05a884a-5cbe-5f81-8fac-a82280a295fd-front.jpg",
+    "back": "images/f05a884a-5cbe-5f81-8fac-a82280a295fd-front.jpg",
+    "expected": "INVALID_REQUEST"
+  },
+  {
+    "id": "blurred_real_photo",
+    "file": "variants/blurry.jpg",
+    "derivedFrom": "f05a884a-5cbe-5f81-8fac-a82280a295fd",
+    "syntheticDegradation": true,
+    "expected": "Allow manual entry; never claim reliable AI labels from blur."
+  },
+  {
+    "id": "missing_file",
+    "file": "images/does-not-exist.jpg",
+    "expected": "IO; preserve existing data and allow replacement."
+  }
+]
