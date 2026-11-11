@@ -11,6 +11,10 @@ Không gán task cho ngày cố định. PRE là ID lịch sử, không phải n
 | C | [C-201](tracks/C.md#c-201), [C-202](tracks/C.md#c-202) | C-206 fake/state UI, privacy review; thiếu key thì experiment BLOCKED, không fake PASS. |
 | D | [PRE-006](tracks/D.md#pre-006) → [PRE-007](tracks/D.md#pre-007) | Wireflow/root contracts, sau shell làm D-006/Profile/Today bằng fake. |
 
+## Bridge: scaffold v1 → contracts v2
+
+Đã có Sprint 0 scaffold cũ trên repo. D ưu tiên PRE-007/S-002 để compile shared v2; A/B/C **không cần chờ toàn bộ migration** để làm POC/fakes/fixtures/UI riêng. Tránh mỗi track tạo định nghĩa `MediaRef`, `Outfit`, `TryOnRequest` bất đồng. Xem [alignment guide](SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## Chuyển hướng PRE cũ
 
 <a id="pre-001"></a>

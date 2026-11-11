@@ -2,6 +2,10 @@
 
 [Workflow](../../TEAM_WORKFLOW.md) · [Board](TASK_BOARD.md) · [Contracts](CONTRACTS.md) · [Runbook](RUNBOOK.md)
 
+## Quyết định bổ sung 11/11/2026 — tích hợp Sprint 0
+
+Sau khi docs v2 được viết, commit Sprint 0 `314e237` bổ sung scaffold theo thiết kế trước đó. Nhận xét 'chưa có source' phía dưới chỉ đúng tại local HEAD `26049f5` khi viết bản trước. Chốt **giữ hợp đồng v2**, di chuyển code theo ownership D(shared), A(media/Room), B(AI/proxy), C(VTO), không giả định chỉ ảnh hưởng D. Track C chọn đầu ra photorealistic 2D có người thật; hai góc nhìn vẫn phải qua VTO gate. Xem [alignment guide](SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## Bằng chứng và phạm vi lượt tiếp tục
 
 Ngày 11/11/2026 đọc lại 12 file execution hiện có; giữ các phần đã cập nhật, hoàn thiện tài liệu còn dùng baseline cũ. Local HEAD vẫn `26049f5`. Repository ngoài execution chỉ có 8 Markdown định hướng được Git theo dõi; chưa có application source/Gradle project/tests/APK trong checkout này. Không suy diễn remote hoặc gọi API có phí. Mọi task active còn TODO; cập nhật tài liệu không phải hoàn thành feature.

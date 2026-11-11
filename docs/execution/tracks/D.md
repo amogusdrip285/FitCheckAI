@@ -4,6 +4,10 @@
 
 Task card ở file này là nguồn scope/acceptance. Trạng thái chỉ ở Board; mọi task còn TODO. ID cũ giữ ổn định dù prefix khác owner: **owner trong bảng là người chịu trách nhiệm hiện tại**. Chọn task có dependency đạt theo priority, không theo ngày. Mọi đường dẫn source là deliverable tương lai, chưa có implementation.
 
+## Chuẩn hóa Sprint 0 trước khi nối shared boundary
+
+S-001 scaffold đã có nhiều module và Hilt tại commit `314e237`, **không dựng lại dự án**. PRE-007/S-002 phải ánh xạ `core/model` hiện hữu từ v1 sang v2, giữ Gradle/Hilt khi khả thi, cập nhật composition root/navigation đúng ownership. A/B/C hiện thực service của mình, không chuyển toàn bộ việc migrate sang D. Xem [migration matrix và acceptance](../SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## Hàng đợi P0
 
 <a id="pre-006"></a>

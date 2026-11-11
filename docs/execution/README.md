@@ -2,6 +2,10 @@
 
 Cập nhật tiếp ngày **11/11/2026**, Asia/Bangkok. Giữ task cards và thay đổi hợp lệ từ lần bị gián đoạn; đây là kế hoạch, chưa có bằng chứng triển khai/POC. Mọi task active còn TODO. Đường dẫn source trong card là deliverable tương lai.
 
+## Lưu ý mã nguồn Sprint 0
+
+Sau commit Sprint 0 `314e237`, repo đã có scaffold Android/Gradle/Hilt, nhưng Kotlin models/Room/proxy/NavHost vẫn theo interface v1. **CONTRACTS.md v2 là nguồn chuẩn**, cần chuyển implementation theo owner, không viết lại spec v2 cho khớp scaffold cũ. Xem [bảng mapping và thứ tự chuyển đổi](SPRINT0_TO_V2_ALIGNMENT.md). Tài liệu lập trước Sprint 0 nêu 'chưa có code' là ảnh chụp trạng thái lịch sử.
+
 ## Cách dùng
 
 1. Đọc [TEAM_WORKFLOW](../../TEAM_WORKFLOW.md) để nắm ownership và phối hợp.

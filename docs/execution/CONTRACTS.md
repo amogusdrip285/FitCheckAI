@@ -21,6 +21,10 @@ Một Android `:app`, Kotlin/Compose, manual DI và interfaces; chỉ tách Grad
 
 D có quyền điều phối, không có nghĩa phải sửa bug của A/B/C. Tests theo package thuộc owner package. File root thay qua request ngắn: task ID, reason, schema before/after, consumer và test.
 
+## Tương thích với Sprint 0
+
+Mã nguồn commit `314e237` có `ClothingItem.imagePath`, `StyleProfile`, `OutfitSource.AI`, service v1 và proxy `/v1/*`; đây **không** phải cách triển khai v2. D chốt shared type/interface migration; A xử lý wardrobe/media; B xử lý reco/recognition/proxy; C xử lý TryOn. Không tạo contract v2 riêng trong feature module. Xem [mapping thực tế và ranh giới ownership](SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## CT-01 — ID, media, ClothingItem và WardrobeRepository
 
 Tất cả domain entity dùng UUID string do client sinh; không dùng Room auto-increment hoặc absolute path làm identity. Có `revision: Long >=1`, `createdAt/updatedAt: epochMillis UTC`, `deletedAt: epochMillis?`. Revision tăng khi nội dung/ảnh đổi, check optimistic revision khi save. Timestamp không tự giải quyết conflict cloud; cloud sync là A-201, chưa triển khai. Tombstone tối thiểu giữ ID/time khi xóa; nội dung/ảnh cá nhân phải xóa theo privacy, không giữ PII chỉ để chờ sync.

@@ -4,6 +4,10 @@
 
 Task card ở file này là nguồn scope/acceptance. Trạng thái chỉ ở Board; mọi task còn TODO. ID cũ giữ ổn định dù prefix khác owner: **owner trong bảng là người chịu trách nhiệm hiện tại**. Chọn task có dependency đạt theo priority, không theo ngày. Mọi đường dẫn source là deliverable tương lai, chưa có implementation.
 
+## Chốt boundary với A/D và hình thức output
+
+VTO là **mô phỏng AI bằng ảnh 2D có người thật**, không xây 3D avatar. Đầu vào garment lấy qua `MediaRef`/`ImagePair`/`MediaStore` của A, profile/body images từ D; C không đọc thẳng Room hoặc `ClothingItem.imagePath` v1. POC/fake/UI có thể bắt đầu trước khi A push implementation; runtime integration chờ shared v2 compile và review. Chi tiết [Sprint 0 → v2](../SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## Hàng đợi P0
 
 <a id="c-201"></a>

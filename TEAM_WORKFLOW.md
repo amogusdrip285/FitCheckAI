@@ -29,6 +29,10 @@ Một task có một primary owner. Prefix ID cũ không xác định owner. A s
 
 Nhận task theo priority và dependency đã đạt; tối đa một task DOING/người. Khi bị chặn, ghi blocker, người cần hỗ trợ và điều kiện mở lại ở board rồi chọn việc độc lập. Hỗ trợ/review không tự chuyển ownership; đổi owner phải ghi task, phạm vi file, trách nhiệm test và cập nhật chỉ mục. D điều phối, owner module sửa lỗi module.
 
+## 5a. Đối chiếu scaffold Sprint 0
+
+Sprint 0 (`314e237`) có Kotlin contracts/Hilt/modules theo track cũ. Đích là contracts v2 trong execution, **không đổi ngược spec về v1**. D sở hữu shared interfaces, Gradle và composition root; A/B/C sửa implementation thuộc track mình. C xây VTO **ảnh 2D có người thật**, không phải 3D; có thể dùng fake `MediaStore` trước khi A push. Chi tiết và checklist: [Sprint 0 → v2](docs/execution/SPRINT0_TO_V2_ALIGNMENT.md).
+
 ## 6. Contract-first development
 
 [Contracts v2](docs/execution/CONTRACTS.md) là nguồn interface chung. PRE-007 chốt schema/fixtures; S-002 tạo types và điểm wiring. A-005, B-005, C-206, D-006 cung cấp fake theo owner, gồm success và failure. Consumer làm qua interface; implementation thật chỉ bắt buộc ở gate tích hợp tương ứng. Domain types không import feature implementation; composition root nối callbacks để tránh vòng phụ thuộc. Breaking change cần consumer review, version/migration và compatibility test.
