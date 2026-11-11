@@ -18,6 +18,13 @@ def main():
         assert item["seasonTags"] == [] and item["styleTags"] == []
         assert 0 < len(item["colors"]) <= 3
         assert item["front"] is not None
+        assert item["groundTruthFields"] == [] and item["independentReviewStatus"] == "PENDING"
+        assert {"category", "colors", "pattern"}.issubset(item["referenceFields"])
+        assert item["fieldProvenance"]["colors"]["method"] == "assistant_visual_review"
+        assert item["fieldProvenance"]["pattern"]["method"] == "assistant_visual_review"
+        assert "name" in item["fieldProvenance"]
+        if item["sourceGroup"] == "CC0-clothing-dataset":
+            assert item["fieldProvenance"]["category"]["sourceLabel"]
         if item["pairVerified"]:
             assert item["back"] is not None and item["sourceGroup"] == "Wikimedia-Commons"
             assert item["front"]["sourceUrl"] != item["back"]["sourceUrl"]

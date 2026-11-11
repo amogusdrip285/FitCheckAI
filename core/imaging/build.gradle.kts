@@ -4,7 +4,10 @@ plugins {
     alias(libs.plugins.fitcheck.hilt)
 }
 
-android { testOptions.unitTests.isIncludeAndroidResources = true }
+android {
+    testOptions.unitTests.isIncludeAndroidResources = true
+    sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("data/fixtures"))
+}
 
 dependencies {
     api(project(":core:model"))

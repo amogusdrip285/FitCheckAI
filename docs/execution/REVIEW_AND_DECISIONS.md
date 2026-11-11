@@ -122,6 +122,14 @@ Phần audit tài liệu bên dưới giữ như lịch sử của lần revise 
 
 ## Decision log kế hoạch (giữ lịch sử, đọc cùng cập nhật trên)
 
+Tiếp tục Track A sau merge `114d3cf`: ưu tiên recovery file/cleanup, preview cancellation và Room native tests không cần B/D.
+Không đổi schema hoặc shared contract. Dataset làm rõ per-field provenance, reference chưa adjudicate không còn nằm trong `groundTruthFields`.
+[Evidence bổ sung](../qa/track-a-independent-followup.md) ghi riêng model ML Kit UNAVAILABLE trên AVD và gate chất lượng chưa chạy.
+Người dùng yêu cầu commit mới bằng `NQKhaixyz` và push main; GitHub authentication đã xác minh đúng account và quyền push.
+Người dùng giới hạn phần ảnh bulk đưa lên GitHub còn khoảng 100 ảnh: commit đúng 100 ảnh CC0 cùng nhãn nguồn/giấy phép
+ở `data/samples/modern-clothing-100`; giữ nguyên 24 ảnh fixtures đã có. Bulk đầy đủ và ZIP tiếp tục gitignore.
+Mẫu 100 ảnh chỉ lấy train, không trùng fixture và không dùng làm holdout đo AI.
+
 Chốt theo dependency/điểm sử dụng, không hạn ngày. “Theo yêu cầu mới” là quyết định sản phẩm đã có; “đề xuất” hoặc “chưa xác nhận” không được giả thành đã triển khai.
 
 | ID | Quyết định / trạng thái | Owner và điểm cần chốt / evidence |

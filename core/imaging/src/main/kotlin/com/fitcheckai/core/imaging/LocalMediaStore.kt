@@ -20,6 +20,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -36,8 +38,12 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
     private fun journal(scope: MediaScope) = File(root(scope), "media-cleanup").apply { mkdirs() }
 
     override suspend fun importImage(uri: String, scope: MediaScope, ownerId: String, view: ImageView): Result<MediaRef> =
-        wardrobeResult { withContext(Dispatchers.IO) {
+        importOwned(uri, scope, ownerId, view)
+
+    private suspend fun importOwned(uri: String, scope: MediaScope, ownerId: String, view: ImageView,
+        original: MediaRef? = null): Result<MediaRef> = creating { remember -> withContext(Dispatchers.IO) {
             requireUuid(ownerId)
+            original?.let { read(it).getOrThrow() }
             val bytes = open(uri).use { input ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(16 * 1024)
@@ -49,7 +55,10 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
                 output.toByteArray()
             }
             val bitmap = normalize(bytes, 2048)
-            try { mutex.withLock { persist(bitmap, scope, ownerId, view, 2048, 4L * 1024 * 1024, null, false) } }
+            try { mutex.withLock {
+                original?.let { ownedFile(it) }
+                persist(bitmap, scope, ownerId, view, 2048, 4L * 1024 * 1024, original?.id, false).also(remember)
+            } }
             finally { bitmap.recycle() }
         } }
 
@@ -65,33 +74,30 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
 
     override fun displayPath(ref: MediaRef): String? = runCatching { ownedFile(ref).absolutePath }.getOrNull()
 
-    override suspend fun derive(ref: MediaRef, preset: DerivativePreset): Result<MediaRef> = wardrobeResult {
+    override suspend fun derive(ref: MediaRef, preset: DerivativePreset): Result<MediaRef> = creating { remember ->
         withContext(Dispatchers.IO) {
             val bytes = read(ref).getOrThrow()
             val bitmap = normalize(bytes, preset.maxEdge)
             try { mutex.withLock {
                 ownedFile(ref)
                 persist(bitmap, ref.scope, ref.ownerEntityId, ref.view, preset.maxEdge,
-                    preset.maxBytes, ref.id, preset != DerivativePreset.SEGMENTATION)
+                    preset.maxBytes, ref.id, preset != DerivativePreset.SEGMENTATION).also(remember)
             } }
             finally { bitmap.recycle() }
         }
     }
 
     /** Records a segmentation result as a derivative; never replaces the original reference. */
-    suspend fun importSegmented(uri: String, original: MediaRef): Result<MediaRef> = wardrobeResult {
-        read(original).getOrThrow()
-        val imported = importImage(uri, original.scope, original.ownerEntityId, original.view).getOrThrow()
-        try {
-            withContext(Dispatchers.IO) { mutex.withLock {
-                ownedFile(original)
-                val derived = imported.copy(derivedFromMediaId = original.id)
-                atomicWrite(metadata(derived), WardrobeCodec.encodeMedia(derived).toByteArray())
-                derived
-            } }
-        } catch (error: Exception) {
-            withContext(kotlinx.coroutines.NonCancellable) { remove(imported) }
-            throw error
+    suspend fun importSegmented(uri: String, original: MediaRef): Result<MediaRef> =
+        importOwned(uri, original.scope, original.ownerEntityId, original.view, original)
+
+    /** A cancelled dispatcher handoff must not strand a newly published ref the caller never received. */
+    private suspend fun creating(block: suspend ((MediaRef) -> Unit) -> MediaRef): Result<MediaRef> {
+        var created: MediaRef? = null
+        return try { wardrobeResult { block { created = it } } }
+        catch (cancelled: CancellationException) {
+            withContext(NonCancellable) { created?.let { remove(it) } }
+            throw cancelled
         }
     }
 
@@ -106,6 +112,7 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
             require(WardrobeCodec.decodeMedia(stored.readText()) == ref) { "Ảnh không thuộc tham chiếu được cấp." }
             val descendants = index(ref.scope).listFiles().orEmpty().filter { it.extension == "json" }
                 .mapNotNull { runCatching { WardrobeCodec.decodeMedia(it.readText()) }.getOrNull() }
+                .filter { it.scope == ref.scope && it.ownerEntityId == ref.ownerEntityId }
             val ids = mutableSetOf(ref.id)
             do { val before = ids.size; descendants.filter { it.derivedFromMediaId in ids }.forEach { ids += it.id } }
             while (before != ids.size)
@@ -118,28 +125,63 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
 
     override suspend fun retryCleanup(): Result<Int> = wardrobeResult { withContext(Dispatchers.IO) { mutex.withLock {
         var cleaned = 0
+        var failed = false
         listOf(context.filesDir, context.noBackupFilesDir).forEach { base ->
             File(base, "media-cleanup").listFiles().orEmpty().filter { it.extension == "json" }.forEach { pending ->
-                val ref = WardrobeCodec.decodeMedia(pending.readText())
-                if (clean(ref)) cleaned++
+                // One interrupted/corrupt entry must not starve unrelated valid deletions.
+                val result = runCatching {
+                    val ref = WardrobeCodec.decodeMedia(pending.readText())
+                    require(pending.canonicalFile == File(journal(ref.scope), "${ref.id}.json").canonicalFile)
+                    clean(ref)
+                }
+                if (result.getOrDefault(false)) cleaned++ else failed = true
             }
         }
+        if (failed) throw WardrobeException(ErrorCode.IO, "Một số ảnh chưa dọn được; dữ liệu sẽ được thử lại sau.")
         cleaned
     } } }
 
     override suspend fun pruneGarmentDrafts(retainedIds: Set<String>, olderThan: Long): Result<Int> = wardrobeResult {
         withContext(Dispatchers.IO) {
             require(olderThan >= 0)
-            val candidates = mutex.withLock {
-                index(MediaScope.GARMENT).listFiles().orEmpty().filter { it.extension == "json" && it.lastModified() < olderThan }
-                    .mapNotNull { file -> runCatching { WardrobeCodec.decodeMedia(file.readText()) }.getOrNull() }
-                    .filter { it.scope == MediaScope.GARMENT && it.derivedFromMediaId == null && it.id !in retainedIds }
+            val (protectedIds, candidates) = mutex.withLock {
+                val entries = index(MediaScope.GARMENT).listFiles().orEmpty().filter { it.extension == "json" }
+                    .mapNotNull { file -> runCatching { file to WardrobeCodec.decodeMedia(file.readText()) }.getOrNull() }
+                val retainedClosure = retainedIds.toMutableSet()
+                do {
+                    val before = retainedClosure.size
+                    entries.filter { it.second.id in retainedClosure }.mapNotNull { it.second.derivedFromMediaId }.forEach { retainedClosure += it }
+                } while (retainedClosure.size != before)
+                retainedClosure.toSet() to entries.filter { (file, ref) -> file.lastModified() < olderThan &&
+                    ref.scope == MediaScope.GARMENT && ref.derivedFromMediaId == null && ref.id !in retainedClosure }.map { it.second }
             }
             var count = 0
             for (ref in candidates) if (remove(ref).getOrThrow().cleanupPending.not()) count++
-            count
+            count + mutex.withLock { pruneUnindexedGarments(protectedIds, olderThan) }
         }
     }
+
+    /** Only UUID-named GARMENT files without registry, journal or a saved reference are eligible. */
+    private fun pruneUnindexedGarments(retainedIds: Set<String>, olderThan: Long): Int {
+        val folder = File(context.filesDir.canonicalFile, "media/GARMENT")
+        if (!folder.isDirectory || folder.canonicalFile != folder) return 0
+        val removedIds = mutableSetOf<String>()
+        folder.listFiles().orEmpty().forEach { owner ->
+            if (!owner.isDirectory || owner.canonicalFile != owner.absoluteFile || !isUuid(owner.name)) return@forEach
+            owner.listFiles().orEmpty().forEach files@{ file ->
+                if (!file.isFile || file.canonicalFile != file.absoluteFile || file.lastModified() >= olderThan) return@files
+                val name = file.name.removeSuffix(".new").removeSuffix(".bak")
+                val id = name.substringBeforeLast('.', "")
+                if (!isUuid(id) || name.substringAfterLast('.') !in setOf("jpg", "png") || id in retainedIds) return@files
+                val records = listOf(File(index(MediaScope.GARMENT), "$id.json"), File(journal(MediaScope.GARMENT), "$id.json"))
+                if (records.any { record -> listOf("", ".new", ".bak").any { File(record.path + it).exists() } }) return@files
+                if (file.delete()) removedIds += id
+            }
+        }
+        return removedIds.size
+    }
+
+    private fun isUuid(value: String) = runCatching { requireUuid(value); true }.getOrDefault(false)
 
     private fun clean(ref: MediaRef): Boolean {
         // The journal is app-private; still validate scope, metadata and canonical containment.

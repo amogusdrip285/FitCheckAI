@@ -12,6 +12,7 @@ Kế hoạch thực thi mới: [Workflow v2](TEAM_WORKFLOW.md), [Task board](doc
 [Contracts v2](docs/execution/CONTRACTS.md). Track A đã triển khai adapter độc lập trong kiến trúc module hiện có,
 Room schema 2 và namespace `core.model.wardrobe`; không tự thay toàn bộ composition root của D.
 Xem [hướng dẫn Track A v2](docs/track-a-v2.md), [dataset](data/README.md), [bảng nghiệm thu](docs/qa/track-a-acceptance.md).
+Phần recovery/preview lifecycle và kiểm thử Android bổ sung sau merge: [QA độc lập mới nhất](docs/qa/track-a-independent-followup.md).
 
 ## Yêu cầu
 - JDK 17+ (đã test với JDK 21)
@@ -64,6 +65,7 @@ MediaStore có giới hạn ảnh/hash/cleanup, component `OutfitVisual` dùng l
 Schema 1 được migrate; file cũ được giữ để đọc/repair, không reset database.
 
 **Dataset:** 5.096 ảnh có nhãn được lọc từ bộ CC0; 21 món/24 ảnh thật và 3 cặp trước/sau được đóng gói trong debug.
+Repo còn có [100 ảnh bulk mẫu](data/samples/modern-clothing-100/README.md), kèm nhãn gốc và giấy phép; bulk đầy đủ giữ local, 100 ảnh mẫu không đóng gói APK.
 Tủ đồ → **Ảnh kiểm thử** → **Thêm bộ ảnh vào tủ đồ**. Không tự seed khi tạo database; release không đóng gói fixtures.
 Nguồn/quyền, scripts tái tạo, giới hạn nhãn và đánh giá Polyvore nằm tại [data/README.md](data/README.md).
 

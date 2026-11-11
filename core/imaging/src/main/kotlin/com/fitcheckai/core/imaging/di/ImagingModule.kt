@@ -11,6 +11,8 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 abstract class ImagingModule {
     @Binds
+    abstract fun bindGarmentCutoutProcessor(impl: com.fitcheckai.core.imaging.MlKitGarmentCutoutProcessor): com.fitcheckai.core.imaging.GarmentCutoutProcessor
+    @Binds
     abstract fun bindMediaStore(impl: com.fitcheckai.core.imaging.LocalMediaStore): com.fitcheckai.core.model.wardrobe.MediaStore
     @Binds
     abstract fun bindImageSegmenter(impl: MlKitSegmenter): ImageSegmenter

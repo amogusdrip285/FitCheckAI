@@ -69,18 +69,29 @@ class RoomWardrobeV2Test {
         assertTrue(repo.upsert(malformed).isFailure)
     }
     @Test fun `cleanup failure leaves durable journal and retries without deleting active refs`() = runBlocking {
+        var canRemove = false
+        repo = RoomWardrobeRepository(db, object : MediaStore by media {
+            override suspend fun remove(ref: MediaRef): Result<DeletionReceipt> = if (canRemove) media.remove(ref)
+                else Result.failure(WardrobeException(ErrorCode.IO, "blocked test filesystem"))
+        })
         val item = repo.upsert(sixFixtures().first()).getOrThrow()
-        media.failNext = ErrorCode.IO // retryCleanup fails first; DB tombstone still commits
         val receipt = repo.delete(item.id, 1).getOrThrow()
         assertTrue(receipt.cleanupPending)
         assertEquals(2, db.wardrobeDao().pending().size)
-        repo.retryCleanup().getOrThrow()
+        canRemove = true; repo.retryCleanup().getOrThrow()
         assertTrue(db.wardrobeDao().pending().isEmpty())
         val next = repo.upsert(sixFixtures()[1]).getOrThrow()
         val orphan = fixtureMedia(next.id, ImageView.BACK, "orphan")
         repo.discardDraft(next.images.refs() + orphan).getOrThrow()
         assertTrue(orphan.id in media.removed)
         assertFalse(next.images.front!!.id in media.removed)
+    }
+    @Test fun `unrelated broken media journal does not starve database cleanup`() = runBlocking {
+        val item = repo.upsert(sixFixtures().first()).getOrThrow()
+        media.failNext = ErrorCode.IO // retryCleanup fails, but each queued ref can still be removed.
+        val receipt = repo.delete(item.id, 1).getOrThrow()
+        assertFalse(receipt.cleanupPending); assertTrue(db.wardrobeDao().pending().isEmpty())
+        assertTrue(media.removed.containsAll(item.images.refs().map { it.id }))
     }
     @Test fun `reopen retains UUID revisions paired refs and tombstones`() = runBlocking {
         db.close()

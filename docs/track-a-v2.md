@@ -59,8 +59,11 @@ Derivative có `derivedFromMediaId`, preset caps; xóa original dọn cả desce
 
 Draft được giữ trong SavedStateHandle qua recreation; ảnh draft đã copy vào private storage. Cancel dọn ảnh mới không thuộc item đã lưu.
 Ảnh garment draft bị bỏ lại do process chết được thu hồi khi mở tủ sau 7 ngày nếu không có item đã lưu tham chiếu; PERSON/results không thuộc chính sách này.
-Thu hồi này áp dụng file đã có registry. Crash đúng giữa ghi file và ghi registry có thể để lại file chưa được lập chỉ mục;
-chưa có kiểm thử kill-at-every-write hay bộ quét orphan cho trường hợp đó. Derivative của original đang dùng được giữ tới khi original bị xóa.
+Thu hồi bao gồm file GARMENT ghi dở/chưa có registry sau 7 ngày, chỉ trong đúng thư mục owner UUID và tên media UUID.
+Giữ file nếu còn item tham chiếu, registry/journal (kể cả atomic sidecar), file mới, tên không thuộc app hoặc symlink;
+không quét PERSON/TRYON_RESULT. Nếu item dùng derivative, toàn bộ chuỗi original của nó cũng được giữ.
+Đã có kiểm thử trạng thái file sau interruption; chưa mô phỏng kill process tại mọi lệnh ghi hoặc storage pressure trên máy thật.
+Cleanup xử lý từng mục độc lập, giữ mục lỗi để retry; một journal lỗi không ngăn dọn các ảnh khác.
 SavedStateHandle không phải bảo đảm khôi phục draft sau force-stop; A-004 kiểm dữ liệu **đã lưu**. Không hứa phục hồi mọi draft khi Android xóa task.
 
 ## Recognition và imaging
@@ -73,6 +76,9 @@ Các trường UNKNOWN/null không bị đổi thành nhãn đoán chắc chắn
 CameraX bind theo lifecycle, xin quyền khi dùng; từ chối vẫn chọn Photo Picker được. Chọn một route CameraX, không bổ sung camera intent trùng chức năng.
 Chụp mới đi qua cùng pipeline MediaStore. Cold-model/offline segmentation có đường bỏ qua. Readiness dựa trên ModuleInstallClient;
 preview chỉ hiện thành công khi có foreground thực, không trả ảnh gốc giả làm kết quả tách nền.
+`GarmentCutoutProcessor` tách xử lý local khỏi UI để kiểm unavailable/downloading/no-subject/late result độc lập.
+Preview là tạm thời: thử lại, đổi view, hủy hoặc đóng màn hình đều dọn derivative của preview; không thay ảnh gốc đã lưu.
+Generation chặn kết quả cũ và dọn output tới muộn. File tạm được dọn cả khi coroutine bị hủy sau khi đã ghi xong ảnh.
 Nguồn kỹ thuật: [ML Kit subject segmentation](https://developers.google.com/ml-kit/vision/subject-segmentation/android),
 [ModuleInstallClient](https://developers.google.com/android/guides/module-install-apis).
 
@@ -86,7 +92,8 @@ python tools/data/validate_fixtures.py
 
 Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process`.
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
-Evidence và hạn chế thực tế nằm ở [QA](qa/track-a-acceptance.md), trạng thái card chỉ cập nhật tại [board](execution/TASK_BOARD.md).
+Evidence ban đầu ở [QA](qa/track-a-acceptance.md), kết quả mới ở [QA bổ sung độc lập](qa/track-a-independent-followup.md);
+trạng thái card chỉ cập nhật tại [board](execution/TASK_BOARD.md).
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.
 
 Điểm D/B/C cần review: namespace/API v2, singleton media ownership, ProfileStorage chưa có, binding recognition, invalidation/stale outfit,
@@ -94,8 +101,9 @@ consent/revoke qua job, adapter đường dẫn sang request bytes và gate arti
 
 ## Điểm nhận việc để làm song song
 
-Nhánh bàn giao trên remote: `track/a-wardrobe-imaging`, implementation ở commit `80d33d8`; documentation QA có thể được cập nhật ở commit sau.
-Lấy nhánh bằng `git fetch origin`, review diff với `origin/main` trước khi merge vào nhánh riêng. Không tự coi branch A đã được merge vào main.
+Nhánh bàn giao trên remote: `track/a-wardrobe-imaging`. Bản đầu `80d33d8`/`e117153` đã được merge vào main qua `114d3cf`;
+người dùng yêu cầu các cải tiến độc lập tiếp theo được push lên **main** bằng `NQKhaixyz`.
+Lấy bản mới bằng `git fetch origin`, rồi tích hợp `origin/main` vào nhánh riêng sau khi review; nhánh A cũ không phải điểm lấy bản mới nhất.
 
 - **B:** implement `ClothingRecognition`/`RecognitionCapability` từ `core:model/.../wardrobe/WardrobeContracts.kt`, kiểm `RecognitionRequest.validate` trước gửi;
   thay `UnavailableRecognition` trong `feature:wardrobe/.../v2/WardrobeBindings.kt` khi có client v2 thật. Fake và lỗi/timeout fixtures đã có trong testFixtures.
