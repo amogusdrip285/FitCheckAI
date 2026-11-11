@@ -31,5 +31,5 @@ Không dùng mirror để vượt yêu cầu truy cập. Chưa gửi yêu cầu 
 4. Đánh giá compatibility AUC/FITB ở Track B; đo import/render/error ở Track A riêng biệt.
 5. Bổ sung cặp front/back được xác minh và ảnh tự chụp cho kiểm thử camera; không ghép hai item cùng loại thành một cặp.
 
-Bộ CC0 hiện tại tiếp tục là nguồn độc lập cho Track A: <https://github.com/alexeygrigorev/clothing-dataset>.
+Catalog hiện dùng cho Track A là Kaggle Fashion Product Images (Small) v1. Bộ CC0 tiếp tục phục vụ tái tạo các fixture ảnh đơn. [Nguồn dữ liệu Track A](README.md).
 Paper Polyvore: <https://arxiv.org/abs/1803.09196>.

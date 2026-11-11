@@ -64,8 +64,9 @@ MediaStore có giới hạn ảnh/hash/cleanup, component `OutfitVisual` dùng l
 Ảnh garment ở `filesDir/media/GARMENT`, ảnh PERSON/TRYON_RESULT và registry ở `noBackupFilesDir`.
 Schema 1 được migrate; file cũ được giữ để đọc/repair, không reset database.
 
-**Dataset:** 5.096 ảnh có nhãn được lọc từ bộ CC0; 21 món/24 ảnh thật và 3 cặp trước/sau được đóng gói trong debug.
-Repo còn có [100 ảnh bulk mẫu](data/samples/modern-clothing-100/README.md), kèm nhãn gốc và giấy phép; bulk đầy đủ giữ local, 100 ảnh mẫu không đóng gói APK.
+**Dataset Track A** dùng catalog Kaggle Fashion Product Images (Small) v1. Sau audit có **24.856 ảnh** thuộc 6 nhóm, kèm nhãn gốc và nhãn quy đổi của app. Script tải nguồn, tạo chỉ mục và xuất mẫu trên máy phát triển. [Cách chuẩn bị catalog](data/README.md#catalog-kaggle).
+
+Bản debug có bộ kiểm thử riêng gồm 21 món, 24 ảnh thật và 3 cặp trước/sau.
 Tủ đồ → **Ảnh kiểm thử** → **Thêm bộ ảnh vào tủ đồ**. Không tự seed khi tạo database; release không đóng gói fixtures.
 Nguồn/quyền, scripts tái tạo, giới hạn nhãn và đánh giá Polyvore nằm tại [data/README.md](data/README.md).
 

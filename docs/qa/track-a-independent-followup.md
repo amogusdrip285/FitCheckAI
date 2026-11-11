@@ -14,7 +14,7 @@ cập nhật docs và push tiếp lên main bằng tài khoản `NQKhaixyz`. Kh�
 | Preview tách nền | `GarmentCutoutProcessor` riêng cho garment; state generation chặn readiness/result cũ. Retry, đổi view, skip và đóng screen dọn preview; output tới muộn cũng được dọn. Bảy test điều khiển thời gian gồm unavailable/downloading/error/missing/late/cancel/close/invalid original return. |
 | Room native | 3 ca Android SQLite/media thật: save/reopen/replace/delete, migration 1→2 giữ counters/ảnh, trigger SQL abort rollback cả row và cleanup, 8 writer qua 2 repository chỉ một revision thắng. Chạy trong package test riêng. |
 | Provenance dataset | 21 record có `fieldProvenance`, `referenceFields`, trạng thái independent review PENDING; `groundTruthFields=[]`. Giữ nguyên 24 file ảnh và giá trị nhãn hiện có. Validator chặn claim ground truth chưa kiểm độc lập. |
-| Mẫu bulk chia sẻ | Đúng 100 ảnh CC0, 6 category, nhãn gốc và giấy phép ở `data/samples/modern-clothing-100`. Chọn từ train, không trùng fixtures; có script tái tạo/validator trong CI. Bulk đầy đủ vẫn local theo yêu cầu mới nhất. |
+| Catalog phát triển | Chuyển sang Kaggle v1 và gỡ 100 ảnh bulk cũ. Đã tải bản v1, audit nhãn/ảnh và xuất thử 12 ảnh đủ 6 nhóm. [Cách chạy và kết quả](../../data/README.md#catalog-kaggle). |
 | Script evidence | Mỗi `--label` phải mới để không lẫn WAL cũ; kiểm `PRAGMA integrity_check` trước so rows. Chạy khi app idle; không hỗ trợ thu snapshot đồng thời người dùng đang sửa dữ liệu. |
 
 Các ca unit mô phỏng trạng thái interruption và cancellation, không phải bằng chứng đã kill process tại mọi instruction của Android/filesystem.
@@ -27,7 +27,7 @@ Media recovery không tự xóa file hỏng đang được item tham chiếu ho�
 - Android API 35: **6 ca được phát hiện, 5 PASS, 1 SKIP**, không failure/error. Ca skip là probe ML Kit vì module chưa sẵn sàng, chi tiết bên dưới.
 - Database line coverage: **341/377 = 90,45%**, đạt gate 80%.
 - Fixtures: **21 món, 24 ảnh, 3 cặp đã đối chiếu nguồn, 6 category**; validator hash/quyền/provenance PASS.
-- Mẫu bulk: **100 ảnh, 6 category, 2,63 MiB**; validator hash/nhãn nguồn/license/metadata PASS. Đây là kiểm toàn vẹn dữ liệu, chưa phải xác nhận từng nhãn đúng với ảnh.
+- Catalog Kaggle: tải mới từ nguồn, kiểm hash, giải mã JPEG và xuất 12 ảnh **PASS**. Audit giữ **24.856 ảnh** từ 44.446 dòng. Hai ca Python kiểm dấu phẩy trong CSV, ID thiếu ảnh, JPEG hỏng, phạm vi và trùng ảnh đều PASS. [Báo cáo audit](../../data/reports/kaggle-fashion-small-audit.json).
 - App thật trên emulator: mở món có cặp ảnh, yêu cầu tách nền, thấy trạng thái model đang tải và ảnh gốc; bỏ chỉnh sửa giữ nguyên toàn bộ row `wardrobe_v2`.
 - Force-stop/reopen **3 lần**, kiểm integrity/bytes PASS: **51 món active, 1 tombstone, 30 row legacy, 54 media hash**. Evidence tại `build/outputs/track-a-device/independent-followup/summary.json`.
 
@@ -38,13 +38,13 @@ SHA-256 APK local của lần kiểm này (CI có thể cho byte khác do môi t
 | Debug | `3469b17fba0f7ead7f2b1bca942b4b2d73c8c2803eac543758e6f61a8623f6c1` |
 | Release unsigned | `7bda8b287bf8bcce7687ba5617ea910a4bc24c92c91f62bb6242172291bf5005` |
 
-Debug có 24 ảnh fixtures; release không có fixtures. Mẫu bulk 100 ảnh chỉ nằm trong repo, không thêm assets vào APK.
+Debug có 24 ảnh fixtures; catalog Kaggle được chuẩn bị trên máy phát triển. Các hash APK ở trên thuộc lần kiểm Android đã ghi ngày.
 
 Lệnh cho teammate (JDK 21, SDK 35 và một emulator/thiết bị kết nối):
 
 ```powershell
 python tools/data/validate_fixtures.py
-python tools/data/package_modern_sample.py
+python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 .\gradlew.bat :core:database:connectedDebugAndroidTest :core:imaging:connectedDebugAndroidTest
 .\gradlew.bat assembleDebug assembleRelease testDebugUnitTest :core:model:test lintDebug :core:database:verifyDatabaseCoverage
 python tools/qa/check_android_state.py --serial emulator-5554 --force-stops 3 --check-media --label independent-followup

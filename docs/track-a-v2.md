@@ -84,8 +84,11 @@ Nguồn kỹ thuật: [ML Kit subject segmentation](https://developers.google.co
 
 ## Kiểm thử và bàn giao
 
+Catalog Kaggle dùng cho thử nhập ảnh và đối chiếu nhãn trên PC. Chạy lệnh trong hướng dẫn để tải v1, chuẩn hóa 6 nhóm của app và xuất JPEG kèm manifest. [Hướng dẫn catalog](../data/README.md#catalog-kaggle).
+
 ```powershell
 python tools/data/validate_fixtures.py
+python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 .\gradlew.bat :core:model:test :core:database:testDebugUnitTest :core:imaging:testDebugUnitTest :feature:wardrobe:testDebugUnitTest
 .\gradlew.bat assembleDebug testDebugUnitTest :core:model:test lintDebug :core:database:verifyDatabaseCoverage
 ```

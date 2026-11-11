@@ -32,7 +32,7 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Bulk downloads/indexes stay local; licensed fixtures and the 100-photo sample are tracked.
+# Dataset archives and generated indexes stay local; licensed Android fixtures are tracked.
 data/raw/
 data/processed/
 __pycache__/

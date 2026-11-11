@@ -13,7 +13,7 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
 | [ ] | [PRE-002](tracks/A.md#pre-002) — Kiểm tra toolchain và máy Android | P0 | readiness | M0 | 40–70 | — | BLOCKED | JDK 21/SDK 35/AVD chạy được; chưa có máy Android thật và D tái lập. |
-| [ ] | [PRE-004](tracks/A.md#pre-004) — Chuẩn bị ảnh và fixture có quyền dùng | P0 | readiness | M0 | 35–60 | — | REVIEW | [21 món / 24 ảnh / 3 cặp và 100 ảnh bulk mẫu](../../data/README.md); provenance/reference rõ, groundTruthFields rỗng; chờ B review độc lập. |
+| [ ] | [PRE-004](tracks/A.md#pre-004) — Chuẩn bị ảnh và fixture có quyền dùng | P0 | readiness | M0 | 35–60 | — | REVIEW | [Catalog Kaggle v1](../../data/README.md#catalog-kaggle) có 24.856 ảnh sau audit; fixtures Android 21 món, 24 ảnh, 3 cặp có nguồn; chờ B review nhãn tham chiếu. |
 | [ ] | [D-001](tracks/A.md#d-001) — Checklist nghiệm thu và hồ sơ evidence | P0 | core | M6 | 30–45 | PRE-007, PRE-004 | REVIEW | [46/46 case P0](../qa/p0-case-index.md) và [mẫu evidence](../qa/evidence-template.md); không gán PASS cho gate chưa chạy. |
 | [ ] | [A-001](tracks/A.md#a-001) — Room schema và Clothing Repository | P0 | core | M2 | 90–150 | S-002 | REVIEW | Room native API 35: migration, SQL abort rollback, reopen/delete, 8 writers/CAS; chờ D/B review shared CT-01. |
 | [ ] | [A-002](tracks/A.md#a-002) — MediaStore và nhập ảnh front/back | P0 | core | M2 | 75–120 | S-002 | REVIEW | 3 scope/EXIF/hash/caps; thêm orphan recovery, bảo vệ ancestor và symlink, cleanup từng mục; unit + Android tests pass, chờ D/C nhận contract. |

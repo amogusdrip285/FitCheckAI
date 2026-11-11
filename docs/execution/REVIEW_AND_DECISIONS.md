@@ -111,7 +111,7 @@ Không dựng skeleton/manual DI khác hoặc thay version toolchain đã chốt
 - Checkout thực tế có 30 item v1 trên emulator (wearCount tổng 9), nên migration Room 1→2 có ý nghĩa và đã kiểm bảo toàn dữ liệu.
   Nhận định “chưa có dữ liệu” trong audit planning cũ không được dùng để reset database này.
 - PRE-004 đã có bộ 21 món/24 ảnh thật, 3 cặp front/back và manifest quyền; nhãn do trợ lý rà soát, chưa có B adjudication.
-  Bulk CC0 có 5.096 ảnh có nhãn sau lọc; Polyvore chưa nhập vì gate truy cập và điều khoản cần làm rõ.
+  Catalog Kaggle v1 có 24.856 ảnh có nhãn sau audit. Nguồn CC0 phục vụ tái tạo các fixture ảnh đơn. [Hướng dẫn dữ liệu Track A](../../data/README.md).
 - Chọn CameraX đang có làm camera route duy nhất; không làm thêm camera intent A-101. Photo Picker vẫn là đường nhập ảnh chính.
 - `UnavailableRecognition` là binding mặc định v2; fake chỉ phục vụ tests. Không gọi fake là AI live hoặc tự gửi ảnh để “đủ demo”.
 - Share/sync chỉ tới local API/metadata prototype; chưa bật live cloud, thanh toán, beta, VTO hay luồng share từ Today.
@@ -126,9 +126,9 @@ Tiếp tục Track A sau merge `114d3cf`: ưu tiên recovery file/cleanup, previ
 Không đổi schema hoặc shared contract. Dataset làm rõ per-field provenance, reference chưa adjudicate không còn nằm trong `groundTruthFields`.
 [Evidence bổ sung](../qa/track-a-independent-followup.md) ghi riêng model ML Kit UNAVAILABLE trên AVD và gate chất lượng chưa chạy.
 Người dùng yêu cầu commit mới bằng `NQKhaixyz` và push main; GitHub authentication đã xác minh đúng account và quyền push.
-Người dùng giới hạn phần ảnh bulk đưa lên GitHub còn khoảng 100 ảnh: commit đúng 100 ảnh CC0 cùng nhãn nguồn/giấy phép
-ở `data/samples/modern-clothing-100`; giữ nguyên 24 ảnh fixtures đã có. Bulk đầy đủ và ZIP tiếp tục gitignore.
-Mẫu 100 ảnh chỉ lấy train, không trùng fixture và không dùng làm holdout đo AI.
+Theo yêu cầu cập nhật nguồn dữ liệu, gỡ 100 ảnh bulk CC0 và manifest mẫu khỏi cây repo, chuyển phần catalog sang Kaggle Fashion Product Images (Small) v1.
+Script đối chiếu ID sản phẩm, giữ metadata nguồn, quy đổi loại/màu và ghi lý do loại từng dòng. ZIP, chỉ mục và ảnh xuất được tạo local.
+Các ca Android cần ảnh trước/sau dùng bộ fixtures có xác minh cặp. [Audit catalog](../../data/reports/kaggle-fashion-small-audit.json).
 
 Chốt theo dependency/điểm sử dụng, không hạn ngày. “Theo yêu cầu mới” là quyết định sản phẩm đã có; “đề xuất” hoặc “chưa xác nhận” không được giả thành đã triển khai.
 
