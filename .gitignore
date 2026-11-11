@@ -31,3 +31,9 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Downloaded source datasets and generated indexes; curated licensed fixtures are tracked separately.
+data/raw/
+data/processed/
+__pycache__/
+*.pyc

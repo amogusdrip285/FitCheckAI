@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-// Danh sách được lưu dạng chuỗi nối bằng ListCodec (xem Mappers.kt) — tránh TypeConverter phức tạp.
+// Keep the public entity shape for tracks C/D. ListCodec reads legacy strings and writes JSON.
 
 @Entity(tableName = "clothing_items")
 data class ClothingItemEntity(

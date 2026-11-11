@@ -1,6 +1,7 @@
 package com.fitcheckai.app
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checkroom
@@ -71,7 +72,7 @@ fun FitCheckApp(viewModel: MainViewModel = hiltViewModel()) {
         NavHost(
             navController = navController,
             startDestination = start,
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
         ) {
             onboardingGraph(navController)
             todayGraph(navController)

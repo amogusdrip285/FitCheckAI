@@ -2,7 +2,10 @@
 
 [Workflow](../../../TEAM_WORKFLOW.md) · [Board](../TASK_BOARD.md) · [Contracts](../CONTRACTS.md) · [Milestones](../DEPENDENCIES_AND_INTEGRATION.md)
 
-Task card ở file này là nguồn scope/acceptance. Trạng thái chỉ ở Board; mọi task còn TODO. ID cũ giữ ổn định dù prefix khác owner: **owner trong bảng là người chịu trách nhiệm hiện tại**. Chọn task có dependency đạt theo priority, không theo ngày. Mọi đường dẫn source là deliverable tương lai, chưa có implementation.
+Task card ở file này là nguồn scope/acceptance; trạng thái hiện tại chỉ ở [Board](../TASK_BOARD.md).
+Implementation độc lập và giới hạn kiểm chứng nằm ở [hướng dẫn A v2](../../track-a-v2.md) và [QA](../../qa/track-a-acceptance.md).
+ID cũ giữ ổn định dù prefix khác owner: **owner trong bảng là người chịu trách nhiệm hiện tại**.
+Chọn task có dependency đạt theo priority, không theo ngày; đường dẫn đề xuất trong card cần đối chiếu kiến trúc module/Hilt đang có.
 
 ## Hàng đợi P0
 

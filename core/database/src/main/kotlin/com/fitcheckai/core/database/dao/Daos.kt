@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.Flow
 /** OWNER: Track A */
 @Dao
 interface ClothingItemDao {
-    @Query("SELECT * FROM clothing_items ORDER BY createdAtMillis DESC")
+    @Query("SELECT * FROM clothing_items ORDER BY createdAtMillis DESC, id ASC")
     fun observeAll(): Flow<List<ClothingItemEntity>>
 
     @Query("SELECT * FROM clothing_items WHERE id = :id")
@@ -23,11 +23,22 @@ interface ClothingItemDao {
     @Upsert
     suspend fun upsert(item: ClothingItemEntity)
 
+    @Query(
+        "UPDATE clothing_items SET category = :category, subCategory = :subCategory, " +
+            "colors = :colors, pattern = :pattern, material = :material, formality = :formality, " +
+            "seasons = :seasons, styleTags = :styleTags WHERE id = :id",
+    )
+    suspend fun updateAttributes(
+        id: String, category: String, subCategory: String, colors: String, pattern: String,
+        material: String?, formality: Int, seasons: String, styleTags: String,
+    ): Int
+
     @Query("DELETE FROM clothing_items WHERE id = :id")
     suspend fun deleteById(id: String)
 
     @Query(
-        "UPDATE clothing_items SET wearCount = wearCount + 1, lastWornAtMillis = :atMillis " +
+        "UPDATE clothing_items SET wearCount = wearCount + 1, " +
+            "lastWornAtMillis = MAX(COALESCE(lastWornAtMillis, :atMillis), :atMillis) " +
             "WHERE id IN (:ids)",
     )
     suspend fun markWorn(ids: List<String>, atMillis: Long)
