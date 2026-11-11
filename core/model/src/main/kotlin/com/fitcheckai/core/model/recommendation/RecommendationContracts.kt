@@ -16,7 +16,8 @@ const val MAX_EXCLUDED_SIGNATURES = 5
 
 enum class Occasion { CASUAL, SCHOOL, WORK, DATE, PARTY, SPORT, FORMAL_EVENT }
 enum class OutfitSource { AI_LIVE, RULES, FAKE }
-enum class ShortfallReason { NOT_ENOUGH_DISTINCT_COMBINATIONS, FOCUS_LIMITS_COMBINATIONS, EXCLUSIONS_LIMIT_COMBINATIONS }
+/** Mirrors Track B proxy `/v2/outfits` (proxy/src/outfits). Change both sides together. */
+enum class ShortfallReason { NOT_ENOUGH_DISTINCT_COMBINATIONS, CONSTRAINTS_TOO_STRICT, INVALID_OUTFITS_REMOVED }
 
 /** Only what the generator needs: no images, no local paths. */
 data class ItemSummary(val id: String, val revision: Long, val attributes: ClothingAttributes)
