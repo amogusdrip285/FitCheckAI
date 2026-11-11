@@ -16,7 +16,8 @@ private const val FAKE_LATENCY_MS = 600L
 
 /**
  * SPRINT 0 STUB — luôn trả về một áo thun trắng.
- * TODO(Track B): ClaudeClothingTagger gọi `POST /v1/tag` qua proxy ([BuildConfig.PROXY_URL]).
+ * TODO(Track B, B-007): RecognitionClient gọi `POST /v2/recognition` qua proxy ([BuildConfig.PROXY_URL]);
+ * wire format ở docs/contracts/proxy-api.md. Chờ D (S-002) công bố interface v2.
  */
 @Singleton
 class StubClothingTagger @Inject constructor() : ClothingTagger {
@@ -35,7 +36,7 @@ class StubClothingTagger @Inject constructor() : ClothingTagger {
 
 /**
  * SPRINT 0 STUB — ghép áo/quần/giày đầu tiên tìm thấy, giả lập AI.
- * TODO(Track B): ClaudeOutfitGenerator gọi `POST /v1/outfits` qua proxy.
+ * TODO(Track B, B-003): RecommendationClient gọi `POST /v2/outfits` qua proxy. Chờ D (S-002).
  */
 @Singleton
 class StubAiOutfitGenerator @Inject constructor() : AiOutfitGenerator {

@@ -1,0 +1,7 @@
+# Copy thành proxy/.dev.vars (đã gitignore). KHÔNG commit file .dev.vars thật.
+ANTHROPIC_API_KEY=
+SESSION_SECRET=thay-bang-chuoi-ngau-nhien-dai-it-nhat-32-ky-tu
+DEMO_ACCESS_CODE=thay-bang-ma-demo
+# Bật service khi chạy local (mặc định trong wrangler.toml là off):
+SERVICE_RECOGNITION=on
+SERVICE_OUTFITS=on

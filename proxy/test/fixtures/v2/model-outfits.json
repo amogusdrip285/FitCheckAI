@@ -1,0 +1,41 @@
+{
+  "_comment": "Output giả lập của model (đúng ModelOutfitsSchema) cho wardrobe-items.json. Dùng cho test validator/route; KHÔNG phải evidence live.",
+  "fiveValid": {
+    "outfits": [
+      { "itemIds": ["t1", "b1"], "explanation": "Áo trắng trơn với quần đen tạo vẻ tối giản, hợp đi làm." },
+      { "itemIds": ["t2", "b1", "s1"], "explanation": "Sơ mi kẻ xanh và quần đen lịch sự; sneaker trắng giữ sự thoải mái." },
+      { "itemIds": ["t1", "b2", "s1"], "explanation": "Áo trắng với jeans và sneaker cho ngày làm việc thoải mái." },
+      { "itemIds": ["t2", "b2"], "explanation": "Sơ mi kẻ cân bằng chiếc jeans, hợp văn phòng không quá trang trọng." },
+      { "itemIds": ["d1", "s1"], "explanation": "Váy đỏ họa tiết nổi bật, sneaker trắng giúp bớt cầu kỳ." }
+    ],
+    "shortfallReason": null
+  },
+  "fewerWithReason": {
+    "outfits": [
+      { "itemIds": ["top1", "bottom1"], "explanation": "Áo trắng với quần đen đơn giản, đúng sở thích tối giản khi đi làm." }
+    ],
+    "shortfallReason": "NOT_ENOUGH_DISTINCT_COMBINATIONS"
+  },
+  "mixedInvalid": {
+    "outfits": [
+      { "itemIds": ["t1", "b1"], "explanation": "Bộ hợp lệ duy nhất." },
+      { "itemIds": ["t1", "ghost"], "explanation": "Có món không tồn tại." },
+      { "itemIds": ["t1", "t1", "b1"], "explanation": "Lặp món trong bộ." },
+      { "itemIds": ["d1", "t2"], "explanation": "Váy kèm áo, sai slot." },
+      { "itemIds": ["b1", "t1"], "explanation": "Trùng tập món với bộ đầu." },
+      { "itemIds": ["t2", "b2"], "explanation": "   " },
+      { "itemIds": ["t1"], "explanation": "Thiếu quần." }
+    ],
+    "shortfallReason": null
+  },
+  "allInvalid": {
+    "outfits": [
+      { "itemIds": ["ghost1", "ghost2"], "explanation": "Toàn món bịa." }
+    ],
+    "shortfallReason": null
+  },
+  "empty": {
+    "outfits": [],
+    "shortfallReason": "CONSTRAINTS_TOO_STRICT"
+  }
+}

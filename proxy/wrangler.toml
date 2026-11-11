@@ -4,7 +4,22 @@ compatibility_date = "2025-04-01"
 
 [vars]
 APP_VERSION = "dev"
+# Model cho recognition/recommendation (PRE-003 chốt). Đổi model = cập nhật eval B-004/B-006.
+AI_MODEL = "claude-opus-5-5"
+# Kill switch theo service: chỉ "on" mới bật. Mặc định TẮT để không gọi provider ngoài ý muốn.
+SERVICE_RECOGNITION = "off"
+SERVICE_OUTFITS = "off"
+SERVICE_TRYON = "off"
+# "DUAL" (front + back) hoặc "FRONT_ONLY".
+RECOGNITION_VIEWS = "DUAL"
+# Cap best-effort mỗi isolate/ngày UTC — KHÔNG phải hard cap tiền. Đặt spend limit thật ở console provider.
+DAILY_CAP_RECOGNITION = "200"
+DAILY_CAP_OUTFITS = "200"
+RATE_LIMIT_PER_MINUTE = "20"
+SESSION_TTL_SECONDS = "43200"
 
-# Secret (KHÔNG ghi vào file này):
+# Secrets (KHÔNG ghi vào file này, KHÔNG commit):
 #   npx wrangler secret put ANTHROPIC_API_KEY
-# Dev local: tạo proxy/.dev.vars với ANTHROPIC_API_KEY=... (đã gitignore)
+#   npx wrangler secret put SESSION_SECRET      # chuỗi ngẫu nhiên ≥32 ký tự
+#   npx wrangler secret put DEMO_ACCESS_CODE    # mã demo đổi lấy session token
+# Dev local: copy .dev.vars.example thành proxy/.dev.vars (đã gitignore) rồi điền giá trị.
