@@ -7,9 +7,9 @@
 //   node eval/ai/run-recognition.mjs --base-url ... --labels labels.track-a.json \
 //        --images-dir eval/ai/images/track-a/data/fixtures/modern-clothing --all-front --confirm-spend
 //
-// Chỉ dùng groundTruthFields A công bố (category/colors/pattern). Nhãn của A chưa được người độc lập
-// kiểm — report phải ghi giới hạn này.
-import { readFileSync, writeFileSync } from "node:fs";
+// Chỉ dùng groundTruthFields A công bố (category/colors/pattern). Review nhãn của B nằm ở
+// recognition/label-review.track-a.json và được áp mặc định; --no-review để dùng nhãn gốc của A.
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { EVAL_DIR, parseArgs } from "../lib/common.mjs";
 
@@ -30,6 +30,24 @@ const items = manifest.items
     annotationStatus: i.annotationStatus,
   }));
 
+// Áp review nhãn của B (recognition/label-review.track-a.json) trừ khi --no-review.
+const reviewPath = path.resolve(EVAL_DIR, "recognition", String(args.review ?? "label-review.track-a.json"));
+let applied = 0;
+if (args["no-review"] !== true && existsSync(reviewPath)) {
+  const review = JSON.parse(readFileSync(reviewPath, "utf8"));
+  const byId = new Map(items.map((i) => [i.id, i]));
+  for (const o of review.overrides) {
+    const item = byId.get(o.id);
+    if (!item) throw new Error(`Review: không thấy món ${o.id} trong manifest`);
+    if (JSON.stringify(item.labels[o.field]) !== JSON.stringify(o.from)) {
+      throw new Error(`Review: nhãn ${o.field} của ${o.id} trong manifest đã đổi (khác 'from') — review lại trước khi áp`);
+    }
+    item.labels[o.field] = o.to;
+    item.reviewed = true;
+    applied++;
+  }
+}
+
 const pairs = items.filter((i) => i.back);
 const cases = pairs.map((p, n) => ({ id: `N0${n + 1}-matched-pair-${p.id.slice(0, 8)}`, kind: "matched-pair", front: p.id, back: p.id, expectItem: p.id }));
 if (pairs.length >= 2) {
@@ -38,4 +56,4 @@ if (pairs.length >= 2) {
 }
 
 writeFileSync(out, `${JSON.stringify({ _source: "Track A data/fixtures/modern-clothing/manifest.json", items, cases }, null, 2)}\n`, "utf8");
-console.log(`Đã ghi ${path.relative(process.cwd(), out)}: ${items.length} món, ${pairs.length} cặp, ${cases.length} case cặp (+ --all-front để chạy front-only từng món).`);
+console.log(`Đã ghi ${path.relative(process.cwd(), out)}: ${items.length} món, ${pairs.length} cặp, ${cases.length} case cặp, ${applied} nhãn sửa theo review B (+ --all-front để chạy front-only từng món).`);
