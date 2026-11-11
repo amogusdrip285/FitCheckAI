@@ -15,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -65,7 +66,9 @@ class MlKitSegmenter @Inject constructor(
         }
     }
 
-    override suspend fun removeBackground(sourceUri: String): Result<String> = try {
+    override suspend fun removeBackground(sourceUri: String): Result<String> {
+        var rendered: String? = null
+        return try {
         val path = withTimeoutOrNull(8_000) {
             val bitmap = images.decode(sourceUri)
             val segmenter = client()
@@ -78,7 +81,7 @@ class MlKitSegmenter @Inject constructor(
                 val output = result.foregroundBitmap ?: throw NoSubjectException()
                 foreground = output
                 if (!hasForeground(output)) throw NoSubjectException()
-                images.saveForeground(output)
+                images.saveForeground(output).also { rendered = it }
             } finally {
                 val task = pending
                 if (task != null && !task.isComplete) {
@@ -97,10 +100,13 @@ class MlKitSegmenter @Inject constructor(
         } ?: throw SegmentationUnavailableException()
         Result.success(path)
     } catch (cancelled: CancellationException) {
+        withContext(NonCancellable) { images.discard(rendered) }
         throw cancelled
     } catch (error: Exception) {
+        withContext(NonCancellable) { images.discard(rendered) }
         // The caller has already persisted the original and can present a useful fallback notice.
         Result.failure(error)
+    }
     }
 
     private suspend fun hasForeground(bitmap: Bitmap): Boolean = withContext(Dispatchers.Default) {

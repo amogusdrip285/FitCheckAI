@@ -14,7 +14,7 @@ import re
 import uuid
 
 from PIL import Image, ImageFilter, ImageOps
-from prepare_modern_clothing import ROOT, RAW, COMMIT, SOURCE, write_json
+from prepare_modern_clothing import ROOT, RAW, COMMIT, SOURCE, CATEGORIES, write_json
 
 # Visual review of source photos: category, visible colors, pattern only. No material/season guesses.
 SELECTION = [
@@ -45,6 +45,22 @@ PAIRS = [
 DEST = ROOT / "data/fixtures/modern-clothing"
 
 
+def annotation_metadata(raw_label=None, pair=False):
+    """Reference annotations are disclosed per field; none has independent adjudication yet."""
+    provenance = {
+        "name": {"method": "assistant_authored_display_name"},
+        "category": {"method": "source_label_mapped_and_assistant_visual_review" if raw_label else "assistant_visual_review"},
+        "colors": {"method": "assistant_visual_review"},
+        "pattern": {"method": "assistant_visual_review"},
+    }
+    if raw_label:
+        provenance["category"]["sourceLabel"] = raw_label
+    if pair:
+        provenance["pairIdentity"] = {"method": "source_view_descriptions_plus_assistant_visual_comparison"}
+    return {"groundTruthFields": [], "referenceFields": ["category", "colors", "pattern"] + (["pairIdentity"] if pair else []),
+            "independentReviewStatus": "PENDING", "fieldProvenance": provenance}
+
+
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -67,6 +83,7 @@ def main(commons_dir):
     items = []
     for prefix, name, category, colors, pattern in SELECTION:
         row = next(row for row in rows if row["image"].startswith(prefix))
+        assert CATEGORIES.get(row["label"]) == category
         source = next((RAW / "images").glob(prefix + "*"))
         identity = str(uuid.uuid5(uuid.NAMESPACE_URL, SOURCE + "/" + row["image"]))
         front = photo(source, identity + "-front.jpg", {
@@ -78,7 +95,7 @@ def main(commons_dir):
                       "material": None, "formality": None, "seasonTags": [], "styleTags": [],
                       "front": front, "back": None, "pairVerified": False,
                       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-                      "groundTruthFields": ["category", "colors", "pattern"], "sourceGroup": "CC0-clothing-dataset"})
+                      **annotation_metadata(row["label"]), "sourceGroup": "CC0-clothing-dataset"})
     pending = []
     records = {}
     if commons_dir:
@@ -109,7 +126,7 @@ def main(commons_dir):
         items.append({"id": identity, "name": name, "category": "TOP", "colors": review["colors"], "pattern": "PRINTED",
                       "material": None, "formality": None, "seasonTags": [], "styleTags": [], **views, "pairVerified": True,
                       "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
-                      "groundTruthFields": ["category", "colors", "pattern", "pairIdentity"], "sourceGroup": "Wikimedia-Commons"})
+                      **annotation_metadata(pair=True), "sourceGroup": "Wikimedia-Commons"})
     for item in items:
         for view in ("front", "back"):
             if item.get(view):

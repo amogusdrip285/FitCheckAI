@@ -9,6 +9,7 @@ plugins {
 android {
     buildFeatures.buildConfig = true
     testOptions.unitTests.isIncludeAndroidResources = true
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
 
 jacoco { toolVersion = "0.8.13" }
@@ -35,6 +36,9 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.robolectric)
     testImplementation(testFixtures(project(":core:model")))
+    androidTestImplementation(project(":core:imaging"))
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 // Measure handwritten database code; Room/Hilt and Kotlin data-class boilerplate are generated.

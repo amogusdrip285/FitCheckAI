@@ -2,6 +2,7 @@
 
 Private DB snapshots stay under ignored build/outputs/track-a-device. Do not publish those files.
 UI onboarding/navigation and physical-device quality remain separate manual checks.
+Run with the app idle and do not edit data during collection. Each label creates a new evidence directory.
 """
 import argparse
 import hashlib
@@ -25,7 +26,9 @@ def main():
     if not 0 <= args.force_stops <= 10 or not args.label.replace("-", "").isalnum():
         raise SystemExit("Invalid count/label")
     output = ROOT / "build/outputs/track-a-device" / args.label
-    output.mkdir(parents=True, exist_ok=True)
+    if output.exists():
+        parser.error("Evidence label already exists; choose a new --label to avoid mixing old WAL/snapshots")
+    output.mkdir(parents=True)
     def adb(*command):
         return subprocess.check_output([args.adb, "-s", args.serial, *command], timeout=60)
     def snapshot(index):
@@ -36,6 +39,8 @@ def main():
             if name in names:
                 (destination / name).write_bytes(adb("exec-out", "run-as", PACKAGE, "cat", "databases/" + name))
         with sqlite3.connect(destination / "fitcheck.db") as db:
+            assert db.execute("PRAGMA integrity_check").fetchone() == ("ok",), "Snapshot is inconsistent; rerun with a new label while app is idle"
+            db.execute("BEGIN")
             rows = db.execute("SELECT id, revision, deletedAt, payload FROM wardrobe_v2 ORDER BY id").fetchall()
             legacy = db.execute("SELECT id,wearCount,lastWornAtMillis FROM clothing_items ORDER BY id").fetchall()
         return rows, legacy

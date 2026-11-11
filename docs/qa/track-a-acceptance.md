@@ -1,5 +1,8 @@
 # Track A v2 — nghiệm thu phần độc lập
 
+> Snapshot nghiệm thu bản đầu `80d33d8`. Xem [bổ sung độc lập sau merge main](track-a-independent-followup.md)
+> cho recovery, lifecycle preview, Room native và provenance dataset cập nhật; các con số/hash bên dưới là lịch sử bản đầu.
+
 Ngày chạy: **11/11/2026**, múi giờ Asia/Ho_Chi_Minh. Nhánh `track/a-wardrobe-imaging`, base `origin/main` `7d995a5`, source bàn giao `80d33d8`.
 Người dùng xác nhận chưa có điện thoại Android thật hoặc nhánh B/D riêng; làm phần độc lập trước.
 Đây là evidence của implementation A trong checkout hiện tại, **không phải 23/23 card DONE hoặc sản phẩm AI end-to-end**.

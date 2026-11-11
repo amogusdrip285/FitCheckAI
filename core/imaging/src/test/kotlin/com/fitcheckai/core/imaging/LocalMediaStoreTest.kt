@@ -113,4 +113,39 @@ class LocalMediaStoreTest {
         assertTrue(media.read(orphan).isFailure); assertTrue(media.read(child).isFailure)
         assertTrue(media.read(retained).isSuccess); assertTrue(media.read(recent).isSuccess); assertTrue(media.read(person).isSuccess)
     }
+    @Test fun `recovery preserves ancestors of a saved derivative`() = runBlocking {
+        val original = media.importImage(source().path, MediaScope.GARMENT, owner, ImageView.FRONT).getOrThrow()
+        val child = media.derive(original, DerivativePreset.THUMBNAIL).getOrThrow()
+        File(context.filesDir, "media-index/${original.id}.json").setLastModified(1)
+        assertEquals(0, media.pruneGarmentDrafts(setOf(child.id), 1000).getOrThrow())
+        assertTrue(media.read(original).isSuccess); assertTrue(media.read(child).isSuccess)
+    }
+    @Test fun `crash leftovers expire but saved missing index recent private and unknown files survive`() = runBlocking {
+        val stranded = media.importImage(source().path, MediaScope.GARMENT, owner, ImageView.FRONT).getOrThrow()
+        val saved = media.importImage(source().path, MediaScope.GARMENT, owner, ImageView.FRONT).getOrThrow()
+        val recent = media.importImage(source().path, MediaScope.GARMENT, owner, ImageView.FRONT).getOrThrow()
+        val person = media.importImage(source().path, MediaScope.PERSON, owner, ImageView.FRONT).getOrThrow()
+        val files = listOf(stranded, saved, recent, person).associateWith { File(media.displayPath(it)!!) }
+        for (ref in files.keys) {
+            val root = if (ref.scope == MediaScope.GARMENT) context.filesDir else context.noBackupFilesDir
+            File(root, "media-index/${ref.id}.json").delete()
+            if (ref != recent) files.getValue(ref).setLastModified(1)
+        }
+        val partial = File(files.getValue(stranded).parentFile, "${UUID.randomUUID()}.jpg.new").apply { writeText("partial"); setLastModified(1) }
+        val unknown = File(files.getValue(stranded).parentFile, "do-not-delete.txt").apply { writeText("unmanaged"); setLastModified(1) }
+        assertEquals(2, media.pruneGarmentDrafts(setOf(saved.id), 1000).getOrThrow())
+        assertFalse(files.getValue(stranded).exists()); assertFalse(partial.exists())
+        assertTrue(files.getValue(saved).exists()); assertTrue(files.getValue(recent).exists())
+        assertTrue(files.getValue(person).exists()); assertTrue(unknown.exists())
+    }
+    @Test fun `bad cleanup journal does not prevent unrelated pending deletion recovery`() = runBlocking {
+        val ref = media.importImage(source().path, MediaScope.GARMENT, owner, ImageView.FRONT).getOrThrow()
+        val file = File(media.displayPath(ref)!!)
+        val journal = File(context.filesDir, "media-cleanup").apply { mkdirs() }
+        File(journal, "broken.json").writeText("interrupted journal")
+        File(journal, "${ref.id}.json").writeText(WardrobeCodec.encodeMedia(ref))
+        assertTrue(media.retryCleanup().isFailure)
+        assertFalse(file.exists()); assertTrue(File(journal, "broken.json").exists())
+        assertFalse(File(journal, "${ref.id}.json").exists())
+    }
 }

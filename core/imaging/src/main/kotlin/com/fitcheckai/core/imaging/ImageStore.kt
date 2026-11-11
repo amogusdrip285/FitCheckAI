@@ -17,6 +17,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -71,8 +73,13 @@ class ImageStore @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    internal suspend fun saveForeground(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
-        write(bitmap, "png", Bitmap.CompressFormat.PNG)
+    internal suspend fun saveForeground(bitmap: Bitmap): String {
+        var created: String? = null
+        return try { withContext(Dispatchers.IO) { write(bitmap, "png", Bitmap.CompressFormat.PNG).also { created = it } } }
+        catch (cancelled: CancellationException) {
+            withContext(NonCancellable) { discard(created) }
+            throw cancelled
+        }
     }
 
     /** White composite avoids turning a transparent background black in JPEG. Hash the exact upload bytes. */

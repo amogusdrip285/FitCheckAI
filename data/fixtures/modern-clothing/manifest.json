@@ -35,12 +35,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shirt"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "9e8a5c51-7ff1-56fd-9ae5-30377c174e1c",
@@ -73,12 +90,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shirt"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "914979a5-24cc-5af7-a0b4-50628d23e122",
@@ -111,12 +145,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "T-Shirt"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "2b7c2338-7c4f-5a8f-b996-6537ba80b64b",
@@ -149,12 +200,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "8cca0e89-76f2-53bd-981a-3abd3c7bc9d5",
@@ -187,12 +255,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "4d0ffc98-c648-5150-89e4-467902677386",
@@ -226,12 +311,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "ae39f6ec-2220-570e-965c-a098feb8fdcb",
@@ -266,12 +368,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "a06aab12-9fbb-5fd9-9c7a-1af5cd789242",
@@ -304,12 +423,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "40d61e48-eb69-5b29-8d5f-f677a3310a4e",
@@ -342,12 +478,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "4a93098c-cb1a-507a-bede-311b6b9027ea",
@@ -380,12 +533,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "12f79b37-045d-509c-8458-1b65c2abdc6f",
@@ -418,12 +588,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "8fff6408-b532-5c5b-b21e-eadccea35fb6",
@@ -456,12 +643,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "d05f08c5-2560-5ae4-952b-86857583722e",
@@ -495,12 +699,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "fd8339a5-a377-5390-b240-e5b7866d5acc",
@@ -533,12 +754,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "287f9233-6405-599f-9509-4942425579f4",
@@ -571,12 +809,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "77fa7ad0-4aaa-5da2-a061-7eccb5006cbc",
@@ -609,12 +864,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "a3b267a2-2aef-55ba-9679-e82c9db039e9",
@@ -648,12 +920,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "64d3d6f7-25bf-5cec-a8b9-1f0d9cead259",
@@ -686,12 +975,29 @@
       "back": null,
       "pairVerified": false,
       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
         "category",
         "colors",
         "pattern"
       ],
-      "sourceGroup": "CC0-clothing-dataset"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
     },
     {
       "id": "90c35860-7e9d-5e80-a2ab-8642cebce60f",
@@ -744,13 +1050,32 @@
       },
       "pairVerified": true,
       "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
         "category",
         "colors",
         "pattern",
         "pairIdentity"
       ],
-      "sourceGroup": "Wikimedia-Commons"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
     },
     {
       "id": "097c68f1-452f-5626-b75a-b1f89db7cb75",
@@ -804,13 +1129,32 @@
       },
       "pairVerified": true,
       "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
         "category",
         "colors",
         "pattern",
         "pairIdentity"
       ],
-      "sourceGroup": "Wikimedia-Commons"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
     },
     {
       "id": "1df9ecb9-22ed-5bd3-b5db-188eebfe1041",
@@ -864,13 +1208,32 @@
       },
       "pairVerified": true,
       "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
-      "groundTruthFields": [
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
         "category",
         "colors",
         "pattern",
         "pairIdentity"
       ],
-      "sourceGroup": "Wikimedia-Commons"
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
     }
   ],
   "pendingVerifiedPairs": [],

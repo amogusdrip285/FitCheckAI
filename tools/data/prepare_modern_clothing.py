@@ -87,7 +87,9 @@ def audit():
             excluded.append({**item, "reason": "ambiguous_source_label"}); continue
         item["group"] = hashlib.sha256(("contributor:" + (row.get("sender_id") or identity)).encode()).hexdigest()
         # Source only supplies a coarse class, not colors/material/style/front-back identity.
-        item["groundTruthFields"] = ["category"]
+        item["referenceFields"] = ["category"]
+        item["groundTruthFields"] = []
+        item["independentReviewStatus"] = "PENDING"
         item["annotationStatus"] = "source_label_unreviewed"
         item["back"] = None
         hashes[item["sha256"]].append(item)

@@ -29,6 +29,7 @@ jobs:
         run: |
           python -m pip install -r tools/data/requirements.txt
           python tools/data/validate_fixtures.py
+          python tools/data/package_modern_sample.py
       - name: Build, unit test, lint
         run: ./gradlew assembleDebug testDebugUnitTest :core:model:test lintDebug :core:database:verifyDatabaseCoverage --console=plain
       - name: Upload test and database coverage reports

@@ -94,17 +94,22 @@ class RoomWardrobeRepository @Inject constructor(private val db: AppDatabase, pr
         events.emit(WardrobeInvalidation(id, tombstone.revision, true))
         cleanPending()
         DeletionReceipt(id, tombstone.revision, requireNotNull(tombstone.deletedAt),
-            dao.pending().any { WardrobeCodec.decodeMedia(it.ref).ownerEntityId == id })
+            dao.pending().any { entry -> runCatching { WardrobeCodec.decodeMedia(entry.ref).ownerEntityId == id }.getOrDefault(true) })
     } }
 
     suspend fun retryCleanup(): Result<Int> = mutations.withLock { cleanPending() }
     private suspend fun cleanPending(): Result<Int> = wardrobeResult {
-        media.retryCleanup().getOrThrow()
+        var failed = media.retryCleanup().isFailure
         var count = 0
         dao.pending().forEach { entry ->
-            val removed = media.remove(WardrobeCodec.decodeMedia(entry.ref))
-            if (removed.getOrNull()?.cleanupPending == false) { dao.finishCleanup(entry.mediaId); count++ }
+            val ref = runCatching { WardrobeCodec.decodeMedia(entry.ref) }.getOrNull()
+            if (ref == null) failed = true else {
+                val removed = media.remove(ref)
+                if (removed.getOrNull()?.cleanupPending == false) { dao.finishCleanup(entry.mediaId); count++ }
+                else failed = true
+            }
         }
+        if (failed) throw WardrobeException(ErrorCode.IO, "Một số ảnh đang chờ dọn lại; món đồ đã lưu vẫn được giữ nguyên.")
         count
     }
 
