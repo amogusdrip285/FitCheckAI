@@ -1,0 +1,378 @@
+{
+  "schemaVersion": 2,
+  "manifestId": "fitcheckai-tryon-technical-fixtures-v2",
+  "createdAtUtc": "2026-11-11T06:55:00Z",
+  "provenance": "SYNTHETIC_TECHNICAL_FIXTURE",
+  "eligibleForLiveQualityGate": false,
+  "notes": "Synthetic metadata and in-memory generated test images only. Contains ZERO real person photographs and ZERO PII.",
+  "positiveCases": [
+    {
+      "caseId": "case-pos-01-single-top",
+      "title": "Single garment TOP (Áo sơ mi cổ bẻ)",
+      "subjectPseudonym": "synthetic-subj-01",
+      "requestedViews": ["FRONT", "BACK"],
+      "outfitId": "outfit-fix-01",
+      "wardrobeSnapshotId": "snap-fix-01",
+      "inputGeneration": 1,
+      "personImages": {
+        "front": {
+          "id": "media-p01-front",
+          "ownerEntityId": "synthetic-subj-01",
+          "scope": "PERSON",
+          "view": "FRONT",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 65536,
+          "contentHash": "sha256-synth-p01-front-aaaa1111",
+          "revision": 1,
+          "exists": true
+        },
+        "back": {
+          "id": "media-p01-back",
+          "ownerEntityId": "synthetic-subj-01",
+          "scope": "PERSON",
+          "view": "BACK",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 66120,
+          "contentHash": "sha256-synth-p01-back-bbbb2222",
+          "revision": 1,
+          "exists": true
+        }
+      },
+      "items": [
+        {
+          "itemId": "item-top-01",
+          "label": "Áo sơ mi linen trắng kem",
+          "category": "TOP",
+          "snapshotRevision": 1,
+          "currentStoreRevision": 1,
+          "images": {
+            "front": {
+              "id": "media-top01-front",
+              "ownerEntityId": "item-top-01",
+              "scope": "GARMENT",
+              "view": "FRONT",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 49152,
+              "contentHash": "sha256-synth-top01-front-1111",
+              "revision": 1,
+              "exists": true
+            },
+            "back": {
+              "id": "media-top01-back",
+              "ownerEntityId": "item-top-01",
+              "scope": "GARMENT",
+              "view": "BACK",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 48900,
+              "contentHash": "sha256-synth-top01-back-2222",
+              "revision": 1,
+              "exists": true
+            }
+          }
+        }
+      ],
+      "selectedItemIds": ["item-top-01"],
+      "consent": {
+        "consentGrantId": "consent-synth-01",
+        "purpose": "TRYON",
+        "providerId": "fake-provider",
+        "providerConfigVersion": "fake-v2",
+        "allowedViews": ["FRONT", "BACK"],
+        "selectedMediaIds": [
+          "media-p01-front",
+          "media-p01-back",
+          "media-top01-front",
+          "media-top01-back"
+        ],
+        "confirmedByUser": true,
+        "revoked": false
+      }
+    },
+    {
+      "caseId": "case-pos-02-single-dress",
+      "title": "Single garment DRESS (Đầm midi đất nung)",
+      "subjectPseudonym": "synthetic-subj-02",
+      "requestedViews": ["FRONT", "BACK"],
+      "outfitId": "outfit-fix-02",
+      "wardrobeSnapshotId": "snap-fix-01",
+      "inputGeneration": 1,
+      "personImages": {
+        "front": {
+          "id": "media-p02-front",
+          "ownerEntityId": "synthetic-subj-02",
+          "scope": "PERSON",
+          "view": "FRONT",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 70112,
+          "contentHash": "sha256-synth-p02-front-cccc3333",
+          "revision": 1,
+          "exists": true
+        },
+        "back": {
+          "id": "media-p02-back",
+          "ownerEntityId": "synthetic-subj-02",
+          "scope": "PERSON",
+          "view": "BACK",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 70900,
+          "contentHash": "sha256-synth-p02-back-dddd4444",
+          "revision": 1,
+          "exists": true
+        }
+      },
+      "items": [
+        {
+          "itemId": "item-dress-01",
+          "label": "Đầm midi lụa đất nung khóa lưng",
+          "category": "DRESS",
+          "snapshotRevision": 1,
+          "currentStoreRevision": 1,
+          "images": {
+            "front": {
+              "id": "media-dress01-front",
+              "ownerEntityId": "item-dress-01",
+              "scope": "GARMENT",
+              "view": "FRONT",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 52400,
+              "contentHash": "sha256-synth-dress01-front-3333",
+              "revision": 1,
+              "exists": true
+            },
+            "back": {
+              "id": "media-dress01-back",
+              "ownerEntityId": "item-dress-01",
+              "scope": "GARMENT",
+              "view": "BACK",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 53100,
+              "contentHash": "sha256-synth-dress01-back-4444",
+              "revision": 1,
+              "exists": true
+            }
+          }
+        }
+      ],
+      "selectedItemIds": ["item-dress-01"],
+      "consent": {
+        "consentGrantId": "consent-synth-02",
+        "purpose": "TRYON",
+        "providerId": "fake-provider",
+        "providerConfigVersion": "fake-v2",
+        "allowedViews": ["FRONT", "BACK"],
+        "selectedMediaIds": [
+          "media-p02-front",
+          "media-p02-back",
+          "media-dress01-front",
+          "media-dress01-back"
+        ],
+        "confirmedByUser": true,
+        "revoked": false
+      }
+    },
+    {
+      "caseId": "case-pos-03-top-bottom-shoes",
+      "title": "Multi-garment TOP + BOTTOM + SHOES (Giày lọc sang unapplied)",
+      "subjectPseudonym": "synthetic-subj-03",
+      "requestedViews": ["FRONT", "BACK"],
+      "outfitId": "outfit-fix-03",
+      "wardrobeSnapshotId": "snap-fix-01",
+      "inputGeneration": 1,
+      "personImages": {
+        "front": {
+          "id": "media-p03-front",
+          "ownerEntityId": "synthetic-subj-03",
+          "scope": "PERSON",
+          "view": "FRONT",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 68000,
+          "contentHash": "sha256-synth-p03-front-eeee5555",
+          "revision": 1,
+          "exists": true
+        },
+        "back": {
+          "id": "media-p03-back",
+          "ownerEntityId": "synthetic-subj-03",
+          "scope": "PERSON",
+          "view": "BACK",
+          "mimeType": "image/png",
+          "width": 768,
+          "height": 1024,
+          "byteCount": 68400,
+          "contentHash": "sha256-synth-p03-back-ffff6666",
+          "revision": 1,
+          "exists": true
+        }
+      },
+      "items": [
+        {
+          "itemId": "item-top-02",
+          "label": "Áo polo dệt kim xanh olive",
+          "category": "TOP",
+          "snapshotRevision": 1,
+          "currentStoreRevision": 1,
+          "images": {
+            "front": {
+              "id": "media-top02-front",
+              "ownerEntityId": "item-top-02",
+              "scope": "GARMENT",
+              "view": "FRONT",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 45000,
+              "contentHash": "sha256-synth-top02-front-5555",
+              "revision": 1,
+              "exists": true
+            },
+            "back": {
+              "id": "media-top02-back",
+              "ownerEntityId": "item-top-02",
+              "scope": "GARMENT",
+              "view": "BACK",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 45200,
+              "contentHash": "sha256-synth-top02-back-6666",
+              "revision": 1,
+              "exists": true
+            }
+          }
+        },
+        {
+          "itemId": "item-bottom-01",
+          "label": "Quần âu ống suông đen",
+          "category": "BOTTOM",
+          "snapshotRevision": 1,
+          "currentStoreRevision": 1,
+          "images": {
+            "front": {
+              "id": "media-bot01-front",
+              "ownerEntityId": "item-bottom-01",
+              "scope": "GARMENT",
+              "view": "FRONT",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 47000,
+              "contentHash": "sha256-synth-bot01-front-7777",
+              "revision": 1,
+              "exists": true
+            },
+            "back": {
+              "id": "media-bot01-back",
+              "ownerEntityId": "item-bottom-01",
+              "scope": "GARMENT",
+              "view": "BACK",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 1024,
+              "byteCount": 47300,
+              "contentHash": "sha256-synth-bot01-back-8888",
+              "revision": 1,
+              "exists": true
+            }
+          }
+        },
+        {
+          "itemId": "item-shoes-01",
+          "label": "Giày loafer da nâu",
+          "category": "SHOES",
+          "snapshotRevision": 1,
+          "currentStoreRevision": 1,
+          "images": {
+            "front": {
+              "id": "media-shoes01-front",
+              "ownerEntityId": "item-shoes-01",
+              "scope": "GARMENT",
+              "view": "FRONT",
+              "mimeType": "image/png",
+              "width": 768,
+              "height": 768,
+              "byteCount": 38000,
+              "contentHash": "sha256-synth-shoes01-front-9999",
+              "revision": 1,
+              "exists": true
+            },
+            "back": null
+          }
+        }
+      ],
+      "selectedItemIds": ["item-top-02", "item-bottom-01"],
+      "consent": {
+        "consentGrantId": "consent-synth-03",
+        "purpose": "TRYON",
+        "providerId": "fake-provider",
+        "providerConfigVersion": "fake-v2",
+        "allowedViews": ["FRONT", "BACK"],
+        "selectedMediaIds": [
+          "media-p03-front",
+          "media-p03-back",
+          "media-top02-front",
+          "media-top02-back",
+          "media-bot01-front",
+          "media-bot01-back"
+        ],
+        "confirmedByUser": true,
+        "revoked": false
+      }
+    }
+  ],
+  "negativeCases": [
+    {
+      "caseId": "case-neg-01-missing-person-back",
+      "expectedErrorCode": "NEEDS_INPUT",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "REMOVE_PERSON_BACK"
+    },
+    {
+      "caseId": "case-neg-02-missing-garment-back",
+      "expectedErrorCode": "NEEDS_INPUT",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "REMOVE_GARMENT_BACK"
+    },
+    {
+      "caseId": "case-neg-03-wrong-view-pairing",
+      "expectedErrorCode": "INVALID_REQUEST",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "CLONE_FRONT_AS_BACK"
+    },
+    {
+      "caseId": "case-neg-04-deleted-media",
+      "expectedErrorCode": "STALE_INPUT",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "DELETE_GARMENT_MEDIA"
+    },
+    {
+      "caseId": "case-neg-05-stale-revision",
+      "expectedErrorCode": "STALE_INPUT",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "BUMP_STORE_REVISION"
+    },
+    {
+      "caseId": "case-neg-06-unsupported-garment",
+      "expectedErrorCode": "UNSUPPORTED_CAPABILITY",
+      "basePositiveCaseId": "case-pos-01-single-top",
+      "mutation": "SELECT_ONLY_UNSUPPORTED_ACCESSORY"
+    }
+  ]
+}
