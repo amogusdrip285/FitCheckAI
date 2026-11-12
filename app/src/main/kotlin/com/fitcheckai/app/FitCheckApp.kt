@@ -23,6 +23,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.fitcheckai.app.tryon.tryOnDestination
 import com.fitcheckai.core.model.nav.Routes
 import com.fitcheckai.feature.onboarding.onboardingGraph
 import com.fitcheckai.feature.today.todayGraph
@@ -76,6 +77,7 @@ fun FitCheckApp(viewModel: MainViewModel = hiltViewModel()) {
             onboardingGraph(navController)
             todayGraph(navController)
             wardrobeGraph(navController)
+            tryOnDestination(navController)
             // Insights is parked in v2 (TEAM_WORKFLOW §3) — not registered.
         }
     }

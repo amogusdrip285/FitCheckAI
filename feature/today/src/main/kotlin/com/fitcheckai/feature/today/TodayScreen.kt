@@ -11,6 +11,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,11 +27,16 @@ import com.fitcheckai.core.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
-fun TodayScreen(onOpenItem: (String) -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
+fun TodayScreen(
+    onOpenItem: (String) -> Unit,
+    onTryOn: (route: String) -> Unit,
+    viewModel: TodayViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var sharing by remember { mutableStateOf(false) }
+    var openingTryOn by remember { mutableStateOf(false) }
     var shareError by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize()) {
@@ -56,33 +62,52 @@ fun TodayScreen(onOpenItem: (String) -> Unit, viewModel: TodayViewModel = hiltVi
             ) {
                 items(state.outfits, key = { it.outfitId }) { outfit ->
                     val worn = outfit.outfitId == state.wornOutfitId
-                    OutfitVisual(
-                        outfit = outfit,
-                        onSelect = viewModel::onWear,
-                        onOpenItem = onOpenItem,
-                        selectionLabel = if (worn) "Đã ghi nhận ✓" else "Mặc bộ này",
-                        selectionEnabled = !worn,
-                        shareEnabled = !sharing && outfit.items.all { it.imagePath != null },
-                        onShare = { id ->
-                            if (!sharing) {
-                                sharing = true
-                                shareError = null
-                                scope.launch {
-                                    try {
-                                        viewModel.prepareShare(id).fold(
-                                            onSuccess = { intent ->
-                                                try { context.startActivity(Intent.createChooser(intent, "Chia sẻ ảnh bộ đồ")) }
-                                                catch (_: ActivityNotFoundException) {
-                                                    shareError = "Thiết bị chưa có ứng dụng nhận ảnh."
-                                                }
-                                            },
-                                            onFailure = { shareError = it.message ?: "Chưa chuẩn bị được ảnh để chia sẻ." },
-                                        )
-                                    } finally { sharing = false }
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        OutfitVisual(
+                            outfit = outfit,
+                            onSelect = viewModel::onWear,
+                            onOpenItem = onOpenItem,
+                            selectionLabel = if (worn) "Đã ghi nhận ✓" else "Mặc bộ này",
+                            selectionEnabled = !worn,
+                            shareEnabled = !sharing && outfit.items.all { it.imagePath != null },
+                            onShare = { id ->
+                                if (!sharing) {
+                                    sharing = true
+                                    shareError = null
+                                    scope.launch {
+                                        try {
+                                            viewModel.prepareShare(id).fold(
+                                                onSuccess = { intent ->
+                                                    try { context.startActivity(Intent.createChooser(intent, "Chia sẻ ảnh bộ đồ")) }
+                                                    catch (_: ActivityNotFoundException) {
+                                                        shareError = "Thiết bị chưa có ứng dụng nhận ảnh."
+                                                    }
+                                                },
+                                                onFailure = { shareError = it.message ?: "Chưa chuẩn bị được ảnh để chia sẻ." },
+                                            )
+                                        } finally { sharing = false }
+                                    }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        )
+                        TextButton(
+                            enabled = !sharing && !openingTryOn,
+                            onClick = {
+                                if (!openingTryOn) {
+                                    openingTryOn = true
+                                    shareError = null
+                                    scope.launch {
+                                        try {
+                                            viewModel.prepareTryOn(outfit.outfitId).fold(
+                                                onSuccess = onTryOn,
+                                                onFailure = { shareError = it.message ?: "Chưa mở được thử đồ." },
+                                            )
+                                        } finally { openingTryOn = false }
+                                    }
+                                }
+                            },
+                        ) { Text("Thử đồ với bộ này") }
+                    }
                 }
                 state.message?.let { note -> item { Text(note, style = MaterialTheme.typography.bodySmall) } }
                 item { OutlinedButton(onClick = viewModel::reroll) { Text("Phối lại") } }

@@ -19,6 +19,9 @@ fun NavGraphBuilder.todayGraph(navController: NavController) {
             },
         ),
     ) {
-        TodayScreen(onOpenItem = { navController.navigate(Routes.wardrobeItem(it)) })
+        TodayScreen(
+            onOpenItem = { navController.navigate(Routes.wardrobeItem(it)) },
+            onTryOn = { route -> navController.navigate(route) { launchSingleTop = true } },
+        )
     }
 }

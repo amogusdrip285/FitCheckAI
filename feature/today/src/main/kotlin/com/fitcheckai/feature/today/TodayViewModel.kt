@@ -24,6 +24,8 @@ import com.fitcheckai.core.model.recommendation.OutfitRequest
 import com.fitcheckai.core.model.recommendation.OutfitSource
 import com.fitcheckai.core.model.recommendation.RecommendationResult
 import com.fitcheckai.core.model.recommendation.ShortfallReason
+import com.fitcheckai.core.model.tryon.TryOnSelection
+import com.fitcheckai.core.model.tryon.TryOnSelectionHandoff
 import com.fitcheckai.core.model.wardrobe.Category
 import com.fitcheckai.core.model.wardrobe.ClothingItem
 import com.fitcheckai.core.model.wardrobe.ErrorCode
@@ -93,6 +95,7 @@ class TodayViewModel @Inject constructor(
     private val share: OutfitShare,
     private val wearLog: WearLogRepository,
     private val metrics: MetricsTracker,
+    private val tryOnHandoff: TryOnSelectionHandoff,
 ) : ViewModel() {
     private val focusItemId: String? = savedStateHandle[Routes.ARG_FOCUS_ITEM_ID]
     private val proposal = MutableStateFlow(TodayProposal())
@@ -229,6 +232,16 @@ class TodayViewModel @Inject constructor(
         val intent = share.prepare("Bộ phối FitCheck", photos).getOrThrow()
         checkCurrent(selected, outfit)
         intent
+    }
+
+    /** C-001/CT-03: validates the picked outfit, hands it to Try-On and returns the route. Never starts a job. */
+    suspend fun prepareTryOn(outfitId: String): Result<String> = wardrobeResult {
+        val selected = proposal.value
+        val outfit = selected.result?.outfits?.find { it.id == outfitId } ?: throw stale()
+        val snapshot = checkCurrent(selected, outfit)
+        val ids = outfit.items.map { it.itemId }.toSet()
+        tryOnHandoff.publish(TryOnSelection(outfit, snapshot.items.filter { it.id in ids }))
+        Routes.tryOn(outfit.id, outfit.wardrobeSnapshotId)
     }
 
     private suspend fun checkCurrent(selected: TodayProposal, outfit: Outfit): WardrobeSnapshot {

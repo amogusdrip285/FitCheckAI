@@ -38,6 +38,7 @@ dependencies {
     implementation(project(":feature:today"))
     implementation(project(":feature:onboarding"))
     implementation(project(":feature:insights"))
+    implementation(project(":feature:tryon"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

@@ -21,6 +21,7 @@ import com.fitcheckai.core.model.recommendation.OutfitRecommendation
 import com.fitcheckai.core.model.recommendation.OutfitRequest
 import com.fitcheckai.core.model.recommendation.OutfitSource
 import com.fitcheckai.core.model.recommendation.outfitSignature
+import com.fitcheckai.core.model.tryon.InMemoryTryOnSelectionHandoff
 import com.fitcheckai.core.model.wardrobe.ErrorCode
 import com.fitcheckai.core.model.wardrobe.WardrobeException
 import com.fitcheckai.core.model.wardrobe.fakes.FakeMediaStore
@@ -59,6 +60,7 @@ class TodayViewModelTest {
     private val profile = fullProfile()
     private val fake = FakeOutfitRecommendation(RecommendationScenario.Single)
     private val worn = mutableListOf<LegacyOutfit>()
+    private val handoff = InMemoryTryOnSelectionHandoff()
     private val wearLog = object : WearLogRepository {
         override fun observeLogs() = flowOf(emptyList<WearLogEntry>())
         override suspend fun logWear(outfit: LegacyOutfit, at: Instant): Result<Unit> {
@@ -170,12 +172,28 @@ class TodayViewModelTest {
 
     private suspend fun TodayViewModel.settled() = state.first { !it.isLoading }
 
+    @Test fun `try-on hands the current outfit to Try-On and refuses a stale one`() = runTest(dispatcher) {
+        val viewModel = create()
+        val outfit = viewModel.settled().outfits.single()
+
+        val route = viewModel.prepareTryOn(outfit.outfitId).getOrThrow()
+        val selection = handoff.find(outfit.outfitId)!!
+        assertEquals(Routes.tryOn(outfit.outfitId, selection.outfit.wardrobeSnapshotId), route)
+        assertEquals(selection.outfit.items.map { it.itemId }.toSet(), selection.items.map { it.id }.toSet())
+        assertNull(handoff.find("another-outfit"))
+
+        repository.upsert(top.copy(name = "Edited item"), top.revision).getOrThrow()
+        val error = viewModel.prepareTryOn(outfit.outfitId).exceptionOrNull() as WardrobeException
+        assertEquals(ErrorCode.STALE_INPUT, error.code)
+    }
+
     private fun create(focus: String? = null, engine: OutfitRecommendation = fake): TodayViewModel {
         val handle = SavedStateHandle(mapOf(Routes.ARG_FOCUS_ITEM_ID to focus))
         val viewModel = TodayViewModel(
             handle, repository, FakeProfileStorage(profile), media, engine,
             BasicOutfitFallback { 100 }, OutfitShare(ContextWrapper(null), media), wearLog,
             object : MetricsTracker { override fun track(event: MetricEvent) = Unit },
+            handoff,
         )
         store.put("today", viewModel)
         return viewModel
