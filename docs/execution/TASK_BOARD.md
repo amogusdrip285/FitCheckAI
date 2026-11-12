@@ -2,7 +2,7 @@
 
 [Workflow](../../TEAM_WORKFLOW.md) · [Trang chủ](README.md) · [Contracts](CONTRACTS.md) · [Milestones](DEPENDENCIES_AND_INTEGRATION.md)
 
-Cập nhật Track A độc lập ngày 11/11/2026; bằng chứng ở [QA A bản đầu](../qa/track-a-acceptance.md) và [bổ sung sau merge main](../qa/track-a-independent-followup.md). Các track B/C/D giữ nguyên trạng thái, không suy nghiệm thu của họ từ build A. Chọn P0 có dependency/gate đã đạt; P0 feasibility có thể kết luận NO_GO nhưng không làm M4 PASS. C-208/C-209 được làm với fake trước GO; C-207 và upload live phải qua gate/account/budget/privacy tương ứng. P2 chưa được cam kết; 5 card archive không nằm trong bảng/tổng.
+Cập nhật Track A độc lập ngày 11/11/2026; bằng chứng ở [QA A bản đầu](../qa/track-a-acceptance.md) và [bổ sung sau merge main](../qa/track-a-independent-followup.md). Cập nhật 12/11/2026 sau khi merge `track-b/B-003-B-007-android-clients` và `lamb` (Track C) vào main: Track C có code/tests cho fake, client, UI, privacy, proxy adapters, nhưng **chưa nối vào app/proxy** (thiếu `include(":feature:tryon")`, route Today→Try-On, mount `/v2/tryon`) và gate C-205 = BLOCKED. Không suy nghiệm thu track khác từ build A. Chọn P0 có dependency/gate đã đạt; P0 feasibility có thể kết luận NO_GO nhưng không làm M4 PASS. C-208/C-209 được làm với fake trước GO; C-207 và upload live phải qua gate/account/budget/privacy tương ứng. P2 chưa được cam kết; 5 card archive không nằm trong bảng/tổng.
 
 Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải kiểm dependency liên track trước nhận việc. Cards là nguồn dependency cứng. Gate có điều kiện (GO_FRONT_ONLY/GO_DUAL, C-211 khi release DUAL) ở [tài liệu tích hợp](DEPENDENCIES_AND_INTEGRATION.md), không suy là đã đạt từ trạng thái TODO.
 
@@ -62,20 +62,20 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | [C-201](tracks/C.md#c-201) — Khảo sát VTO provider, quyền dùng và privacy | P0 | feasibility | M0 | 45–90 | — | TODO | — |
-| [ ] | [C-202](tracks/C.md#c-202) — Bộ ảnh người và garment có consent cho POC | P0 | feasibility | M0 | 30–60 | — | TODO | — |
-| [ ] | [C-203](tracks/C.md#c-203) — POC front-view với một outfit được chọn | P0 | feasibility | M4-F | 60–120 | C-201, C-202, PRE-001 | TODO | — |
-| [ ] | [C-204](tracks/C.md#c-204) — POC back-view và consistency của cặp | P0 | feasibility | M4-F | 60–120 | C-203 | TODO | — |
-| [ ] | [C-205](tracks/C.md#c-205) — Feasibility gate và quyết định phạm vi VTO | P0 | feasibility | M4-F | 30–45 | C-201, C-202 | TODO | — |
-| [ ] | [C-206](tracks/C.md#c-206) — Fake TryOnService và preview states | P0 | foundation | M1 | 35–60 | S-002 | TODO | — |
-| [ ] | [C-210](tracks/C.md#c-210) — Privacy gate và cleanup ảnh/job | P0 | core | M5 | 60–100 | C-201, S-002 | TODO | — |
-| [ ] | [D-002](tracks/C.md#d-002) — Chuyển evidence thành pitch có giới hạn | P1 | quality | M6 | 30–45 | PRE-005, C-205 | TODO | — |
-| [ ] | [C-207](tracks/C.md#c-207) — Server adapter VTO và job idempotency | P1 | reliable | M4-R | 90–150 | B-001, C-205 | TODO | — |
-| [ ] | [C-208](tracks/C.md#c-208) — Android VTO client và khôi phục job | P1 | reliable | M4-R | 75–120 | S-002, C-206 | TODO | — |
-| [ ] | [C-209](tracks/C.md#c-209) — Try-On screen cho outfit đã chọn | P1 | reliable | M4-R | 60–100 | C-206 | TODO | — |
-| [ ] | [C-211](tracks/C.md#c-211) — Đánh giá runtime hai mặt và nhiều món | P1 | reliable | M4-R | 60–100 | C-207, C-208, C-209, C-210 | TODO | — |
-| [ ] | [C-212](tracks/C.md#c-212) — Tích hợp và nghiệm thu VTO theo capability | P1 | reliable | M4-R | 45–75 | C-207, C-208, C-209, C-210, INT-001 | TODO | — |
-| [ ] | [C-213](tracks/C.md#c-213) — Tối ưu nhiều món và ổn định góc nhìn | P2 | future | M4-R | 120–240 | C-212 | TODO | — |
+| [ ] | [C-201](tracks/C.md#c-201) — Khảo sát VTO provider, quyền dùng và privacy | P0 | feasibility | M0 | 45–90 | — | PARTIAL | [Khảo sát provider](tracks/C_201_PROVIDER_RESEARCH.md): FASHN/Vertex/FOSTA/OpenAI, privacy, trần POC đề xuất. Chờ duyệt ngân sách, PRE-001 và cấp key. |
+| [ ] | [C-202](tracks/C.md#c-202) — Bộ ảnh người và garment có consent cho POC | P0 | feasibility | M0 | 30–60 | — | BLOCKED | [Dataset readiness](tracks/C_202_DATASET_READINESS.md) + manifest kỹ thuật 3 positive/6 negative synthetic. Chưa có ≥3 bộ ảnh người thật có consent ngoài Git. |
+| [ ] | [C-203](tracks/C.md#c-203) — POC front-view với một outfit được chọn | P0 | feasibility | M4-F | 60–120 | C-201, C-202, PRE-001 | BLOCKED | Harness `eval/tryon/poc_runner.py` (7 tests). FOSTA live qua CLI chỉ thử FRONT+TOP; chưa chạy 3 case có consent và chưa có 2 reviewer chấm. [C log](tracks/C_IMPLEMENTATION_LOG.md) |
+| [ ] | [C-204](tracks/C.md#c-204) — POC back-view và consistency của cặp | P0 | feasibility | M4-F | 60–120 | C-203 | BLOCKED | Harness phân biệt TWO_INDEPENDENT_REQUESTS/NATIVE_PAIRED và PARTIAL mặt sau; BACK/TOP+BOTTOM chỉ có mock E2E. Chờ C-203 live. |
+| [ ] | [C-205](tracks/C.md#c-205) — Feasibility gate và quyết định phạm vi VTO | P0 | feasibility | M4-F | 30–45 | C-201, C-202 | REVIEW | [Gate](tracks/C_205_FEASIBILITY_GATE.md) ghi quyết định **BLOCKED** (capability UNKNOWN, M4-F chưa PASS) kèm điều kiện mở lại. Chờ B/A/D review. |
+| [ ] | [C-206](tracks/C.md#c-206) — Fake TryOnService và preview states | P0 | foundation | M1 | 35–60 | S-002 | REVIEW | `FakeVirtualTryOnService` + fixtures: SUCCEEDED/PARTIAL/TIMED_OUT/UNKNOWN_SUBMISSION/EXPIRED, idempotency 1 job/key, nhãn FAKE; unit tests pass. [C log](tracks/C_IMPLEMENTATION_LOG.md) |
+| [ ] | [C-210](tracks/C.md#c-210) — Privacy gate và cleanup ảnh/job | P0 | core | M5 | 60–100 | C-201, S-002 | PARTIAL | `TryOnPrivacyCoordinator` + `SafeTryOnLogger`: không consent → 0 upload, thu hồi/xóa ảnh chặn kết quả trễ, log lọc path/URL/base64/key; fake tests pass. Chưa test với ProfileStorage/MediaStore thật. |
+| [ ] | [D-002](tracks/C.md#d-002) — Chuyển evidence thành pitch có giới hạn | P1 | quality | M6 | 30–45 | PRE-005, C-205 | PARTIAL | [Pitch draft](tracks/C_D002_PITCH_SUPPORT.md): kịch bản 5 phút, bảng Claim→Evidence→Limitation. Chờ số PRE-005 và số đo live C-203/C-204. |
+| [ ] | [C-207](tracks/C.md#c-207) — Server adapter VTO và job idempotency | P1 | reliable | M4-R | 90–150 | B-001, C-205 | PARTIAL | `proxy/src/tryon/*`: router `/v2/tryon/*`, ledger JSON idempotency + quota, adapter OpenAI (`/v1/images/edits`) và FOSTA (`/v1/responses`), LIVE mặc định tắt; 3 vitest suites pass trên main. **Chưa mount vào `proxy/src/index.ts`**, chưa có durable store deploy. [C handoff](tracks/C_HANDOFF.md) |
+| [ ] | [C-208](tracks/C.md#c-208) — Android VTO client và khôi phục job | P1 | reliable | M4-R | 75–120 | S-002, C-206 | REVIEW | `AndroidVirtualTryOnClient` + `AtomicFileTryOnLocalJobStore`: lưu PENDING_SUBMISSION trước khi gọi mạng, khôi phục sau process death, UNKNOWN_SUBMISSION không tự retry, chuẩn hóa EXIF; unit tests pass ở nhánh C. |
+| [ ] | [C-209](tracks/C.md#c-209) — Try-On screen cho outfit đã chọn | P1 | reliable | M4-R | 60–100 | C-206 | REVIEW | `TryOnScreen`/`TryOnViewModel` + `TryOnDemoActivity`; 10 instrumentation Visual QA ở nhánh C trên emulator. **`:feature:tryon` chưa include trong `settings.gradle.kts`** và chưa nối route từ Today (D/B). [C handoff](tracks/C_HANDOFF.md) |
+| [ ] | [C-211](tracks/C.md#c-211) — Đánh giá runtime hai mặt và nhiều món | P1 | reliable | M4-R | 60–100 | C-207, C-208, C-209, C-210 | BLOCKED | Cần GO_DUAL từ C-205 + runtime live + 3 bộ ảnh có consent. |
+| [ ] | [C-212](tracks/C.md#c-212) — Tích hợp và nghiệm thu VTO theo capability | P1 | reliable | M4-R | 45–75 | C-207, C-208, C-209, C-210, INT-001 | BLOCKED | Cần GO_FRONT_ONLY/GO_DUAL, INT-001 và provider live. Đề xuất nối ghép ở [C_SHARED_CONTRACTS_PROPOSAL](tracks/C_SHARED_CONTRACTS_PROPOSAL.md). |
+| [ ] | [C-213](tracks/C.md#c-213) — Tối ưu nhiều món và ổn định góc nhìn | P2 | future | M4-R | 120–240 | C-212 | BLOCKED | P2, chờ C-212. |
 
 ## D — App Foundation & Experience
 
