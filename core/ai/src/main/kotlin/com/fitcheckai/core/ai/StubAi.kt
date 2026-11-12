@@ -14,11 +14,7 @@ import javax.inject.Singleton
 
 private const val FAKE_LATENCY_MS = 600L
 
-/**
- * SPRINT 0 STUB — luôn trả về một áo thun trắng.
- * TODO(Track B, B-007): RecognitionClient gọi `POST /v2/recognition` qua proxy ([BuildConfig.PROXY_URL]);
- * wire format ở docs/contracts/proxy-api.md. Chờ D (S-002) công bố interface v2.
- */
+/** Stub cho consumer v1. Tủ đồ v2 dùng [ProxyRecognitionClient]. */
 @Singleton
 class StubClothingTagger @Inject constructor() : ClothingTagger {
     override suspend fun tag(imagePath: String): Result<ClothingAttributes> {

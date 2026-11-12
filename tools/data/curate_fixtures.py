@@ -18,25 +18,38 @@ from prepare_modern_clothing import ROOT, RAW, COMMIT, SOURCE, CATEGORIES, write
 
 # Visual review of source photos: category, visible colors, pattern only. No material/season guesses.
 SELECTION = [
-    ("b0c03127", "Áo sơ mi kẻ đỏ đen", "TOP", ["RED", "BLACK"], "CHECKED"),
+    ("b0c03127", "Áo khoác sơ mi kẻ đỏ đen", "OUTERWEAR", ["RED", "BLACK"], "CHECKED"),
     ("09f4ffb6", "Áo sơ mi trắng", "TOP", ["WHITE"], "SOLID"),
-    ("ea7b6656", "Áo thun tím hồng", "TOP", ["PURPLE"], "SOLID"),
+    ("ea7b6656", "Áo thun đỏ đô", "TOP", ["RED"], "SOLID"),
     ("97074b7f", "Quần jeans xanh", "BOTTOM", ["BLUE"], "SOLID"),
     ("c4f11a12", "Quần xám", "BOTTOM", ["GRAY"], "SOLID"),
-    ("c995c900", "Quần thể thao tối màu", "BOTTOM", ["BLUE", "WHITE"], "OTHER"),
-    ("e3c8e575", "Đầm hoa nền trắng", "DRESS", ["WHITE", "PINK", "GREEN"], "PRINTED"),
-    ("e6a8b33f", "Đầm xanh đậm", "DRESS", ["BLUE"], "SOLID"),
+    ("c995c900", "Quần thể thao xanh navy", "BOTTOM", ["BLUE", "WHITE"], "STRIPED"),
+    ("e3c8e575", "Đầm hoa tím nền be", "DRESS", ["BEIGE", "PURPLE", "GREEN"], "PRINTED"),
+    ("e6a8b33f", "Đầm đen", "DRESS", ["BLACK"], "SOLID"),
     ("21059bce", "Đầm xanh lá", "DRESS", ["GREEN"], "OTHER"),
     ("ff231d91", "Áo khoác xanh ô liu", "OUTERWEAR", ["GREEN"], "SOLID"),
-    ("44bf7760", "Áo khoác xám sáng", "OUTERWEAR", ["GRAY"], "SOLID"),
+    ("44bf7760", "Áo khoác trắng lót vàng", "OUTERWEAR", ["WHITE", "YELLOW"], "SOLID"),
     ("43ac2647", "Áo khoác đen", "OUTERWEAR", ["BLACK"], "SOLID"),
     ("bf78527f", "Giày đen đế trắng", "SHOES", ["BLACK", "WHITE"], "SOLID"),
     ("61bbb3a2", "Giày xanh đậm", "SHOES", ["BLUE"], "SOLID"),
-    ("b7935371", "Giày bệt trắng", "SHOES", ["WHITE"], "OTHER"),
+    ("b7935371", "Giày bệt trắng", "SHOES", ["WHITE"], "SOLID"),
     ("b6899eaa", "Mũ len đen", "ACCESSORY", ["BLACK"], "SOLID"),
     ("70731fd8", "Mũ lưỡi trai xanh", "ACCESSORY", ["BLUE", "YELLOW"], "PRINTED"),
-    ("2d6afa47", "Mũ len có logo", "ACCESSORY", ["BLACK"], "OTHER"),
+    ("2d6afa47", "Mũ len có logo", "ACCESSORY", ["BLACK"], "PRINTED"),
 ]
+# Visual decisions after comparing the source photos with Track B's review.
+REVIEW_NOTES = {
+    "b0c03127": {"category": "Dáng sơ mi mặc ngoài, có lớp lót thấy ở cổ tay và gấu."},
+    "ea7b6656": {"colors": "Màu đỏ đô được quy về RED trong bảng màu của app."},
+    "c995c900": {
+        "colors": "Giữ BLUE và WHITE. Vùng sáng thấy sắc xanh navy dù vùng tối gần đen.",
+        "pattern": "Hai dải sọc trắng dọc ống đủ rõ để dùng STRIPED.",
+    },
+    "e3c8e575": {"colors": "Nền be nhạt, cụm hoa tím và lá xanh là ba màu thấy rõ."},
+    "44bf7760": {"colors": "Vỏ trắng kem, phần lót vàng thấy rõ ở cổ áo."},
+    "b7935371": {"pattern": "Bề mặt trắng trơn là chủ đạo, đính đá tập trung ở mũi."},
+    "2d6afa47": {"pattern": "Logo chữ là họa tiết đồ họa thấy rõ. Không suy ra kỹ thuật tạo logo."},
+}
 PAIRS = [
     ("ddc", "Áo thun DDC trắng", "DDC International T-shirt front.jpg", "DDC International T-shirt back.jpg", "Jonathan Schilling"),
     ("wlm", "Áo thun Wiki Loves Monuments", "WLM shirt - Female (front).jpg", "WLM shirt - Female (back).jpg", "Béria L. Rodríguez @ Wikimedia Commons"),
@@ -45,16 +58,18 @@ PAIRS = [
 DEST = ROOT / "data/fixtures/modern-clothing"
 
 
-def annotation_metadata(raw_label=None, pair=False):
+def annotation_metadata(raw_label=None, pair=False, *, source_prefix=None):
     """Reference annotations are disclosed per field; none has independent adjudication yet."""
     provenance = {
         "name": {"method": "assistant_authored_display_name"},
         "category": {"method": "source_label_mapped_and_assistant_visual_review" if raw_label else "assistant_visual_review"},
-        "colors": {"method": "assistant_visual_review"},
+        "colors": {"method": "user_visual_confirmation" if source_prefix == "e6a8b33f" else "assistant_visual_review"},
         "pattern": {"method": "assistant_visual_review"},
     }
     if raw_label:
         provenance["category"]["sourceLabel"] = raw_label
+    for field, note in REVIEW_NOTES.get(source_prefix, {}).items():
+        provenance[field].update(method="track_a_visual_review", note=note)
     if pair:
         provenance["pairIdentity"] = {"method": "source_view_descriptions_plus_assistant_visual_comparison"}
     return {"groundTruthFields": [], "referenceFields": ["category", "colors", "pattern"] + (["pairIdentity"] if pair else []),
@@ -83,7 +98,7 @@ def main(commons_dir):
     items = []
     for prefix, name, category, colors, pattern in SELECTION:
         row = next(row for row in rows if row["image"].startswith(prefix))
-        assert CATEGORIES.get(row["label"]) == category
+        assert CATEGORIES.get(row["label"]) == category or "category" in REVIEW_NOTES.get(prefix, {})
         source = next((RAW / "images").glob(prefix + "*"))
         identity = str(uuid.uuid5(uuid.NAMESPACE_URL, SOURCE + "/" + row["image"]))
         front = photo(source, identity + "-front.jpg", {
@@ -95,7 +110,8 @@ def main(commons_dir):
                       "material": None, "formality": None, "seasonTags": [], "styleTags": [],
                       "front": front, "back": None, "pairVerified": False,
                       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
-                      **annotation_metadata(row["label"]), "sourceGroup": "CC0-clothing-dataset"})
+                      **annotation_metadata(row["label"], source_prefix=prefix),
+                      "sourceGroup": "CC0-clothing-dataset"})
     pending = []
     records = {}
     if commons_dir:

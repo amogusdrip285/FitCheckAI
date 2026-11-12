@@ -7,8 +7,8 @@
 //   node eval/ai/run-recognition.mjs --base-url ... --labels labels.track-a.json \
 //        --images-dir eval/ai/images/track-a/data/fixtures/modern-clothing --all-front --confirm-spend
 //
-// Chỉ dùng groundTruthFields A công bố (category/colors/pattern). Review nhãn của B nằm ở
-// recognition/label-review.track-a.json và được áp mặc định; --no-review để dùng nhãn gốc của A.
+// Dùng nhãn tham chiếu category/colors/pattern từ manifest A. Review lịch sử của B được áp
+// cho các trường chưa chốt; --no-review đọc đúng nhãn đang có trong manifest.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { EVAL_DIR, parseArgs } from "../lib/common.mjs";
@@ -36,10 +36,20 @@ let applied = 0;
 if (args["no-review"] !== true && existsSync(reviewPath)) {
   const review = JSON.parse(readFileSync(reviewPath, "utf8"));
   const byId = new Map(items.map((i) => [i.id, i]));
+  const provenanceById = new Map(manifest.items.map((i) => [i.id, i.fieldProvenance]));
   for (const o of review.overrides) {
     const item = byId.get(o.id);
     if (!item) throw new Error(`Review: không thấy món ${o.id} trong manifest`);
-    if (JSON.stringify(item.labels[o.field]) !== JSON.stringify(o.from)) {
+    const current = JSON.stringify(item.labels[o.field]);
+    const original = JSON.stringify(o.from);
+    const keptAfterReview = current === original &&
+      provenanceById.get(o.id)?.[o.field]?.method === "track_a_visual_review";
+    if (current === JSON.stringify(o.to) || keptAfterReview) {
+      // Preserve the resolved fixture label, including explicitly retained labels.
+      item.reviewed = true;
+      continue;
+    }
+    if (current !== original) {
       throw new Error(`Review: nhãn ${o.field} của ${o.id} trong manifest đã đổi (khác 'from') — review lại trước khi áp`);
     }
     item.labels[o.field] = o.to;

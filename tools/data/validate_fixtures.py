@@ -20,8 +20,10 @@ def main():
         assert item["front"] is not None
         assert item["groundTruthFields"] == [] and item["independentReviewStatus"] == "PENDING"
         assert {"category", "colors", "pattern"}.issubset(item["referenceFields"])
-        assert item["fieldProvenance"]["colors"]["method"] == "assistant_visual_review"
-        assert item["fieldProvenance"]["pattern"]["method"] == "assistant_visual_review"
+        assert item["fieldProvenance"]["colors"]["method"] in {
+            "assistant_visual_review", "user_visual_confirmation", "track_a_visual_review",
+        }
+        assert item["fieldProvenance"]["pattern"]["method"] in {"assistant_visual_review", "track_a_visual_review"}
         assert "name" in item["fieldProvenance"]
         if item["sourceGroup"] == "CC0-clothing-dataset":
             assert item["fieldProvenance"]["category"]["sourceLabel"]

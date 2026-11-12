@@ -97,6 +97,32 @@ class WardrobeV2ViewModelTest {
         assertNotNull(unavailable.state.value.error)
         assertFalse(unavailable.state.value.recognizing)
     }
+    @Test fun `front-only consent sends only front while keeping both saved views`() = runTest(dispatcher) {
+        val requests = mutableListOf<RecognitionRequest>()
+        val frontOnly = object : ClothingRecognition {
+            override val capability = RecognitionCapability("DEV front", "fixture-v2", true, false)
+            override suspend fun recognize(request: RecognitionRequest): Result<RecognitionResult> {
+                request.validate(capability)
+                requests += request
+                return recognition.respond(request)
+            }
+        }
+        val vm = editor(ai = frontOnly)
+        prepare(vm)
+        runCurrent()
+        vm.chooseImage("back-photo", ImageView.BACK)
+        runCurrent()
+        val original = vm.state.value.item.images
+        val preview = vm.recognitionViews(frontOnly.capability)
+        assertEquals(mapOf(original.front!!.id to ImageView.FRONT), preview)
+        vm.recognize(frontOnly.capability, preview)
+        runCurrent()
+        assertNull(requests.single().images.back)
+        assertEquals(preview.keys, requests.single().consentGrant.mediaIds)
+        vm.save()
+        runCurrent()
+        assertEquals(original, repo.get(vm.state.value.item.id).getOrThrow()?.images)
+    }
     @Test fun `restored pending draft does not auto upload or stay pending`() = runTest(dispatcher) {
         val item = sixFixtures().first().copy(recognitionState = RecognitionState.PENDING)
         val handle = SavedStateHandle(mapOf("v2Draft" to WardrobeCodec.encodeItem(item)))

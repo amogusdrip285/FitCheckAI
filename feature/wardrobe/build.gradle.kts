@@ -10,6 +10,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:ai"))
     implementation(project(":core:imaging"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.camera.view)

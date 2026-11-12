@@ -6,7 +6,7 @@
 
 Trạng thái: implementation + unit/HTTP tests với model giả (B-001/B-002/BACK-004). **Chưa có evidence live**: cần PRE-003 (provider/budget), deploy và B-004/B-006.
 
-**Android client (B-003/B-007):** `core/ai/.../proxy/` — `ProxyOutfitRecommendation` (bind sẵn vào `OutfitRecommendation`), `ProxyClothingRecognition` (cung cấp qua Hilt, A đổi binding `ClothingRecognition` ở INT-002), `ProxyTransport` (session token, deadline 20s, map lỗi CT-07, không auto-retry, mỗi `requestId` chỉ gửi một lần). Mã truy cập demo: gradle property `fitcheck.accessCode` (đặt trong `~/.gradle/gradle.properties`, không commit); trống ⇒ `UNSUPPORTED_CAPABILITY`, không gọi mạng. Client kiểm lại mọi invariant response; một bộ/field sai cấu trúc ⇒ bỏ cả response. Test chỉ dùng MockEngine, chưa chạy với proxy thật.
+**Android client:** recommendation (B-003) — `core/ai/.../proxy/ProxyOutfitRecommendation` (bind vào `OutfitRecommendation`) qua `ProxyTransport` (session token, deadline 20s, map lỗi CT-07, không auto-retry, mỗi `requestId` chỉ gửi một lần); mã truy cập demo từ gradle property `fitcheck.accessCode` (đặt trong `~/.gradle/gradle.properties`, không commit; trống ⇒ `UNSUPPORTED_CAPABILITY`, không gọi mạng). Recognition (B-007) — nhóm chọn ngày 12/11/2026 giữ `core/ai/ProxyRecognitionClient` do A viết (bind vào `ClothingRecognition`), mã truy cập nhập trên UI (`RecognitionSetup.authorize`); B đã review và sửa để đọc `providers.recognition`, nhận `openai@host`, bỏ qua field `/health` mới. Hai client đang có hai cơ chế lấy session khác nhau — nên hợp nhất ở INT-002. Client kiểm lại mọi invariant response; một bộ/field sai cấu trúc ⇒ bỏ cả response. Test chỉ dùng MockEngine, chưa chạy với proxy thật.
 
 ## Chung
 

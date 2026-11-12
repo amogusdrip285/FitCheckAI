@@ -1,12 +1,10 @@
 package com.fitcheckai.core.ai.di
 
 import com.fitcheckai.core.ai.BuildConfig
-import com.fitcheckai.core.ai.proxy.ProxyClothingRecognition
 import com.fitcheckai.core.ai.proxy.ProxyConfig
 import com.fitcheckai.core.ai.proxy.ProxyOutfitRecommendation
 import com.fitcheckai.core.ai.proxy.ProxyTransport
 import com.fitcheckai.core.ai.proxy.createProxyTransport
-import com.fitcheckai.core.model.wardrobe.MediaStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,8 +13,8 @@ import io.ktor.client.engine.okhttp.OkHttp
 import javax.inject.Singleton
 
 /**
- * Track B v2 clients. [ProxyClothingRecognition] được cung cấp nhưng CHƯA bind vào ClothingRecognition:
- * binding thuộc A (feature/wardrobe WardrobeBindings) và đổi ở INT-002.
+ * Track B v2 recommendation client (B-003). Recognition dùng `ProxyRecognitionClient` (bind ở [AiModule]),
+ * có phiên demo riêng nhập mã trên UI.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,8 +27,4 @@ object ProxyModule {
 
     @Provides @Singleton
     fun outfitRecommendation(transport: ProxyTransport): ProxyOutfitRecommendation = ProxyOutfitRecommendation(transport)
-
-    @Provides @Singleton
-    fun clothingRecognition(transport: ProxyTransport, media: MediaStore): ProxyClothingRecognition =
-        ProxyClothingRecognition(transport, media)
 }
