@@ -16,15 +16,17 @@ import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
 import com.fitcheckai.feature.tryon.contract.TryOnOutfitSnapshot
 import com.fitcheckai.feature.tryon.contract.TryOnPersonProfileSnapshot
 import com.fitcheckai.feature.tryon.contract.TryOnProfilePort
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 // D-007 root wiring: maps CT-01/03/04 core types into :feature:tryon's contract types.
 // The Try-On UI opens `localRelativePath` as a file, so refs carry the validated display path
 // from MediaStore; refs MediaStore refuses to resolve are dropped rather than guessed.
 
-internal fun MediaRef.toTryOn(media: MediaStore): TryOnMediaRef? {
-    val path = media.displayPath(this) ?: return null
+private fun MediaRef.toTryOn(path: String?): TryOnMediaRef? {
+    if (path == null) return null
     return TryOnMediaRef(
         id = id,
         ownerEntityId = ownerEntityId,
@@ -41,8 +43,11 @@ internal fun MediaRef.toTryOn(media: MediaStore): TryOnMediaRef? {
     )
 }
 
-internal fun ImagePair.toTryOn(media: MediaStore) =
-    TryOnImagePair(front = front?.toTryOn(media), back = back?.toTryOn(media))
+/** Resolves paths through MediaStore (disk I/O): call off the main thread. */
+private fun ImagePair.toTryOn(media: MediaStore) = TryOnImagePair(
+    front = front?.let { it.toTryOn(media.displayPath(it)) },
+    back = back?.let { it.toTryOn(media.displayPath(it)) },
+)
 
 /** :feature:tryon reuses the v1 enum, which has no UNKNOWN; ACCESSORY is never a VTO category. */
 private fun Category.toTryOn(): TryOnCategory =
@@ -67,8 +72,14 @@ internal fun TryOnSelection.toSnapshot(): TryOnOutfitSnapshot {
     )
 }
 
-internal fun TryOnSelection.garmentImages(media: MediaStore): Map<String, TryOnImagePair> =
-    items.associate { it.id to it.images.toTryOn(media) }
+/** Uses paths the publisher already resolved, so this is safe on the main thread. */
+internal fun TryOnSelection.garmentImages(): Map<String, TryOnImagePair> =
+    items.associate { item ->
+        item.id to TryOnImagePair(
+            front = item.images.front?.let { it.toTryOn(displayPaths[it.id]) },
+            back = item.images.back?.let { it.toTryOn(displayPaths[it.id]) },
+        )
+    }
 
 /** CT-04 → Track C port. Exposes only id/revision/body photos; never height, weight or style data. */
 internal class ProfileStorageTryOnPort(
@@ -79,5 +90,5 @@ internal class ProfileStorageTryOnPort(
         profiles.observeProfile().map { state ->
             val profile = (state as? LoadState.Ready)?.value ?: return@map null
             TryOnPersonProfileSnapshot(profile.id, profile.revision, profile.bodyImages.toTryOn(media))
-        }
+        }.flowOn(Dispatchers.IO)
 }

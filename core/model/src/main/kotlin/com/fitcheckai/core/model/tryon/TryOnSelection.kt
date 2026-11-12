@@ -9,7 +9,12 @@ import java.util.concurrent.atomic.AtomicReference
 // snapshot it was validated against) and the Try-On destination looks it up by outfitId.
 // In-memory only: after process death Try-On finds nothing and asks the user to pick again.
 
-data class TryOnSelection(val outfit: Outfit, val items: List<ClothingItem>) {
+/** [displayPaths]: media id -> validated local display path, resolved off the main thread by the publisher. */
+data class TryOnSelection(
+    val outfit: Outfit,
+    val items: List<ClothingItem>,
+    val displayPaths: Map<String, String> = emptyMap(),
+) {
     init {
         val ids = items.map { it.id }.toSet()
         require(outfit.items.all { it.itemId in ids }) { "Selection must carry every outfit item." }

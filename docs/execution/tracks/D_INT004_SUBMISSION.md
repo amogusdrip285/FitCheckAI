@@ -14,7 +14,7 @@ python tools/release/package_apk.py --mode CORE
 ```
 
 Script:
-- từ chối khi working tree bẩn (trừ `--allow-dirty`, không dùng cho bản nộp);
+- từ chối khi working tree bẩn — file tracked đã sửa **hoặc** file mới chưa track trong `src/`/`*.gradle.kts` (vẫn được build vào APK) — trừ `--allow-dirty`, không dùng cho bản nộp;
 - build `:app:assembleDebug` (giữ debug signing đã test, không đổi signing sát giờ);
 - **từ chối đóng gói** nếu APK chứa giá trị giống provider key (OpenAI/Google/Anthropic/FASHN/PEM);
 - ghi `dist/FitCheckAI-<version>-<commit7>-<MODE>.apk`, `.sha256` và `.json` (commit, mode, thời điểm, kết quả scan, có/không có access code demo — không ghi giá trị).
@@ -26,7 +26,7 @@ Chạy thử 12/11/2026 trên APK commit `5e6ddbc`: scan **clean**, `demoAccessC
 ## 2. Smoke cài đặt (bắt buộc, trên chính file trong `dist/`)
 
 ```bash
-sha256sum -c dist/FitCheckAI-*.sha256
+(cd dist && sha256sum -c FitCheckAI-<...>.sha256)   # file .sha256 ghi tên tương đối trong dist/
 adb install -r dist/FitCheckAI-<...>.apk
 ```
 

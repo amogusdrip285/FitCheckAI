@@ -180,6 +180,7 @@ class TodayViewModelTest {
         val selection = handoff.find(outfit.outfitId)!!
         assertEquals(Routes.tryOn(outfit.outfitId, selection.outfit.wardrobeSnapshotId), route)
         assertEquals(selection.outfit.items.map { it.itemId }.toSet(), selection.items.map { it.id }.toSet())
+        assertEquals(selection.items.flatMap { it.images.refs() }.map { it.id }.toSet(), selection.displayPaths.keys)
         assertNull(handoff.find("another-outfit"))
 
         repository.upsert(top.copy(name = "Edited item"), top.revision).getOrThrow()

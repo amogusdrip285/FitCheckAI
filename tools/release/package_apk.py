@@ -70,7 +70,18 @@ def sha256(path: Path) -> str:
 
 
 def git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.rstrip()
+
+
+BUILD_INPUT_RE = re.compile(r"(^|/)src/|\.gradle\.kts$|(^|/)gradle\.properties$")
+ACCESS_CODE_RE = re.compile(r"^\s*fitcheck\.accessCode\s*[=:]\s*(.*?)\s*$", re.MULTILINE)
+
+
+def dirty_build_inputs(tracked_changes: str, untracked: str) -> list[str]:
+    """Paths that make the APK differ from the commit: tracked changes plus untracked build inputs."""
+    changed = [line[3:] for line in tracked_changes.splitlines() if line.strip()]
+    new_inputs = [path for path in untracked.splitlines() if BUILD_INPUT_RE.search(path)]
+    return changed + new_inputs
 
 
 def build_apk() -> None:
@@ -83,11 +94,12 @@ def has_access_code(apk: Path) -> bool:
     with zipfile.ZipFile(apk) as archive:
         dex = b"".join(archive.read(n) for n in archive.namelist() if n.endswith(".dex"))
     # BuildConfig stores an empty string when unset; the field name alone proves nothing.
+    # Only ~/.gradle/gradle.properties is inspected; a code passed via -P or env reports False.
     gradle_props = Path.home() / ".gradle" / "gradle.properties"
     if not gradle_props.exists():
         return False
-    match = re.search(r"^fitcheck\.accessCode=(.+)$", gradle_props.read_text(encoding="utf-8"), re.MULTILINE)
-    return bool(match and match.group(1).strip() and match.group(1).strip().encode() in dex)
+    match = ACCESS_CODE_RE.search(gradle_props.read_text(encoding="utf-8"))
+    return bool(match and match.group(1) and match.group(1).encode() in dex)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -98,9 +110,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-dirty", action="store_true", help="Allow uncommitted changes (not for submission).")
     args = parser.parse_args(argv)
 
-    dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
+    dirty_paths = dirty_build_inputs(
+        git("status", "--porcelain", "--untracked-files=no"),
+        git("ls-files", "--others", "--exclude-standard"),
+    )
+    dirty = bool(dirty_paths)
     if dirty and not args.allow_dirty:
-        print("Working tree has uncommitted changes; commit first or pass --allow-dirty.", file=sys.stderr)
+        print("Uncommitted build inputs: " + ", ".join(dirty_paths[:10]) + "; commit first or pass --allow-dirty.",
+              file=sys.stderr)
         return 2
     if not args.skip_build:
         build_apk()

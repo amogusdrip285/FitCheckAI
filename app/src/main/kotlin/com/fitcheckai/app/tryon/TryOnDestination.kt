@@ -80,6 +80,6 @@ private fun createTryOnViewModel(context: Context, outfitId: String, snapshotId:
             ),
         ),
         initialOutfit = selection?.toSnapshot(),
-        initialGarmentImages = selection?.garmentImages(media).orEmpty(),
+        initialGarmentImages = selection?.garmentImages().orEmpty(),
     )
 }
