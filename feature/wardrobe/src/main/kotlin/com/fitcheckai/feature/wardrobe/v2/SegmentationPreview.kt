@@ -12,7 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fitcheckai.core.imaging.GarmentCutoutProcessor
 import com.fitcheckai.core.imaging.SegmentationReadiness
 import com.fitcheckai.core.model.wardrobe.*
-import com.fitcheckai.feature.wardrobe.GarmentPhoto
+import com.fitcheckai.core.ui.component.GarmentPhoto
 import com.fitcheckai.feature.wardrobe.InfoNotice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

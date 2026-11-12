@@ -1,24 +1,45 @@
 package com.fitcheckai.feature.today
 
+import android.content.Intent
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fitcheckai.core.model.ClothingItem
+import com.fitcheckai.core.ai.fallback.BasicOutfitFallback
+import com.fitcheckai.core.ai.proxy.rerollAfter
+import com.fitcheckai.core.imaging.OutfitShare
 import com.fitcheckai.core.model.MetricEvent
 import com.fitcheckai.core.model.MetricNames
 import com.fitcheckai.core.model.MetricsTracker
-import com.fitcheckai.core.model.Occasion
-import com.fitcheckai.core.model.Outfit
-import com.fitcheckai.core.model.OutfitService
-import com.fitcheckai.core.model.OutfitSuggestions
-import com.fitcheckai.core.model.WardrobeRepository
+import com.fitcheckai.core.model.Outfit as LegacyOutfit
+import com.fitcheckai.core.model.OutfitSource as LegacySource
 import com.fitcheckai.core.model.WearLogRepository
 import com.fitcheckai.core.model.nav.Routes
+import com.fitcheckai.core.model.profile.ProfileStorage
+import com.fitcheckai.core.model.recommendation.ItemSummary
+import com.fitcheckai.core.model.recommendation.MAX_REQUEST_ITEMS
+import com.fitcheckai.core.model.recommendation.Occasion
+import com.fitcheckai.core.model.recommendation.Outfit
+import com.fitcheckai.core.model.recommendation.OutfitRecommendation
+import com.fitcheckai.core.model.recommendation.OutfitRequest
+import com.fitcheckai.core.model.recommendation.OutfitSource
+import com.fitcheckai.core.model.recommendation.RecommendationResult
+import com.fitcheckai.core.model.recommendation.ShortfallReason
+import com.fitcheckai.core.model.wardrobe.Category
+import com.fitcheckai.core.model.wardrobe.ClothingItem
+import com.fitcheckai.core.model.wardrobe.ErrorCode
 import com.fitcheckai.core.model.wardrobe.LoadState
-import com.fitcheckai.core.model.wardrobe.WardrobeRepository as VersionedWardrobeRepository
-import com.fitcheckai.core.model.wardrobe.ClothingItem as VersionedItem
+import com.fitcheckai.core.model.wardrobe.MediaStore
+import com.fitcheckai.core.model.wardrobe.WardrobeException
+import com.fitcheckai.core.model.wardrobe.WardrobeRepository
+import com.fitcheckai.core.model.wardrobe.WardrobeSnapshot
+import com.fitcheckai.core.model.wardrobe.wardrobeResult
+import com.fitcheckai.core.ui.component.OutfitVisualData
+import com.fitcheckai.core.ui.component.resolveOutfitItems
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,38 +50,34 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import kotlinx.coroutines.withContext
 
 data class TodayUiState(
     val occasion: Occasion = Occasion.CASUAL,
-    val isLoading: Boolean = false,
-    val suggestions: OutfitSuggestions? = null,
-    val itemsById: Map<String, ClothingItem> = emptyMap(),
+    val isLoading: Boolean = true,
+    val outfits: List<OutfitVisualData> = emptyList(),
+    val message: String? = null,
     val wornOutfitId: String? = null,
 )
 
+private const val STALE_MESSAGE = "Tủ đồ đã thay đổi. Hãy phối lại với các món hiện tại."
+
 private data class TodayProposal(
     val ui: TodayUiState = TodayUiState(),
-    val revisions: Map<String, Long> = emptyMap(),
+    val request: OutfitRequest? = null,
+    val result: RecommendationResult? = null,
 ) {
-    fun isCurrent(outfit: Outfit, current: Map<String, Long>): Boolean =
-        outfit.itemIds.isNotEmpty() && outfit.itemIds.all { id ->
-            id in ui.itemsById && current[id] != null && current[id] == revisions[id]
-        }
-
-    fun visibleTo(load: LoadState<List<VersionedItem>>): TodayUiState {
-        val suggestions = ui.suggestions ?: return ui
-        val current = if (load is LoadState.Ready) load.value.associate { it.id to it.revision } else emptyMap()
-        val valid = suggestions.outfits.filter { isCurrent(it, current) }
-        if (valid.size == suggestions.outfits.size) return ui
-        val visibleItemIds = valid.flatMap { it.itemIds }.toSet()
+    fun visibleTo(load: LoadState<List<ClothingItem>>): TodayUiState {
+        if (ui.outfits.isEmpty()) return ui
+        val current = (load as? LoadState.Ready)?.value.orEmpty().associate { it.id to it.revision }
+        val validIds = result?.outfits.orEmpty()
+            .filter { outfit -> outfit.items.all { current[it.itemId] == it.revision } }
+            .map { it.id }.toSet()
+        val visible = ui.outfits.filter { it.outfitId in validIds }
         return ui.copy(
-            suggestions = suggestions.copy(
-                outfits = valid,
-                emptyReason = if (valid.isEmpty()) "Tủ đồ đã thay đổi. Hãy phối lại với các món hiện tại." else null,
-            ),
-            itemsById = ui.itemsById.filterKeys(visibleItemIds::contains),
-            wornOutfitId = ui.wornOutfitId?.takeIf { id -> valid.any { it.id == id } },
+            outfits = visible,
+            message = if (visible.isEmpty()) STALE_MESSAGE else ui.message,
+            wornOutfitId = ui.wornOutfitId?.takeIf { it in validIds },
         )
     }
 }
@@ -68,72 +85,170 @@ private data class TodayProposal(
 @HiltViewModel
 class TodayViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val outfitService: OutfitService,
     private val wardrobe: WardrobeRepository,
-    private val versionedWardrobe: VersionedWardrobeRepository,
+    private val profiles: ProfileStorage,
+    private val media: MediaStore,
+    private val recommendation: OutfitRecommendation,
+    private val fallback: BasicOutfitFallback,
+    private val share: OutfitShare,
     private val wearLog: WearLogRepository,
     private val metrics: MetricsTracker,
 ) : ViewModel() {
     private val focusItemId: String? = savedStateHandle[Routes.ARG_FOCUS_ITEM_ID]
     private val proposal = MutableStateFlow(TodayProposal())
     private var suggestionJob: Job? = null
-    val state: StateFlow<TodayUiState> = combine(proposal, versionedWardrobe.observeItems()) { current, items ->
-        current.visibleTo(items)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, TodayUiState(isLoading = true))
+    private var wearJob: Job? = null
 
-    init {
-        suggest()
-    }
+    val state: StateFlow<TodayUiState> = combine(proposal, wardrobe.observeItems()) { current, items ->
+        current.visibleTo(items)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, TodayUiState())
+
+    init { suggest() }
 
     fun onOccasionSelected(occasion: Occasion) {
-        proposal.update { it.copy(ui = it.ui.copy(occasion = occasion)) }
-        suggest()
+        if (occasion != proposal.value.ui.occasion) requestOutfits(occasion, reroll = false)
     }
 
     fun suggest() {
-        val occasion = proposal.value.ui.occasion
+        if (suggestionJob?.isActive != true) requestOutfits(proposal.value.ui.occasion, reroll = false)
+    }
+
+    fun reroll() {
+        if (suggestionJob?.isActive != true) requestOutfits(proposal.value.ui.occasion, reroll = true)
+    }
+
+    private fun requestOutfits(occasion: Occasion, reroll: Boolean) {
+        val previous = proposal.value
         suggestionJob?.cancel()
-        proposal.value = TodayProposal(TodayUiState(occasion = occasion, isLoading = true))
+        proposal.value = TodayProposal(TodayUiState(occasion))
         metrics.track(MetricEvent(MetricNames.OUTFIT_REQUESTED, mapOf("occasion" to occasion.name)))
         suggestionJob = viewModelScope.launch {
             val startedAt = System.currentTimeMillis()
             try {
-                // The existing service returns v1 IDs. Pin their v2 revisions before starting it.
-                val revisions = versionedWardrobe.getSnapshot().getOrThrow().items.associate { it.id to it.revision }
-                val suggestions = outfitService.suggest(occasion, focusItemId)
-                val items = wardrobe.observeItems().first().associateBy { it.id }
-                val latest = versionedWardrobe.getSnapshot().getOrThrow()
-                val result = TodayProposal(TodayUiState(occasion, suggestions = suggestions, itemsById = items), revisions)
-                val visible = result.visibleTo(LoadState.Ready(latest.items))
+                val snapshot = wardrobe.getSnapshot().getOrThrow()
+                val draft = buildRequest(snapshot, occasion)
+                val previousRequest = previous.request
+                val previousResult = previous.result
+                val request = if (reroll && previousRequest != null && previousResult != null &&
+                    recommendation.capability.supportsReroll &&
+                    previousRequest.copy(requestId = draft.requestId, excludeOutfitSignatures = emptySet(),
+                        regenerationOfRequestId = null) == draft
+                ) previousRequest.rerollAfter(previousResult, draft.requestId) else draft
+                val result = recommend(request)
+                val latest = wardrobe.getSnapshot().getOrThrow()
+                val visible = result.outfits.filter { it.items.isNotEmpty() && latest.isCurrent(it.items) }
+                val cards = withContext(Dispatchers.IO) {
+                    val ids = visible.flatMap { it.items }.map { it.itemId }.toSet()
+                    val paths = latest.items.filter { it.id in ids }.flatMap { it.images.refs() }
+                        .mapNotNull { ref -> media.displayPath(ref)?.let { ref.id to it } }.toMap()
+                    visible.mapIndexed { index, outfit ->
+                        OutfitVisualData(
+                            outfit.id, "Bộ phối ${index + 1}", resolveOutfitItems(latest, outfit.items, paths),
+                            outfit.source, outfit.explanation,
+                        )
+                    }
+                }
+                val ui = TodayUiState(
+                    occasion, isLoading = false, outfits = cards,
+                    message = if (cards.isEmpty()) STALE_MESSAGE else result.shortfallReason?.label(),
+                )
                 ensureActive()
-                proposal.value = result.copy(ui = visible)
-                val shown = visible.suggestions?.outfits.orEmpty()
+                proposal.value = TodayProposal(ui, request, result.copy(outfits = visible))
                 metrics.track(MetricEvent(MetricNames.OUTFIT_SHOWN, mapOf(
                     "latencyMs" to (System.currentTimeMillis() - startedAt).toString(),
-                    "count" to shown.size.toString(),
-                    "source" to (shown.firstOrNull()?.source?.name ?: "NONE"),
+                    "count" to cards.size.toString(),
+                    "source" to (cards.firstOrNull()?.source?.name ?: "NONE"),
                 )))
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (error: Exception) {
                 ensureActive()
-                proposal.value = TodayProposal(TodayUiState(occasion, suggestions = OutfitSuggestions(
-                    emptyList(), null, "Chưa tải được gợi ý. Hãy thử lại.",
-                )))
+                proposal.value = TodayProposal(TodayUiState(
+                    occasion, isLoading = false,
+                    message = (error as? WardrobeException)?.message ?: "Chưa tải được gợi ý. Hãy thử lại.",
+                ))
             }
         }
     }
 
-    fun onWear(outfit: Outfit) {
-        viewModelScope.launch {
+    private suspend fun buildRequest(snapshot: WardrobeSnapshot, occasion: Occasion): OutfitRequest {
+        val known = snapshot.items.filter { it.attributes.category != Category.UNKNOWN }
+        val focus = focusItemId?.let { id -> known.find { it.id == id } ?: throw WardrobeException(
+            ErrorCode.NEEDS_INPUT, "Món được chọn đã bị xóa hoặc chưa có loại đồ. Hãy chọn món khác.",
+        ) }
+        if (known.isEmpty()) throw WardrobeException(
+            ErrorCode.INSUFFICIENT_WARDROBE, "Hãy thêm áo và quần/chân váy hoặc một đầm liền vào tủ đồ.",
+        )
+        // Keep the focus and at least one possible base outfit even in a large wardrobe.
+        val essentials = listOfNotNull(focus) + listOf(Category.TOP, Category.BOTTOM, Category.DRESS).mapNotNull { category ->
+            known.firstOrNull { it.attributes.category == category }
+        }
+        val items = (essentials + known).distinctBy { it.id }.take(MAX_REQUEST_ITEMS)
+        val profile = profiles.observeProfile().first { it !is LoadState.Loading } as? LoadState.Ready
+        return OutfitRequest(
+            requestId = UUID.randomUUID().toString(),
+            wardrobeSnapshotId = snapshot.snapshotId,
+            items = items.map { ItemSummary(it.id, it.revision, it.attributes) },
+            profile = profile?.value?.toProjection(),
+            occasion = occasion,
+            focusItemId = focus?.id,
+        )
+    }
+
+    private suspend fun recommend(request: OutfitRequest): RecommendationResult =
+        recommendation.recommend(request).getOrElse { error ->
+            if ((error as? WardrobeException)?.code !in FALLBACK_ERRORS) throw error
+            RecommendationResult(request.requestId, listOf(fallback.suggest(request).getOrThrow()))
+        }
+
+    fun onWear(outfitId: String) {
+        if (wearJob?.isActive == true || proposal.value.ui.wornOutfitId == outfitId) return
+        wearJob = viewModelScope.launch {
             val selected = proposal.value
-            if (outfit !in selected.ui.suggestions?.outfits.orEmpty()) return@launch
-            val snapshot = versionedWardrobe.getSnapshot().getOrNull() ?: return@launch
-            if (proposal.value !== selected || !selected.isCurrent(outfit, snapshot.items.associate { it.id to it.revision })) return@launch
-            wearLog.logWear(outfit).onSuccess {
+            val outfit = selected.result?.outfits?.find { it.id == outfitId } ?: return@launch
+            if (wardrobeResult { checkCurrent(selected, outfit) }.isFailure) return@launch
+            val legacy = LegacyOutfit(
+                outfit.id, outfit.items.map { it.itemId }, outfit.explanation,
+                source = if (outfit.source == OutfitSource.AI_LIVE) LegacySource.AI else LegacySource.RULES,
+            )
+            wearLog.logWear(legacy).onSuccess {
                 metrics.track(MetricEvent(MetricNames.OUTFIT_WORN, mapOf("source" to outfit.source.name)))
-                proposal.update { if (it === selected) it.copy(ui = it.ui.copy(wornOutfitId = outfit.id)) else it }
+                proposal.update { if (it === selected) it.copy(ui = it.ui.copy(wornOutfitId = outfitId)) else it }
             }
         }
     }
+
+    suspend fun prepareShare(outfitId: String): Result<Intent> = wardrobeResult {
+        val selected = proposal.value
+        val outfit = selected.result?.outfits?.find { it.id == outfitId } ?: throw stale()
+        val snapshot = checkCurrent(selected, outfit)
+        val photos = outfit.items.map { ref ->
+            snapshot.items.first { it.id == ref.itemId }.images.front
+                ?: throw WardrobeException(ErrorCode.IO, "Món đồ thiếu ảnh mặt trước.")
+        }
+        val intent = share.prepare("Bộ phối FitCheck", photos).getOrThrow()
+        checkCurrent(selected, outfit)
+        intent
+    }
+
+    private suspend fun checkCurrent(selected: TodayProposal, outfit: Outfit): WardrobeSnapshot {
+        val latest = wardrobe.getSnapshot().getOrThrow()
+        if (proposal.value.result !== selected.result || outfit.items.isEmpty() || !latest.isCurrent(outfit.items)) throw stale()
+        return latest
+    }
+
+    private fun stale() = WardrobeException(ErrorCode.STALE_INPUT, STALE_MESSAGE)
+
+    private companion object {
+        val FALLBACK_ERRORS = setOf(
+            ErrorCode.UNSUPPORTED_CAPABILITY, ErrorCode.NETWORK, ErrorCode.UPSTREAM_TIMEOUT, ErrorCode.UPSTREAM_ERROR,
+            ErrorCode.RATE_LIMITED, ErrorCode.BUDGET_EXCEEDED, ErrorCode.INVALID_AI_OUTPUT, ErrorCode.UNAUTHORIZED,
+        )
+    }
+}
+
+private fun ShortfallReason.label(): String = when (this) {
+    ShortfallReason.NOT_ENOUGH_DISTINCT_COMBINATIONS -> "Tủ đồ hiện chỉ có từng này bộ khác nhau."
+    ShortfallReason.CONSTRAINTS_TOO_STRICT -> "Một số lựa chọn đang giới hạn số bộ phù hợp."
+    ShortfallReason.INVALID_OUTFITS_REMOVED -> "Đã bỏ các bộ có món không hợp lệ."
 }

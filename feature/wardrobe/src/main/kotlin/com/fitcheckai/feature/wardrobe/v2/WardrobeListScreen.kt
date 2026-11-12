@@ -1,5 +1,7 @@
 package com.fitcheckai.feature.wardrobe.v2
 
+import com.fitcheckai.core.ui.component.GarmentPhoto
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

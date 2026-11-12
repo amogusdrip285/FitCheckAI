@@ -1,5 +1,7 @@
 package com.fitcheckai.feature.wardrobe.v2
 
+import com.fitcheckai.core.ui.component.GarmentPhoto
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler

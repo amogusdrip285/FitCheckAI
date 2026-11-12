@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.fitcheckai.core.model.wardrobe.*
 import com.fitcheckai.core.model.wardrobe.fakes.*
-import com.fitcheckai.feature.wardrobe.resolveOutfitItems
+import com.fitcheckai.core.ui.component.resolveOutfitItems
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 import org.junit.After

@@ -14,7 +14,7 @@ Nguồn chi tiết: [`2026-11-12T12-48-27-674-recommendation.md`](2026-11-12T12-
 - R05 tủ đủ ⇒ 5 bộ khác tập món; R03/R04 trả 1 bộ + `NOT_ENOUGH_DISTINCT_COMBINATIONS`; R06 focus váy đỏ ⇒ mọi bộ chứa váy; R09 freeText cố ghi đè luật vẫn đúng slot; R10 giải thích ghi rõ thời tiết là dữ liệu cũ.
 - Latency AI 12.5–33.0s (Gemini 11/11: 1.3–3.0s). Chỉ đo được vì đã nới deadline; với 15s mặc định, 5/6 case sẽ timeout.
 - Văn phong: cụ thể theo màu/hoạ tiết/dịp; **nhược điểm thấy được**: vài câu lộ trường nội bộ ("độ trang trọng 3", "độ trang trọng 4") — nên sửa prompt nếu giữ luna.
-- **Chưa đạt B-004**: thiếu điểm của 2 reviewer B và A (bảng `__ / __` trong report).
+- Track A đã chấm 17 bộ trong 6 case. Tất cả đạt ít nhất 3/5 ở cả ngữ cảnh và giải thích theo cột A. Gate B-004 còn chờ điểm độc lập của B và kết quả dưới deadline demo. [Bảng chấm](2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a).
 
 ## B-006 — recognition
 

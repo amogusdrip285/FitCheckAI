@@ -1,5 +1,11 @@
 package com.fitcheckai.feature.wardrobe
 
+import com.fitcheckai.core.model.recommendation.OutfitSource
+import com.fitcheckai.core.ui.component.ItemThumbnailData
+import com.fitcheckai.core.ui.component.OutfitVisual
+import com.fitcheckai.core.ui.component.OutfitVisualData
+import com.fitcheckai.core.ui.component.OutfitVisualList
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll

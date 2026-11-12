@@ -1,5 +1,7 @@
 package com.fitcheckai.feature.wardrobe
 
+import com.fitcheckai.core.ui.component.GarmentPhoto
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager

@@ -1,40 +1,48 @@
 package com.fitcheckai.feature.today
 
+import android.content.ContextWrapper
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
-import com.fitcheckai.core.model.Category
-import com.fitcheckai.core.model.ClothingAttributes
-import com.fitcheckai.core.model.ClothingItem
+import com.fitcheckai.core.ai.fallback.BasicOutfitFallback
+import com.fitcheckai.core.imaging.OutfitShare
+import com.fitcheckai.core.model.MetricEvent
 import com.fitcheckai.core.model.MetricsTracker
-import com.fitcheckai.core.model.Occasion
-import com.fitcheckai.core.model.Outfit
+import com.fitcheckai.core.model.Outfit as LegacyOutfit
 import com.fitcheckai.core.model.OutfitFeedback
-import com.fitcheckai.core.model.OutfitService
-import com.fitcheckai.core.model.OutfitSource
-import com.fitcheckai.core.model.OutfitSuggestions
-import com.fitcheckai.core.model.WardrobeRepository
+import com.fitcheckai.core.model.WearLogEntry
 import com.fitcheckai.core.model.WearLogRepository
-import com.fitcheckai.core.model.wardrobe.ClothingItem as VersionedItem
-import com.fitcheckai.core.model.wardrobe.LoadState
+import com.fitcheckai.core.model.ai.fakes.FakeOutfitRecommendation
+import com.fitcheckai.core.model.ai.fakes.RecommendationScenario
+import com.fitcheckai.core.model.nav.Routes
+import com.fitcheckai.core.model.profile.fakes.FakeProfileStorage
+import com.fitcheckai.core.model.profile.fakes.fullProfile
+import com.fitcheckai.core.model.recommendation.Occasion
+import com.fitcheckai.core.model.recommendation.OutfitRecommendation
+import com.fitcheckai.core.model.recommendation.OutfitRequest
+import com.fitcheckai.core.model.recommendation.OutfitSource
+import com.fitcheckai.core.model.recommendation.outfitSignature
+import com.fitcheckai.core.model.wardrobe.ErrorCode
+import com.fitcheckai.core.model.wardrobe.WardrobeException
+import com.fitcheckai.core.model.wardrobe.fakes.FakeMediaStore
 import com.fitcheckai.core.model.wardrobe.fakes.FakeWardrobeRepository
+import com.fitcheckai.core.model.wardrobe.fakes.fixtureId
 import com.fitcheckai.core.model.wardrobe.fakes.sixFixtures
 import java.time.Instant
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
@@ -43,15 +51,17 @@ class TodayViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val store = ViewModelStore()
     private val fixtures = sixFixtures()
-    private val first = fixtures[0]
-    private val second = fixtures[1]
+    private val top = fixtures[0]
+    private val bottom = fixtures[1]
+    private val dress = fixtures[2]
     private val repository = FakeWardrobeRepository(fixtures)
-    private val worn = mutableListOf<Outfit>()
-    private val occasions = mutableListOf<Occasion>()
-    private val legacy = LegacyReader(repository)
+    private val media = FakeMediaStore()
+    private val profile = fullProfile()
+    private val fake = FakeOutfitRecommendation(RecommendationScenario.Single)
+    private val worn = mutableListOf<LegacyOutfit>()
     private val wearLog = object : WearLogRepository {
-        override fun observeLogs() = flowOf(emptyList<com.fitcheckai.core.model.WearLogEntry>())
-        override suspend fun logWear(outfit: Outfit, at: Instant): Result<Unit> {
+        override fun observeLogs() = flowOf(emptyList<WearLogEntry>())
+        override suspend fun logWear(outfit: LegacyOutfit, at: Instant): Result<Unit> {
             worn += outfit
             return Result.success(Unit)
         }
@@ -61,95 +71,113 @@ class TodayViewModelTest {
     @Before fun setUp() { Dispatchers.setMain(dispatcher) }
     @After fun tearDown() { store.clear(); Dispatchers.resetMain() }
 
-    @Test fun `edit and delete remove affected cards and stale wear actions`() = runTest(dispatcher) {
-        val edited = outfit("edited", first)
-        val deleted = outfit("deleted", second)
-        val viewModel = create { listOf(edited, deleted) }
-        runCurrent()
-        assertEquals(listOf(edited, deleted), viewModel.state.value.suggestions?.outfits)
-        viewModel.onWear(edited)
-        runCurrent()
-        assertEquals(edited.id, viewModel.state.value.wornOutfitId)
+    @Test fun `Today uses CT02 snapshot and projection and resolves both views for focused outfits`() = runTest(dispatcher) {
+        fake.scenario = RecommendationScenario.Generate
+        val viewModel = create(focus = dress.id)
+        val shown = viewModel.settled()
+        val request = fake.requests.single()
+        assertEquals(repository.getSnapshot().getOrThrow().snapshotId, request.wardrobeSnapshotId)
+        assertEquals(profile.toProjection(), request.profile)
+        assertEquals(dress.id, request.focusItemId)
+        assertTrue(shown.outfits.size in 1..5)
+        for (card in shown.outfits) {
+            assertEquals(OutfitSource.FAKE, card.source)
+            val item = card.items.first { it.itemId == dress.id }
+            assertEquals(media.displayPath(dress.images.front!!), item.imagePath)
+            assertEquals(media.displayPath(dress.images.back!!), item.backImagePath)
+        }
+    }
 
-        repository.upsert(first.copy(name = "Edited item"), first.revision).getOrThrow()
-        // Check the action against storage even before UI receives the change.
-        viewModel.onWear(edited)
+    @Test fun `wardrobe edit and delete hide stale cards and reject share and wear`() = runTest(dispatcher) {
+        val viewModel = create()
+        val first = viewModel.settled().outfits.single()
+        viewModel.onWear(first.outfitId)
         runCurrent()
-        assertEquals(listOf(deleted), viewModel.state.value.suggestions?.outfits)
-        assertEquals(setOf(second.id), viewModel.state.value.itemsById.keys)
-        assertNull(viewModel.state.value.wornOutfitId)
-        assertEquals(listOf(edited), worn)
+        assertEquals(first.outfitId, viewModel.state.value.wornOutfitId)
 
-        repository.delete(second.id, second.revision).getOrThrow()
+        repository.upsert(top.copy(name = "Edited item"), top.revision).getOrThrow()
+        val shareError = viewModel.prepareShare(first.outfitId).exceptionOrNull() as WardrobeException
+        assertEquals(ErrorCode.STALE_INPUT, shareError.code)
+        val invalidated = viewModel.state.first { it.outfits.isEmpty() && !it.isLoading }
+        assertTrue(invalidated.message!!.contains("Tủ đồ đã thay đổi"))
+        assertNull(invalidated.wornOutfitId)
+        viewModel.onWear(first.outfitId)
         runCurrent()
-        assertTrue(viewModel.state.value.suggestions!!.outfits.isEmpty())
-        assertTrue(viewModel.state.value.suggestions!!.emptyReason!!.contains("Tủ đồ đã thay đổi"))
-        assertTrue(viewModel.state.value.itemsById.isEmpty())
-        assertEquals(listOf(Occasion.CASUAL), occasions)
+        assertEquals(listOf(first.outfitId), worn.map { it.id })
+
+        viewModel.suggest()
+        val replacement = viewModel.state.first { it.outfits.isNotEmpty() }.outfits.single()
+        assertTrue(replacement.items.any { it.name == "Edited item" })
+        repository.delete(bottom.id, bottom.revision).getOrThrow()
+        assertTrue(viewModel.state.first { it.outfits.isEmpty() && !it.isLoading }.message!!.contains("Tủ đồ đã thay đổi"))
     }
 
     @Test fun `edit during an outstanding suggestion cannot publish the stale outfit`() = runTest(dispatcher) {
-        val completion = CompletableDeferred<Unit>()
-        val stale = outfit("delayed", first)
-        val viewModel = create { completion.await(); listOf(stale) }
+        fake.delayMs = 1_000
+        val viewModel = create()
         runCurrent()
-        assertTrue(viewModel.state.value.isLoading)
-        repository.upsert(first.copy(name = "New revision"), first.revision).getOrThrow()
-        completion.complete(Unit)
-        runCurrent()
-        assertTrue(viewModel.state.value.suggestions!!.outfits.isEmpty())
-        assertTrue(viewModel.state.value.itemsById.isEmpty())
+        assertEquals(1, fake.requests.size)
+        repository.upsert(top.copy(name = "New revision"), top.revision).getOrThrow()
+        advanceTimeBy(1_001)
+        assertTrue(viewModel.settled().outfits.isEmpty())
     }
 
-    @Test fun `a late response cannot replace the latest selected occasion`() = runTest(dispatcher) {
-        val completion = CompletableDeferred<Unit>()
-        val late = outfit("late", first)
-        val work = outfit("work", second)
-        val viewModel = create { occasion ->
-            if (occasion == Occasion.CASUAL) {
-                withContext(NonCancellable) { completion.await() }
-                listOf(late)
-            } else listOf(work)
+    @Test fun `missing proxy falls back to a correctly labelled rules outfit while keeping focus`() = runTest(dispatcher) {
+        fake.scenario = RecommendationScenario.Failure(ErrorCode.UNSUPPORTED_CAPABILITY)
+        val card = create(focus = dress.id).settled().outfits.single()
+        assertEquals(OutfitSource.RULES, card.source)
+        assertEquals(listOf(dress.id), card.items.map { it.itemId })
+    }
+
+    @Test fun `reroll excludes the visible outfit and duplicate taps launch one request`() = runTest(dispatcher) {
+        val viewModel = create()
+        val card = viewModel.settled().outfits.single()
+        val previous = fake.requests.single()
+        viewModel.reroll()
+        viewModel.reroll()
+        val next = viewModel.state.first { state -> state.outfits.any { it.outfitId != card.outfitId } }.outfits.single()
+        assertEquals(2, fake.requests.size)
+        val reroll = fake.requests.last()
+        assertEquals(previous.requestId, reroll.regenerationOfRequestId)
+        assertEquals(setOf(outfitSignature(card.items.map { it.itemId })), reroll.excludeOutfitSignatures)
+        assertNotEquals(card.items.map { it.itemId }.toSet(), next.items.map { it.itemId }.toSet())
+    }
+
+    @Test fun `a missing focus does not send another outfit request`() = runTest(dispatcher) {
+        val state = create(focus = fixtureId("deleted-focus")).settled()
+        assertTrue(fake.requests.isEmpty())
+        assertTrue(state.outfits.isEmpty())
+        assertTrue(state.message!!.contains("Món được chọn"))
+    }
+
+    @Test fun `an older recommendation cannot replace the selected occasion`() = runTest(dispatcher) {
+        val engine = object : OutfitRecommendation by fake {
+            override suspend fun recommend(request: OutfitRequest) =
+                if (request.occasion == Occasion.CASUAL) withContext(NonCancellable) {
+                    delay(1_000)
+                    fake.recommend(request)
+                } else fake.recommend(request)
         }
+        val viewModel = create(engine = engine)
         runCurrent()
         viewModel.onOccasionSelected(Occasion.WORK)
+        val work = viewModel.state.first { it.occasion == Occasion.WORK && !it.isLoading }
+        advanceTimeBy(1_001)
         runCurrent()
-        completion.complete(Unit)
-        runCurrent()
-        assertEquals(Occasion.WORK, viewModel.state.value.occasion)
-        assertEquals(listOf(work), viewModel.state.value.suggestions?.outfits)
+        assertEquals(work, viewModel.state.value)
+        assertTrue(work.outfits.single().explanation.contains("work"))
     }
 
-    private fun create(suggest: suspend (Occasion) -> List<Outfit>): TodayViewModel {
-        val service = object : OutfitService {
-            override suspend fun suggest(occasion: Occasion, focusItemId: String?): OutfitSuggestions {
-                occasions += occasion
-                return OutfitSuggestions(suggest(occasion), null)
-            }
-        }
-        val viewModel = TodayViewModel(SavedStateHandle(), service, legacy, repository, wearLog, object : MetricsTracker {
-            override fun track(event: com.fitcheckai.core.model.MetricEvent) = Unit
-        })
+    private suspend fun TodayViewModel.settled() = state.first { !it.isLoading }
+
+    private fun create(focus: String? = null, engine: OutfitRecommendation = fake): TodayViewModel {
+        val handle = SavedStateHandle(mapOf(Routes.ARG_FOCUS_ITEM_ID to focus))
+        val viewModel = TodayViewModel(
+            handle, repository, FakeProfileStorage(profile), media, engine,
+            BasicOutfitFallback { 100 }, OutfitShare(ContextWrapper(null), media), wearLog,
+            object : MetricsTracker { override fun track(event: MetricEvent) = Unit },
+        )
         store.put("today", viewModel)
         return viewModel
-    }
-
-    private fun outfit(id: String, item: VersionedItem) = Outfit(id, listOf(item.id), "Test outfit", source = OutfitSource.RULES)
-
-    private class LegacyReader(private val repository: FakeWardrobeRepository) : WardrobeRepository {
-        override fun observeItems() = repository.observeItems().map { state ->
-            (state as? LoadState.Ready)?.value.orEmpty().map(::asLegacy)
-        }
-        override suspend fun getItem(id: String) = repository.get(id).getOrThrow()?.let(::asLegacy)
-        override suspend fun save(imagePath: String, attributes: ClothingAttributes): Result<ClothingItem> = error("Read only")
-        override suspend fun update(item: ClothingItem): Result<Unit> = error("Read only")
-        override suspend fun delete(id: String): Result<Unit> = error("Read only")
-        override suspend fun markWorn(itemIds: List<String>, at: Instant): Result<Unit> = error("Read only")
-
-        private fun asLegacy(item: VersionedItem) = ClothingItem(
-            item.id, "/fixture/${item.id}.jpg",
-            ClothingAttributes(Category.valueOf(item.attributes.category.name), item.name, emptyList()),
-            Instant.ofEpochMilli(item.createdAt),
-        )
     }
 }

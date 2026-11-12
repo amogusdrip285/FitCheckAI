@@ -28,14 +28,15 @@ Các type v1 chỉ giữ để consumer cũ compile; không ghi S-002/PRE-007 c�
 | `ClothingRecognition` | `ProxyRecognitionClient` trong `core:ai`; editor chỉ bật gửi ảnh khi proxy báo recognition khả dụng |
 | `ProfileStorage` | `FileProfileStorage` dùng chung `MediaStore` với Tủ đồ; ảnh PERSON lưu ở `noBackupFilesDir` |
 | v1 wardrobe | `LegacyWardrobeBridge` chỉ đọc v2, giữ counters v1 đã có; không có write v1 cạnh tranh |
-| Reusable visual | `OutfitVisual`, `ItemThumbnail`, `OutfitVisualList`, `resolveOutfitItems`; DTO/callback, không NavHost/provider |
+| Reusable visual | `OutfitVisual`, `ItemThumbnail`, `OutfitVisualList`, `resolveOutfitItems` ở `core:ui`; Today truyền DTO và callback |
+| Phối đồ | Today dùng `OutfitRecommendation` CT-02 của B, hoặc `BasicOutfitFallback` khi dịch vụ chưa cấu hình hay gặp lỗi có thể dùng offline |
 | Fixtures | `core:model/src/testFixtures`; ảnh thật chỉ ở debug assets, import chủ động |
-| Share prototype | `OutfitShare.prepare` trả `ACTION_SEND`/content URI đọc một collage; component nhận callback `onShare` |
+| Chia sẻ | Nút **Chia sẻ ảnh mặt trước** ở Today tạo collage GARMENT qua `OutfitShare`, rồi mở Android Sharesheet |
 | Sync prototype | `GarmentTransfer`/mapping metadata, [quy tắc conflict và privacy](track-a-sync-boundary.md); chưa upload/restore cloud |
 
 v1 không biểu diễn UNKNOWN/nullable formality: bridge bỏ item chưa có category, dùng default formality 2 chỉ cho consumer v1,
 không ghi default đó vào v2 hay coi là annotation. Wear tracking nằm ngoài scope v2; bridge từ chối write/markWorn bằng lỗi rõ ràng.
-Today dùng dịch vụ phối đồ hiện tại và đối chiếu revision với tủ v2. Luồng phối đồ live và VTO được nghiệm thu ở các gate riêng.
+Today gửi ID, revision và thuộc tính các món đủ loại, tối đa 50 món, cùng phần thông tin hồ sơ cho phép theo CT-04. Thông tin gửi gồm sở thích, loại đồ ưa dùng và chiều cao nếu có. Khi phối quanh một món, request giữ ID món đó và hiển thị lỗi nếu món đã xóa hoặc chưa có loại.
 
 ## Dữ liệu và độ bền
 
@@ -49,7 +50,8 @@ Delete ghi tombstone, loại khỏi snapshot/flow ngay, xóa payload rồi clean
 Snapshot ID được tạo từ danh sách ID/revision; `isCurrent` và `resolveOutfitItems` giúp consumer chặn chọn outfit stale/deleted.
 Consumer D/C phải kiểm snapshot lại trước action/upload; events chỉ giúp làm mới UI, không thay thế kiểm revision ở boundary.
 Today chụp revision trước khi xin gợi ý và kiểm lại khi kết quả về. Sửa hoặc xóa món làm ẩn các bộ chứa revision cũ, kể cả khi Today đang ở tab nền.
-Người dùng có thể bấm **Thử lại** hoặc **Phối lại** để xin gợi ý mới.
+**Thử lại** tạo yêu cầu từ tủ hiện tại. **Phối lại** với cùng ngữ cảnh loại các bộ vừa hiển thị, rồi cho biết nếu đã hết tổ hợp phù hợp.
+Chia sẻ kiểm revision trước và sau khi ghép ảnh. Collage là JPEG trong cache, URI chỉ đọc. Người dùng chọn ứng dụng nhận hoặc hủy ở bảng chia sẻ.
 
 Ảnh import JPEG/PNG được xoay theo EXIF, xóa metadata, thu nhỏ tối đa 2.048 px, giới hạn 4 MiB; input tối đa 32 MiB/100 MP.
 Ảnh mỗi mặt có UUID/hash, không ghi đè file cũ khi thay view. Hai mặt không được dùng cùng content hash, nhưng hash khác không chứng minh cùng garment;
@@ -94,6 +96,12 @@ Generation chặn kết quả cũ và dọn output tới muộn. File tạm đư
 Nguồn kỹ thuật: [ML Kit subject segmentation](https://developers.google.com/ml-kit/vision/subject-segmentation/android),
 [ModuleInstallClient](https://developers.google.com/android/guides/module-install-apis).
 
+## Today với proxy của nhóm
+
+Today dùng hai thiết lập `fitcheck.proxyUrl` và `fitcheck.accessCode` khi build demo. Dùng URL HTTPS của Worker đã bật `SERVICE_OUTFITS`, đặt mã demo trong Gradle properties của máy. Form nhận diện vẫn nhập mã demo ở hộp xác nhận gửi ảnh khi phiên hết hạn.
+
+Với cấu hình mặc định, mở **Hôm nay** sau khi nhập bộ ảnh thử để xem **Phối cơ bản**. Mở thẻ món, bấm **Phối đồ cùng món này**, thử **Phối lại** và **Chia sẻ ảnh mặt trước**. Luồng AI live thuộc INT-002 và cần proxy HTTPS đã triển khai.
+
 ## Kiểm thử và bàn giao
 
 Catalog Kaggle dùng cho thử nhập ảnh và đối chiếu nhãn trên PC. Chạy lệnh trong hướng dẫn để tải v1, chuẩn hóa 6 nhóm của app và xuất JPEG kèm manifest. [Hướng dẫn catalog](../data/README.md#catalog-kaggle).
@@ -109,8 +117,9 @@ python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 
 Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process`.
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
-Evidence chạy mới nhất ở [QA trên máy thật](qa/track-a-physical-device.md). Các lần trước có [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
+Evidence sau bàn giao B ở [QA tích hợp A–B](qa/track-a-b-handoff.md). Các lần trước có [QA trên máy thật](qa/track-a-physical-device.md), [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
 Trạng thái card ở [board](execution/TASK_BOARD.md).
+[Điểm demo nội bộ](../Scorings.MD) và [điểm reviewer A cho B-004](../eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a) có thang chấm riêng.
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.
 
 Điểm D/B/C cần review gồm quyền sở hữu media, luồng live qua proxy, revision khi chọn outfit cho VTO, consent qua job và gate artifact máy thật.
@@ -122,7 +131,7 @@ người dùng yêu cầu các cải tiến độc lập tiếp theo được pu
 Lấy bản mới bằng `git fetch origin`, rồi tích hợp `origin/main` vào nhánh riêng sau khi review; nhánh A cũ không phải điểm lấy bản mới nhất.
 
 - **B:** review client Android theo CT-05 và chạy INT-002 với proxy live, sau khi nhóm xác nhận provider và ngân sách. Bộ test mock nằm trong `core:ai`.
-- **D:** review shared contracts, DI và schema migration. Khi nối `OutfitVisualList` cho selection, share hoặc VTO, kiểm snapshot/ID/revision lại trước action.
+- **D:** review shared contracts, DI, schema migration và component Today ở `core:ui`. Khi nối VTO, kiểm snapshot/ID/revision lại trước khi tạo job.
 - **C:** nhận `MediaRef`/scope từ owner, dùng API đọc media thay vì tự dựng path; review cleanup/retention ảnh người và kết quả cùng D.
   `OutfitVisual` hiện là ảnh garment, không phải kết quả try-on.
 
