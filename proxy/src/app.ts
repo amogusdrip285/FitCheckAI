@@ -2,8 +2,23 @@
 // Thứ tự chặn trước khi tới handler: route → auth → kill switch → rate limit → body cap → validate (handler)
 // → daily cap → provider. Request bị chặn ở bất kỳ bước nào KHÔNG gọi upstream.
 import { z } from "zod";
-import { DEFAULT_MODELS, type Env, SERVICES, aiProvider, dailyCap, intVar, recognitionViews, serviceEnabled } from "./env";
+import {
+  AI_SERVICES,
+  type AiService,
+  type Env,
+  SERVICES,
+  aiModel,
+  aiProvider,
+  providerTimeoutMs,
+  proxyDeadlineMs,
+  dailyCap,
+  intVar,
+  providerLabel,
+  recognitionViews,
+  serviceEnabled,
+} from "./env";
 import { GeminiModelClient } from "./shared/gemini";
+import { OpenAICompatibleModelClient, normalizeBaseUrl } from "./shared/openai";
 import { accessCodeMatches, bearerToken, issueSessionToken, verifySessionToken } from "./shared/auth";
 import { ApiError, errorResponse } from "./shared/errors";
 import { UsageGuard } from "./shared/guard";
@@ -13,24 +28,35 @@ import { AnthropicModelClient, type ModelClient } from "./shared/model";
 import { type AppDeps, matchPath, type RouteContext, type RouteDef } from "./shared/registry";
 
 /** Deadline tổng của proxy (CT-07: client 20s, proxy ≤18s, provider ≤15s). */
+/** Mặc định CT-07; giá trị thật theo env qua proxyDeadlineMs(). */
 export const PROXY_DEADLINE_MS = 18_000;
 const SESSION_BODY_BYTES = 1024;
 
 const SessionRequestSchema = z.object({ accessCode: z.string().min(1).max(128) }).strict();
 
-function defaultModelFor(): (env: Env) => ModelClient | null {
+function defaultModelFor(): (env: Env, service?: AiService) => ModelClient | null {
   const cache = new Map<string, ModelClient>();
-  return (env) => {
-    const provider = aiProvider(env);
-    const apiKey = (provider === "gemini" ? env.GEMINI_API_KEY : env.ANTHROPIC_API_KEY)?.trim();
+  return (env, service) => {
+    const provider = aiProvider(env, service);
+    const apiKey = (
+      provider === "gemini" ? env.GEMINI_API_KEY : provider === "openai" ? env.OPENAI_API_KEY : env.ANTHROPIC_API_KEY
+    )?.trim();
     if (!apiKey) return null;
-    const model = env.AI_MODEL?.trim() || DEFAULT_MODELS[provider];
-    const cacheKey = `${provider}:${model}:${apiKey.length}:${apiKey.slice(-6)}`;
+    const baseUrl = provider === "openai" ? normalizeBaseUrl(env.OPENAI_BASE_URL) : "";
+    if (baseUrl === null) return null;
+    const model = aiModel(env, service);
+    const timeoutMs = providerTimeoutMs(env);
+    const cacheKey = `${provider}:${baseUrl}:${model}:${timeoutMs}:${apiKey.length}:${apiKey.slice(-6)}`;
     let client = cache.get(cacheKey);
     if (client === undefined) {
       client =
-        provider === "gemini" ? new GeminiModelClient(apiKey, model) : AnthropicModelClient.fromApiKey(apiKey, model);
-      cache.clear();
+        provider === "gemini"
+          ? new GeminiModelClient(apiKey, model, undefined, timeoutMs)
+          : provider === "openai"
+            ? new OpenAICompatibleModelClient(apiKey, model, baseUrl, undefined, timeoutMs)
+            : AnthropicModelClient.fromApiKey(apiKey, model, undefined, timeoutMs);
+      // Vài service có thể dùng provider khác nhau cùng lúc ⇒ giữ vài client, không xoá nhau.
+      if (cache.size >= 4) cache.clear();
       cache.set(cacheKey, client);
     }
     return client;
@@ -86,8 +112,12 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       schemaVersion: 2,
       services,
       recognitionViews: recognitionViews(env),
-      provider: aiProvider(env),
+      provider: providerLabel(env),
       providerConfigured: deps.modelFor(env) !== null,
+      // Theo từng service: consent recognition phải hiện đúng nơi ảnh được gửi.
+      providers: Object.fromEntries(
+        AI_SERVICES.map((s) => [s, { provider: providerLabel(env, s), model: aiModel(env, s), configured: deps.modelFor(env, s) !== null }]),
+      ),
     });
   }
 
@@ -137,7 +167,7 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       requestId: log.requestId,
       session,
       params,
-      signal: AbortSignal.timeout(PROXY_DEADLINE_MS),
+      signal: AbortSignal.timeout(proxyDeadlineMs(env)),
       reserveUpstreamCall() {
         if (!deps.guard.tryReserveDaily(service, dailyCap(env, service), deps.now())) {
           throw new ApiError("BUDGET_EXCEEDED", "Đã hết hạn mức AI hôm nay");

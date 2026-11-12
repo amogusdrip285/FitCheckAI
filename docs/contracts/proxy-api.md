@@ -6,6 +6,8 @@
 
 Trạng thái: implementation + unit/HTTP tests với model giả (B-001/B-002/BACK-004). **Chưa có evidence live**: cần PRE-003 (provider/budget), deploy và B-004/B-006.
 
+**Android client:** recommendation (B-003) — `core/ai/.../proxy/ProxyOutfitRecommendation` (bind vào `OutfitRecommendation`) qua `ProxyTransport` (session token, deadline 20s, map lỗi CT-07, không auto-retry, mỗi `requestId` chỉ gửi một lần); mã truy cập demo từ gradle property `fitcheck.accessCode` (đặt trong `~/.gradle/gradle.properties`, không commit; trống ⇒ `UNSUPPORTED_CAPABILITY`, không gọi mạng). Recognition (B-007) — nhóm chọn ngày 12/11/2026 giữ `core/ai/ProxyRecognitionClient` do A viết (bind vào `ClothingRecognition`), mã truy cập nhập trên UI (`RecognitionSetup.authorize`); B đã review và sửa để đọc `providers.recognition`, nhận `openai@host`, bỏ qua field `/health` mới. Hai client đang có hai cơ chế lấy session khác nhau — nên hợp nhất ở INT-002. Client kiểm lại mọi invariant response; một bộ/field sai cấu trúc ⇒ bỏ cả response. Test chỉ dùng MockEngine, chưa chạy với proxy thật.
+
 ## Chung
 
 - Base URL: `BuildConfig.PROXY_URL` (gradle property `fitcheck.proxyUrl`). Chỉ HTTPS.
@@ -52,10 +54,12 @@ Không cần auth.
 ```json
 { "status": "ok", "version": "dev", "schemaVersion": 2,
   "services": { "recognition": true, "outfits": true, "tryon": false },
-  "recognitionViews": "DUAL", "provider": "gemini", "providerConfigured": true }
+  "recognitionViews": "DUAL", "provider": "openai@codex.fosta.app", "providerConfigured": true,
+  "providers": { "recognition": { "provider": "gemini", "model": "gemini-3.5-flash-lite", "configured": true },
+                 "outfits":     { "provider": "openai@codex.fosta.app", "model": "gpt-6-luna", "configured": true } } }
 ```
 
-Client dùng `services`/`recognitionViews` để ẩn CTA chưa khả dụng; đây không phải bằng chứng AI chạy tốt.
+Client dùng `services`/`recognitionViews` để ẩn CTA chưa khả dụng; đây không phải bằng chứng AI chạy tốt. `provider`/`providerConfigured` là cấu hình chung; `providers.<service>` là provider thật từng service dùng (có thể khác nhau) — Android recognition lấy `providers.recognition` để hiện trong consent và tính `configVersion` (đổi provider/model ⇒ consent cũ không còn khớp).
 
 ## `POST /v2/session`
 
@@ -98,7 +102,7 @@ Response `200`
   "outfits": [{ "id": "<uuid server gán>", "requestId": "r1", "wardrobeSnapshotId": "s1",
                 "items": [{"itemId":"top1","revision":1},{"itemId":"bottom1","revision":1}],
                 "explanation": "…tiếng Việt, 1–500 ký tự…", "source": "AI_LIVE",
-                "createdAt": 1794621600000, "signature": "bottom1+top1" }],
+                "createdAt": 1794621600000, "signature": "bottom1|top1" }],
   "shortfallReason": "NOT_ENOUGH_DISTINCT_COMBINATIONS" }
 ```
 
@@ -112,9 +116,21 @@ Bảo đảm từ server:
 - Tủ không có DRESS và không đủ TOP+BOTTOM ⇒ `409 INSUFFICIENT_WARDROBE` **không gọi AI**.
 - `id` outfit gán một lần khi server nhận response; client lưu lại, không sinh mới khi render.
 
-**Signature canonical:** các `itemId` sắp xếp tăng dần (so sánh chuỗi), nối bằng `+`. Ví dụ `["t2","b1","s1"]` ⇒ `"b1+s1+t2"`. ID không được chứa `+`.
+**Signature canonical:** các `itemId` sắp xếp tăng dần (so sánh chuỗi), nối bằng `|` — khớp `outfitSignature()` trong `core/model/recommendation` (Track D). Ví dụ `["t2","b1","s1"]` ⇒ `"b1|s1|t2"`. ID không được chứa `|`.
 
 Client vẫn phải so `items[].revision` với repository hiện tại trước khi hiển thị/chọn Try-On (CT-02): món đã sửa/xóa ⇒ stale.
+
+### Phối lại (C-102) và phối quanh một món (LATER-006) — semantics cho D
+
+`RecommendationCapability.supportsReroll = supportsFocus = true` ở `ProxyOutfitRecommendation`.
+
+- **Phối bộ khác:** mỗi lần người dùng bấm = **một** request mới tạo bằng `request.rerollAfter(kếtQuảVừaHiện)` (`core/ai/.../proxy/Reroll.kt`): `requestId` mới, `regenerationOfRequestId` = request trước, giữ nguyên dịp/ghi chú/focus/profile/thời tiết/số bộ, `excludeOutfitSignatures` = các bộ vừa hiện + các bộ đã loại trước (chuẩn hoá, tối đa 5, ưu tiên bộ vừa hiện). Không tự gọi lại, không gọi do recomposition (gửi lại cùng `requestId` ⇒ client trả `CONFLICT`).
+- **Phối quanh một món:** đặt `focusItemId` = id món (phải thuộc snapshot, không `UNKNOWN`). Mọi bộ trả về chứa món đó; món phụ (giày/áo khoác/phụ kiện) được gắn vào một bộ chính.
+- **Kết quả:**
+  - `200` có thể ít bộ hơn với `shortfallReason` (`CONSTRAINTS_TOO_STRICT` khi do focus/loại trừ) — hiển thị bình thường kèm giải thích.
+  - `409 INSUFFICIENT_WARDROBE` = "không còn lựa chọn khác hợp lệ" (mọi tổ hợp đã bị loại, hoặc focus không ghép được, vd. áo mà tủ không có quần). Server kiểm **trước khi gọi AI** nên không tốn tiền. Hiển thị thông báo, không ẩn ràng buộc rồi gọi lại.
+  - `UNSUPPORTED_CAPABILITY` khi focus vào món chưa rõ loại ⇒ ẩn/khóa CTA "phối quanh món này" cho món `UNKNOWN`.
+- Fallback không dùng AI `BasicOutfitFallback` (C-002) tôn trọng cùng focus/loại trừ.
 
 ## `POST /v2/recognition` — nhận diện thuộc tính (CT-05)
 
@@ -161,7 +177,7 @@ C export `RouteDef[]` từ `proxy/src/tryon/**` (interface ở `proxy/src/shared
 
 ## Vận hành
 
-- Provider: `AI_PROVIDER = "anthropic" | "gemini"` (adapter ở `proxy/src/shared/model.ts`, `proxy/src/shared/gemini.ts`; wire format client không đổi). `AI_MODEL` trống ⇒ mặc định `claude-opus-5-5` / `gemini-3.5-flash-lite`. **Gemini free tier chỉ để test**: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm — không gửi ảnh người dùng thật; `/health` báo `provider`.
+- Provider: `AI_PROVIDER = "anthropic" | "gemini" | "openai"` (adapter ở `proxy/src/shared/model.ts`, `gemini.ts`, `openai.ts`; wire format client không đổi). `AI_MODEL` trống ⇒ mặc định `claude-opus-5-5` / `gemini-3.5-flash-lite` / `gpt-6-luna`. Ghi đè từng service: `AI_PROVIDER_RECOGNITION|OUTFITS`, `AI_MODEL_RECOGNITION|OUTFITS` (trống ⇒ cấu hình chung; `AI_MODEL` chung chỉ áp khi service cùng provider chung). `openai` dùng `OPENAI_API_KEY` + `OPENAI_BASE_URL` (HTTPS, mặc định `https://api.openai.com/v1`; gateway FOSTA `https://codex.fosta.app/v1`) và `/health.provider` = `openai@<host>`. FOSTA: outfits ~10–13s, recognition ~19–25s (vượt deadline 15s hiện tại) — xem `docs/track-b/PRE-003-provider-budget.md`. **Gemini free tier chỉ để test**: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm — không gửi ảnh người dùng thật; `/health` báo `provider`.
 - Secrets: `ANTHROPIC_API_KEY` hoặc `GEMINI_API_KEY` (theo provider), `SESSION_SECRET`, `DEMO_ACCESS_CODE` (xem `proxy/wrangler.toml`, `proxy/.dev.vars.example`). Key không bao giờ nằm trong APK/git/log.
 - Bật/tắt: `SERVICE_RECOGNITION|OUTFITS|TRYON = "on"|"off"` (mặc định off). Đổi biến ⇒ redeploy.
 - `DAILY_CAP_*` và rate limit đếm **theo isolate**, best-effort — không phải quota toàn cục hay trần tiền. Trần tiền thật: spend limit ở console provider (PRE-003). Quota atomic/toàn cục: BACK-011.

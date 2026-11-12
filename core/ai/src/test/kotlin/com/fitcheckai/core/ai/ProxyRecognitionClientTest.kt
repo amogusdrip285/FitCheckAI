@@ -30,6 +30,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,6 +63,31 @@ class ProxyRecognitionClientTest {
             assertFalse(derivativeId in request.consentGrant.mediaIds)
             assertEquals(listOf(derivativeId, originalBack.id), proxy.media.reads)
             assertEquals(listOf("/health", "/v2/session", "/health", "/v2/recognition"), proxy.paths)
+        }
+    }
+
+    @Test fun `per-service providers from the current proxy are honoured and extra fields tolerated`() = runBlocking {
+        Harness().use { proxy ->
+            fun health(recognition: String, configured: Boolean = true) = """{"status":"ok","version":"dev","schemaVersion":2,
+                "services":{"recognition":true,"outfits":true,"tryon":false},"recognitionViews":"DUAL",
+                "provider":"openai@codex.fosta.app","providerConfigured":true,"futureField":{"x":1},
+                "providers":{"recognition":{"provider":"$recognition","model":"m1","configured":$configured},
+                             "outfits":{"provider":"openai@codex.fosta.app","model":"gpt-6.1-sol","configured":true}}}"""
+            proxy.health = health("gemini")
+            val gemini = proxy.client.refreshCapability()
+            assertTrue(gemini.available && gemini.supportsBack)
+            assertTrue(gemini.provider.startsWith("gemini qua "))
+
+            proxy.health = health("openai@codex.fosta.app")
+            val gateway = proxy.client.refreshCapability()
+            assertTrue(gateway.available)
+            assertTrue(gateway.provider.startsWith("openai@codex.fosta.app qua "))
+            assertNotEquals(gemini.configVersion, gateway.configVersion) // đổi provider ⇒ consent cũ hết hiệu lực
+
+            proxy.health = health("gemini", configured = false)
+            assertFalse(proxy.client.refreshCapability().available)
+            proxy.health = health("acme-ai")
+            assertFalse(proxy.client.refreshCapability().available)
         }
     }
 
@@ -129,6 +155,7 @@ class ProxyRecognitionClientTest {
         val paths = mutableListOf<String>()
         val uploads = mutableListOf<RecognitionPayload>()
         var views = "DUAL"
+        var health: String? = null
         var rejectToken = false
         var transform: (RecognitionResponse) -> RecognitionResponse = { it }
 
@@ -136,7 +163,7 @@ class ProxyRecognitionClientTest {
             val path = request.url.encodedPath
             paths += path
             when (path) {
-                "/health" -> respond("""{"status":"ok","version":"test","schemaVersion":2,"services":{"recognition":true,"outfits":false,"tryon":false},"recognitionViews":"$views","provider":"gemini","providerConfigured":true}""")
+                "/health" -> respond(health ?: """{"status":"ok","version":"test","schemaVersion":2,"services":{"recognition":true,"outfits":false,"tryon":false},"recognitionViews":"$views","provider":"gemini","providerConfigured":true}""")
                 "/v2/session" -> {
                     val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
                     assertEquals("demo-code", Json.decodeFromString<DemoSessionRequest>(body).accessCode)

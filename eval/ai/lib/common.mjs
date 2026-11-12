@@ -46,8 +46,11 @@ export async function health(baseUrl) {
   return res.json();
 }
 
+/** Timeout client của eval: mặc định 20s như app (CT-07); nới bằng FITCHECK_EVAL_TIMEOUT_MS khi proxy đã nới deadline. */
+export const EVAL_TIMEOUT_MS = Number(process.env.FITCHECK_EVAL_TIMEOUT_MS ?? 20_000);
+
 /** POST có đo thời gian; trả {status, body, latencyMs}. Body lỗi giữ nguyên envelope. */
-export async function postJson(baseUrl, token, route, payload, timeoutMs = 20_000) {
+export async function postJson(baseUrl, token, route, payload, timeoutMs = EVAL_TIMEOUT_MS) {
   const started = performance.now();
   const res = await fetch(`${baseUrl}${route}`, {
     method: "POST",

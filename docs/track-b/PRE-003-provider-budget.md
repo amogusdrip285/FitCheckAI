@@ -37,6 +37,23 @@ Giá lấy từ bảng giá Anthropic (bản cache 2026-11-03) — **kiểm lạ
 - **Giới hạn:** free tier có rate limit thấp (trang giá không ghi số cụ thể) ⇒ có thể gặp `429 RATE_LIMITED`; eval chạy tuần tự, ít call.
 - **Evidence:** kết quả eval phải ghi provider/model thật đã dùng. Chất lượng đo trên Gemini **không** chứng minh chất lượng trên Claude và ngược lại; đổi provider ⇒ chạy lại B-004/B-006.
 
+### Giai đoạn pitching: gateway OpenAI-compatible FOSTA (quyết định 12/11/2026)
+
+Nhóm muốn demo/pitching bằng model GPT nên proxy có thêm adapter **`openai`** (`proxy/src/shared/openai.ts`) gọi Chat Completions chuẩn OpenAI; FOSTA dùng qua `OPENAI_BASE_URL = https://codex.fosta.app/v1`, model mặc định `gpt-6-luna` (đổi từ `gpt-6.1-sol` ngày 12/11/2026 để tiết kiệm: đo được luna nhanh ngang sol — recognition 18.9–19.8s vs 19.1–19.9s, schema nhỏ 9.0s vs 8.6–10.4s — vì phần lớn độ trễ nằm ở gateway; chất lượng giải thích của luna **chưa chấm** theo rubric B-004; FOSTA còn có `gpt-6.1-sol`, `gpt-6-astra`; tên đầy đủ trong `/v1/models` có tiền tố `cx/`). Key nằm ở `.dev.vars`/`wrangler secret` — không APK, không git.
+
+- **Không phải OpenAI trực tiếp.** FOSTA là gateway bên thứ ba: ảnh garment và metadata tủ đồ đi qua máy chủ của họ. Chưa có điều khoản retention/training/giá công khai được nhóm đọc ⇒ chỉ dùng ảnh test (vd. `data/fixtures/modern-clothing`), không ảnh người dùng thật. `/health` ghi `provider = "openai@codex.fosta.app"` để consent không gọi nhầm là OpenAI.
+- **Đo ngày 12/11/2026** (laptop dev → FOSTA, mỗi cấu hình 1–3 lần, mẫu nhỏ):
+  - `response_format: json_schema` **bị bỏ qua** (trả văn bản tự do) ⇒ adapter dùng function calling bắt buộc (`tool_choice` + `strict`). Tool strict vẫn có lúc bỏ key nullable (`sameItem`) ⇒ adapter điền `null` cho key nullable bị thiếu, key bắt buộc khác vẫn bị zod chặn.
+  - Vision chạy: ảnh áo thun in hình nhận đúng `TOP`, `BLACK/WHITE/RED`, `PRINTED`.
+  - `/v2/outfits` qua proxy local: 3/3 lần 200 trong **10.4–13.3s**, 1 bộ hợp lệ + shortfall đúng fixture CT-02.
+  - `/v2/recognition`: model mất **~19–25s** (sol/luna, effort low/none, ảnh 1024px hay gốc đều vậy) ⇒ **vượt deadline provider 15s** ⇒ qua proxy trả `504 UPSTREAM_TIMEOUT` 2/2 lần. Muốn dùng recognition qua FOSTA phải nới deadline CT-07 (provider/proxy/client + `withTimeoutOrNull(20_000)` ở A) — **quyết định nhóm, chưa đổi**.
+- **Chạy song song (quyết định 12/11/2026, tạm cho tới khi test UI trên app thật):** outfits = GPT qua FOSTA, recognition = Gemini (`AI_PROVIDER=openai`, `AI_PROVIDER_RECOGNITION=gemini`). Đo cùng ngày qua proxy local: outfits 2/3 lần 200 (13.4–14.3s), 1 lần 504 ở mốc 15s; recognition qua Gemini 2/2 lần 504. Gọi thẳng Gemini: text 2.5–6.8s; recognition 1 ảnh 1/3 OK (8.2s), 2/3 HTTP 503 ⇒ free tier đang quá tải. **Hiện chưa cấu hình nào ổn định dưới deadline 15s**; xem lại khi test UI thật.
+- **Toàn bộ luna + nới deadline để test (quyết định 12/11/2026, chiều):** `AI_MODEL=gpt-6-luna` cho cả hai service, `PROVIDER_TIMEOUT_MS=120000` / `PROXY_DEADLINE_MS=125000` chỉ trong `.dev.vars` (mặc định code/wrangler vẫn 15000/18000). Lý do: khi chạy thật nhóm sẽ dùng API OpenAI trực tiếp; mục tiêu bây giờ là kiểm model trả **đúng**, không phải nhanh.
+  - FOSTA rất thất thường cùng buổi: "Xin chao" luna 10.5s, sol 46.6s; outfits tủ 6 món luna 2/2 lần timeout ở 60s, gọi thẳng luna >180s và sol 115s → 502; ~30 phút sau lại chạy tốt ⇒ độ trễ do gateway, không suy ra được từ model.
+  - Lần chạy tốt qua proxy local (limit 120s): outfits tủ 6 món xin 5 bộ — **2/2 lần 200, 5 bộ hợp lệ, không shortfall, 23.4–24.8s**, giải thích tiếng Việt cụ thể theo màu/hoạ tiết/dịp; recognition luna — FRONT 17.8s, cặp khớp 21.6s, cặp chéo 24.5s, cả 3 nhận đúng `TOP / BLACK,WHITE,RED / PRINTED`; cặp chéo có `VIEWS_LOOK_LIKE_DIFFERENT_ITEMS` + mọi field cần review ✔.
+  - Đây là smoke test (n nhỏ), chưa phải eval B-004/B-006 có reviewer chấm.
+- Chất lượng/latency đo trên FOSTA không chứng minh cho OpenAI trực tiếp hay provider khác; đổi provider ⇒ chạy lại B-004/B-006.
+
 ## 3. Ước lượng chi phí mỗi call (THÔ — phải thay bằng số đo usage thật ở B-004/B-006)
 
 Giả định: ảnh derivative ≤1024px cạnh dài ⇒ ~1.4K token/ảnh (≈ rộng×cao/750); system prompt ~0.6–0.8K token; output gồm cả thinking.

@@ -46,7 +46,7 @@ export type AttributeField = (typeof ATTRIBUTE_FIELDS)[number];
 
 export type Source = "AI_LIVE" | "FAKE";
 
-/** ID trên wire: UUID khi triển khai; cho phép ID ngắn chữ-số để fixture dễ đọc. Không có "+" (dùng làm separator signature). */
+/** ID trên wire: UUID khi triển khai; cho phép ID ngắn chữ-số để fixture dễ đọc. Không có "|" (separator signature). */
 export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
 /** Tag ngắn (style/season): 1–32 ký tự sau trim. */

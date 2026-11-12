@@ -76,11 +76,15 @@ class ProxyRecognitionClient internal constructor(
 
     private suspend fun fetchCapability(): RecognitionCapability {
         val health = exchange<ProxyHealth>("/health")
+        // Ảnh đi tới provider của riêng recognition (có thể khác provider chung) ⇒ consent phải nêu đúng nó.
+        val own = health.providers["recognition"]
+        val provider = own?.provider ?: health.provider
+        val providerReady = own?.configured ?: health.providerConfigured
         if (health.status != "ok" || health.schemaVersion != 2 || health.services["recognition"] != true ||
-            !health.providerConfigured || health.provider !in setOf("gemini", "anthropic") ||
+            !providerReady || provider.substringBefore('@') !in SupportedProviders ||
             health.recognitionViews !in setOf("FRONT_ONLY", "DUAL")) return Unavailable
-        val version = sha256("$origin/${health.version}/${health.provider}/${health.recognitionViews}".encodeToByteArray())
-        return RecognitionCapability("${health.provider} qua ${origin?.authority}", version, true, health.recognitionViews == "DUAL")
+        val version = sha256("$origin/${health.version}/$provider/${own?.model.orEmpty()}/${health.recognitionViews}".encodeToByteArray())
+        return RecognitionCapability("$provider qua ${origin?.authority}", version, true, health.recognitionViews == "DUAL")
     }
 
     override suspend fun authorize(accessCode: String): Result<Unit> = networkResult {
@@ -163,7 +167,7 @@ class ProxyRecognitionClient internal constructor(
             val text = bytes.decodeToString()
             if (response.status.value != 200) throw proxyFailure(response.status.value, text)
             try {
-                Json.decodeFromString<T>(text)
+                ResponseJson.decodeFromString<T>(text)
             } catch (_: IllegalArgumentException) {
                 throw invalidResponse()
             }
@@ -186,6 +190,10 @@ class ProxyRecognitionClient internal constructor(
         const val MiB = 1024 * 1024
         const val MaxResponseBytes = 64 * 1024
         val Unavailable = RecognitionCapability("FitCheckAI", "2", false, false)
+        /** "openai" gồm cả gateway tương thích; nhãn dạng "openai@codex.fosta.app" giữ host thật để consent ghi đúng. */
+        val SupportedProviders = setOf("gemini", "anthropic", "openai")
+        /** Proxy được thêm field mới (vd. `providers`) mà không làm hỏng client cũ. */
+        val ResponseJson = Json { ignoreUnknownKeys = true }
         val PngSignature = byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)
 
         fun parseOrigin(value: String): URI? = runCatching { URI(value.trim()) }.getOrNull()?.takeIf {

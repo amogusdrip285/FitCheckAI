@@ -3,13 +3,13 @@ import type { Category } from "../shared/domain";
 import { LIMITS } from "../shared/domain";
 import type { ItemSummary, ModelOutfits, OutfitRequest } from "./schema";
 
-/** Signature canonical: ID sắp xếp tăng dần nối bằng "+". Client tính giống hệt để gửi excludeOutfitSignatures. */
+/** Signature canonical: ID sắp xếp tăng dần nối bằng "|" (khớp outfitSignature() trong core/model của D). Client tính giống hệt để gửi excludeOutfitSignatures. */
 export function outfitSignature(itemIds: readonly string[]): string {
-  return [...itemIds].sort().join("+");
+  return [...itemIds].sort().join("|");
 }
 
 export function parseSignature(signature: string): string[] {
-  return signature.split("+").filter((s) => s.length > 0);
+  return signature.split("|").filter((s) => s.length > 0);
 }
 
 /**
@@ -46,6 +46,42 @@ export function wardrobeCanFormOutfit(items: readonly ItemSummary[], focusItemId
     default:
       return basic;
   }
+}
+
+const ADDON_CATEGORIES = ["OUTERWEAR", "SHOES", "ACCESSORY"] as const;
+
+/** Liệt kê lười các bộ hợp lệ theo luật slot (core × tuỳ chọn mỗi loại phụ kiện), dừng được bất cứ lúc nào. */
+function* validCombinations(items: readonly ItemSummary[]): Generator<string[]> {
+  const of = (c: Category) => items.filter((i) => i.attributes.category === c).map((i) => i.id);
+  const cores = [...of("TOP").flatMap((t) => of("BOTTOM").map((b) => [t, b])), ...of("DRESS").map((d) => [d])];
+  const addonChoices = ADDON_CATEGORIES.map((c) => [null, ...of(c)]);
+  for (const core of cores) {
+    for (const outer of addonChoices[0]!) {
+      for (const shoes of addonChoices[1]!) {
+        for (const accessory of addonChoices[2]!) {
+          yield [...core, ...[outer, shoes, accessory].filter((x): x is string => x !== null)];
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Còn ít nhất một bộ hợp lệ chứa focus và KHÔNG nằm trong excluded (C-102/LATER-006) không.
+ * Kiểm trước khi gọi AI: reroll khi mọi tổ hợp đã bị loại ⇒ 409, không tốn tiền.
+ * Dừng ngay khi tìm được một bộ; excluded ≤5 nên thường chỉ duyệt vài tổ hợp.
+ */
+export function hasAvailableOutfit(
+  items: readonly ItemSummary[],
+  focusItemId: string | null,
+  excludeOutfitSignatures: readonly string[],
+): boolean {
+  const excluded = new Set(excludeOutfitSignatures.map((s) => outfitSignature(parseSignature(s))));
+  for (const combo of validCombinations(items)) {
+    if (focusItemId !== null && !combo.includes(focusItemId)) continue;
+    if (!excluded.has(outfitSignature(combo))) return true;
+  }
+  return false;
 }
 
 export type RejectReason =

@@ -1,6 +1,6 @@
 // OWNER: Track B. Seam đăng ký route: B giữ entry/auth/limits; track khác (C — tryon) export RouteDef
 // từ module của mình (vd. src/tryon/routes.ts) và B mount vào danh sách route trong src/index.ts.
-import type { Env, ServiceName } from "../env";
+import type { AiService, Env, ServiceName } from "../env";
 import type { Session } from "./auth";
 import type { UsageGuard } from "./guard";
 import type { LogEvent } from "./log";
@@ -11,7 +11,8 @@ export type HttpMethod = "GET" | "POST" | "DELETE";
 export interface AppDeps {
   guard: UsageGuard;
   /** null khi chưa cấu hình provider (thiếu key) ⇒ route trả 503, không gọi upstream. */
-  modelFor(env: Env): ModelClient | null;
+  /** [service] chọn provider/model riêng (AI_PROVIDER_<SERVICE>); bỏ trống = cấu hình chung. */
+  modelFor(env: Env, service?: AiService): ModelClient | null;
   now(): number;
   uuid(): string;
   log(event: LogEvent): void;

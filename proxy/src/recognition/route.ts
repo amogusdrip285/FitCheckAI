@@ -53,7 +53,7 @@ export const recognitionRoute: RouteDef = {
       throw new ApiError("INVALID_REQUEST", "Ảnh sau trùng ảnh trước; không nhân đôi ảnh trước làm ảnh sau");
     }
 
-    const model = ctx.deps.modelFor(ctx.env);
+    const model = ctx.deps.modelFor(ctx.env, "recognition");
     if (model === null) throw new ApiError("UNSUPPORTED_CAPABILITY", "AI provider chưa được cấu hình", { status: 503 });
 
     ctx.reserveUpstreamCall();

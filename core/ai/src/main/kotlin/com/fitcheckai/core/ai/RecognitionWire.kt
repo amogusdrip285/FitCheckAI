@@ -22,7 +22,12 @@ internal data class ProxyHealth(
     val recognitionViews: String,
     val provider: String,
     val providerConfigured: Boolean,
+    /** Provider thật từng service (proxy có thể dùng Gemini cho recognition, GPT cho outfits). */
+    val providers: Map<String, ServiceProvider> = emptyMap(),
 )
+
+@Serializable
+internal data class ServiceProvider(val provider: String, val model: String = "", val configured: Boolean)
 
 @Serializable
 internal data class DemoSessionRequest(val accessCode: String)

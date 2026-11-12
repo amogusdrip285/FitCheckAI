@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { OUTFITS_SYSTEM_PROMPT } from "../src/outfits/prompt";
 import { type OutfitRequest, OutfitRequestSchema, type RecommendationResultDto } from "../src/outfits/schema";
-import { outfitSignature, selectValidOutfits, slotsValid, wardrobeCanFormOutfit } from "../src/outfits/validate";
+import {
+  hasAvailableOutfit,
+  outfitSignature,
+  selectValidOutfits,
+  slotsValid,
+  wardrobeCanFormOutfit,
+} from "../src/outfits/validate";
 import modelOutfits from "./fixtures/v2/model-outfits.json";
 import ctExample from "./fixtures/v2/outfits-request-ct02-example.json";
 import wardrobe from "./fixtures/v2/wardrobe-items.json";
@@ -48,13 +54,13 @@ describe("slot rule CT-02", () => {
 
 describe("selectValidOutfits", () => {
   it("signature canonical không phụ thuộc thứ tự", () => {
-    expect(outfitSignature(["t2", "b1", "s1"])).toBe("b1+s1+t2");
-    expect(outfitSignature(["s1", "t2", "b1"])).toBe("b1+s1+t2");
+    expect(outfitSignature(["t2", "b1", "s1"])).toBe("b1|s1|t2");
+    expect(outfitSignature(["s1", "t2", "b1"])).toBe("b1|s1|t2");
   });
 
   it("loại ID lạ, trùng món, sai slot, trùng bộ, giải thích rỗng; giữ bộ hợp lệ", () => {
     const { accepted, rejected } = selectValidOutfits(modelOutfits.mixedInvalid, parsed());
-    expect(accepted.map((o) => o.signature)).toEqual(["b1+t1"]);
+    expect(accepted.map((o) => o.signature)).toEqual(["b1|t1"]);
     expect(rejected).toEqual({
       UNKNOWN_ITEM: 1,
       DUPLICATE_ITEM: 1,
@@ -78,9 +84,23 @@ describe("selectValidOutfits", () => {
   });
 
   it("exclude: bỏ bộ đã bị loại trừ dù khác thứ tự ID", () => {
-    const { accepted, rejected } = selectValidOutfits(modelOutfits.fiveValid, parsed({ excludeOutfitSignatures: ["t1+b1"] }));
-    expect(accepted.map((o) => o.signature)).not.toContain("b1+t1");
+    const { accepted, rejected } = selectValidOutfits(modelOutfits.fiveValid, parsed({ excludeOutfitSignatures: ["t1|b1"] }));
+    expect(accepted.map((o) => o.signature)).not.toContain("b1|t1");
     expect(rejected.EXCLUDED_SET).toBe(1);
+  });
+
+  it("hasAvailableOutfit: tôn trọng focus và exclusions, phụ kiện tạo tổ hợp khác", () => {
+    const items = parsed().items;
+    const pick = (...ids: string[]) => items.filter((i) => ids.includes(i.id));
+    expect(hasAvailableOutfit(pick("t1", "b1"), null, [])).toBe(true);
+    expect(hasAvailableOutfit(pick("t1", "b1"), null, ["b1|t1"])).toBe(false);
+    // Có thêm giày: t1+b1+s1 là bộ khác (signature khác) nên vẫn còn lựa chọn.
+    expect(hasAvailableOutfit(pick("t1", "b1", "s1"), null, ["b1|t1"])).toBe(true);
+    expect(hasAvailableOutfit(pick("t1", "b1", "s1"), null, ["b1|t1", "b1|s1|t1"])).toBe(false);
+    expect(hasAvailableOutfit(pick("t1", "b1", "d1"), "d1", ["d1"])).toBe(false);
+    expect(hasAvailableOutfit(pick("t1", "b1", "d1"), "t1", ["d1"])).toBe(true);
+    expect(hasAvailableOutfit(pick("t1"), null, [])).toBe(false);
+    expect(hasAvailableOutfit(items, "s1", [])).toBe(true);
   });
 
   it("wardrobeCanFormOutfit", () => {
@@ -117,7 +137,7 @@ describe("POST /v2/outfits", () => {
         explanation: modelOutfits.fewerWithReason.outfits[0]!.explanation,
         source: "AI_LIVE",
         createdAt: t.clock.now,
-        signature: "bottom1+top1",
+        signature: "bottom1|top1",
       },
     ]);
   });
@@ -142,7 +162,7 @@ describe("POST /v2/outfits", () => {
     t.model.respond(modelOutfits.mixedInvalid);
     const res = await t.post("/v2/outfits", fullRequest());
     const body = (await res.json()) as RecommendationResultDto;
-    expect(body.outfits.map((o) => o.signature)).toEqual(["b1+t1"]);
+    expect(body.outfits.map((o) => o.signature)).toEqual(["b1|t1"]);
     expect(body.shortfallReason).toBe("INVALID_OUTFITS_REMOVED");
     expect(t.logs[0]?.rejected).toMatchObject({ UNKNOWN_ITEM: 1 });
   });
@@ -158,9 +178,34 @@ describe("POST /v2/outfits", () => {
   it("model trả rỗng ⇒ 409 INSUFFICIENT_WARDROBE", async () => {
     const t = setup();
     t.model.respond(modelOutfits.empty);
-    const res = await t.post("/v2/outfits", fullRequest({ focusItemId: "s1", excludeOutfitSignatures: ["s1+t2+b1"] }));
+    const res = await t.post("/v2/outfits", fullRequest({ focusItemId: "s1", excludeOutfitSignatures: ["s1|t2|b1"] }));
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ error: { code: "INSUFFICIENT_WARDROBE" } });
+  });
+
+  it("phối lại khi tủ chỉ có 1 bộ và bộ đó đã bị loại ⇒ 409, không gọi AI (C-102)", async () => {
+    const t = setup();
+    const oneSet = wardrobe.filter((i) => i.id === "t1" || i.id === "b1");
+    const res = await t.post("/v2/outfits", fullRequest({ items: oneSet, excludeOutfitSignatures: ["t1|b1"], regenerationOfRequestId: "req-prev" }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: { code: "INSUFFICIENT_WARDROBE" } });
+    expect(t.model.calls).toHaveLength(0);
+  });
+
+  it("phối lại vẫn gọi AI khi còn tổ hợp khác; danh sách loại trừ tới prompt", async () => {
+    const t = setup();
+    t.model.respond(modelOutfits.fewerWithReason);
+    await t.post("/v2/outfits", fullRequest({ excludeOutfitSignatures: ["b1|t1", "t2|b1|s1"], regenerationOfRequestId: "req-prev" }));
+    expect(t.model.calls).toHaveLength(1);
+    const text = t.model.calls[0]!.content.map((p) => (p.type === "text" ? p.text : "")).join(" ");
+    expect(text).toContain('"excludedOutfits":[["b1","t1"],["t2","b1","s1"]]');
+  });
+
+  it("focus vào món không ghép được (TOP không có BOTTOM) ⇒ 409, không gọi AI (LATER-006)", async () => {
+    const t = setup();
+    const res = await t.post("/v2/outfits", fullRequest({ items: wardrobe.filter((i) => i.attributes.category !== "BOTTOM"), focusItemId: "t1" }));
+    expect(res.status).toBe(409);
+    expect(t.model.calls).toHaveLength(0);
   });
 
   it("tủ chỉ có TOP ⇒ 409 INSUFFICIENT_WARDROBE, không gọi AI", async () => {
