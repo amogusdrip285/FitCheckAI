@@ -47,10 +47,10 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 | [ ] | [B-005](tracks/B.md#b-005) — Fake AI và compatibility fixtures | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
 | [ ] | [BACK-004](tracks/B.md#back-004) — Recognition proxy cho ảnh trước/sau | P0 | core | M3 | 75–120 | B-001, B-005 | TODO | — |
 | [ ] | [B-002](tracks/B.md#b-002) — Recommendation tối đa 5 outfit có giải thích | P0 | core | M3 | 90–150 | B-001, B-005 | TODO | — |
-| [ ] | [B-003](tracks/B.md#b-003) — Android client cancellable và parser | P0 | core | M3 | 45–75 | S-002, B-005 | TODO | — |
+| [ ] | [B-003](tracks/B.md#b-003) — Android client cancellable và parser | P0 | core | M3 | 45–75 | S-002, B-005 | PARTIAL | `ProxyOutfitRecommendation` + 14 MockEngine tests pass (1/5 bộ, invalid ID/revision/count/slot/signature, lỗi CT-07, timeout, cancel, chặn gửi trùng). Chưa build app/Hilt graph, chưa gọi proxy thật; D chưa nối (C-003). |
 | [ ] | [B-004](tracks/B.md#b-004) — Đánh giá recommendation live và tính hợp lệ | P0 | core | M3 | 45–75 | B-002, B-003, PRE-004 | TODO | — |
 | [ ] | [B-006](tracks/B.md#b-006) — Evaluation recognition hai góc nhìn | P0 | core | M3 | 45–75 | BACK-004, PRE-004 | TODO | — |
-| [ ] | [B-007](tracks/B.md#b-007) — Android recognition client và upload có giới hạn | P0 | core | M3 | 45–75 | S-002, B-005 | TODO | — |
+| [ ] | [B-007](tracks/B.md#b-007) — Android recognition client và upload có giới hạn | P0 | core | M3 | 45–75 | S-002, B-005 | PARTIAL | `ProxyClothingRecognition` + 14 MockEngine tests pass (front/back đúng slot, consent sai không gọi mạng, chặn >1MiB/sai MIME/ảnh trùng, stale/malformed, FRONT_ONLY, dọn derivative). Chưa build app, chưa máy thật; binding A đổi ở INT-002. |
 | [ ] | [INT-002](tracks/B.md#int-002) — Tích hợp recognition và recommendation live | P0 | core | M3 | 45–75 | INT-001, B-004, B-006, B-007, BACK-005, C-003, A-006 | TODO | — |
 | [ ] | [BACK-011](tracks/B.md#back-011) — Củng cố bảo mật/quota trước public beta | P1 | quality | M6 | 120–240 | B-004 | TODO | — |
 | [ ] | [LATER-006](tracks/B.md#later-006) — Phối quanh một món có contract xuyên suốt | P1 | quality | M3 | 45–75 | B-002 | TODO | — |

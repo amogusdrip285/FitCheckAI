@@ -12,6 +12,11 @@ android {
     defaultConfig {
         val proxyUrl = providers.gradleProperty("fitcheck.proxyUrl").get()
         buildConfigField("String", "PROXY_URL", "\"$proxyUrl\"")
+        // Mã truy cập demo kín (POST /v2/session). Đặt trong ~/.gradle/gradle.properties, KHÔNG commit.
+        // Trống ⇒ client báo UNSUPPORTED_CAPABILITY, không gọi mạng. Không phải bảo mật public beta (BACK-011).
+        val accessCode = providers.gradleProperty("fitcheck.accessCode").orElse("").get()
+        require(Regex("[A-Za-z0-9_.-]{0,128}").matches(accessCode)) { "fitcheck.accessCode chỉ gồm chữ, số, . _ -" }
+        buildConfigField("String", "PROXY_ACCESS_CODE", "\"$accessCode\"")
     }
 }
 
@@ -24,4 +29,5 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(testFixtures(project(":core:model")))
 }

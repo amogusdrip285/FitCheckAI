@@ -6,6 +6,8 @@
 
 Trạng thái: implementation + unit/HTTP tests với model giả (B-001/B-002/BACK-004). **Chưa có evidence live**: cần PRE-003 (provider/budget), deploy và B-004/B-006.
 
+**Android client (B-003/B-007):** `core/ai/.../proxy/` — `ProxyOutfitRecommendation` (bind sẵn vào `OutfitRecommendation`), `ProxyClothingRecognition` (cung cấp qua Hilt, A đổi binding `ClothingRecognition` ở INT-002), `ProxyTransport` (session token, deadline 20s, map lỗi CT-07, không auto-retry, mỗi `requestId` chỉ gửi một lần). Mã truy cập demo: gradle property `fitcheck.accessCode` (đặt trong `~/.gradle/gradle.properties`, không commit); trống ⇒ `UNSUPPORTED_CAPABILITY`, không gọi mạng. Client kiểm lại mọi invariant response; một bộ/field sai cấu trúc ⇒ bỏ cả response. Test chỉ dùng MockEngine, chưa chạy với proxy thật.
+
 ## Chung
 
 - Base URL: `BuildConfig.PROXY_URL` (gradle property `fitcheck.proxyUrl`). Chỉ HTTPS.
@@ -98,7 +100,7 @@ Response `200`
   "outfits": [{ "id": "<uuid server gán>", "requestId": "r1", "wardrobeSnapshotId": "s1",
                 "items": [{"itemId":"top1","revision":1},{"itemId":"bottom1","revision":1}],
                 "explanation": "…tiếng Việt, 1–500 ký tự…", "source": "AI_LIVE",
-                "createdAt": 1794621600000, "signature": "bottom1+top1" }],
+                "createdAt": 1794621600000, "signature": "bottom1|top1" }],
   "shortfallReason": "NOT_ENOUGH_DISTINCT_COMBINATIONS" }
 ```
 
@@ -112,7 +114,7 @@ Bảo đảm từ server:
 - Tủ không có DRESS và không đủ TOP+BOTTOM ⇒ `409 INSUFFICIENT_WARDROBE` **không gọi AI**.
 - `id` outfit gán một lần khi server nhận response; client lưu lại, không sinh mới khi render.
 
-**Signature canonical:** các `itemId` sắp xếp tăng dần (so sánh chuỗi), nối bằng `+`. Ví dụ `["t2","b1","s1"]` ⇒ `"b1+s1+t2"`. ID không được chứa `+`.
+**Signature canonical:** các `itemId` sắp xếp tăng dần (so sánh chuỗi), nối bằng `|` — khớp `outfitSignature()` trong `core/model/recommendation` (Track D). Ví dụ `["t2","b1","s1"]` ⇒ `"b1|s1|t2"`. ID không được chứa `|`.
 
 Client vẫn phải so `items[].revision` với repository hiện tại trước khi hiển thị/chọn Try-On (CT-02): món đã sửa/xóa ⇒ stale.
 
