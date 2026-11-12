@@ -9,4 +9,5 @@ dependencies {
     implementation(project(":core:database"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
+    testImplementation(testFixtures(project(":core:model")))
 }

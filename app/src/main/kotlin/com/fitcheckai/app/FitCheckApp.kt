@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checkroom
-import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -24,7 +24,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.fitcheckai.core.model.nav.Routes
-import com.fitcheckai.feature.insights.insightsGraph
 import com.fitcheckai.feature.onboarding.onboardingGraph
 import com.fitcheckai.feature.today.todayGraph
 import com.fitcheckai.feature.wardrobe.wardrobeGraph
@@ -34,7 +33,7 @@ private data class TopLevelTab(val route: String, val routePrefix: String, val l
 private val TABS = listOf(
     TopLevelTab(Routes.TODAY, Routes.TODAY, "Hôm nay", Icons.Outlined.WbSunny),
     TopLevelTab(Routes.WARDROBE, Routes.WARDROBE, "Tủ đồ", Icons.Outlined.Checkroom),
-    TopLevelTab(Routes.INSIGHTS, Routes.INSIGHTS, "Insights", Icons.Outlined.Insights),
+    TopLevelTab(Routes.PROFILE, Routes.PROFILE, "Hồ sơ", Icons.Outlined.Person),
 )
 
 @Composable
@@ -77,7 +76,7 @@ fun FitCheckApp(viewModel: MainViewModel = hiltViewModel()) {
             onboardingGraph(navController)
             todayGraph(navController)
             wardrobeGraph(navController)
-            insightsGraph(navController)
+            // Insights is parked in v2 (TEAM_WORKFLOW §3) — not registered.
         }
     }
 }
