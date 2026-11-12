@@ -1,6 +1,6 @@
 # Track A v2 — chạy độc lập và bàn giao
 
-Cập nhật ngày 12/11/2026. Nghiệm thu lần này dùng Android emulator API 35. Các gate máy thật và proxy live vẫn mở.
+Cập nhật ngày 12/11/2026. Luồng Hồ sơ, Tủ đồ, Today và độ bền dữ liệu đã kiểm trên emulator API 35 và Samsung SM-F721B API 36. Gate proxy live vẫn mở.
 
 ## Chạy trên máy tính
 
@@ -109,7 +109,7 @@ python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 
 Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process`.
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
-Evidence chạy mới nhất ở [QA trên emulator](qa/track-a-emulator-integration.md). Các lần trước có [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
+Evidence chạy mới nhất ở [QA trên máy thật](qa/track-a-physical-device.md). Các lần trước có [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
 Trạng thái card ở [board](execution/TASK_BOARD.md).
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.
 
