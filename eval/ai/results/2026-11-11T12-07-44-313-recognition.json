@@ -1,0 +1,1064 @@
+{
+  "generatedAt": "2026-11-11T12:07:44.312Z",
+  "baseUrl": "http://127.0.0.1:8787",
+  "aiCalls": 25,
+  "results": [
+    {
+      "id": "G01-no-consent",
+      "kind": "guard",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 403,
+      "latencyMs": 50
+    },
+    {
+      "id": "N01-matched-pair-90c35860",
+      "kind": "matched-pair",
+      "outcome": "FAIL",
+      "status": 502,
+      "latencyMs": 5996,
+      "requestId": "n01-33c0d0d5-20e2-40d2-b46d-11fe11a4c263",
+      "problems": [
+        "HTTP 502 UPSTREAM_ERROR"
+      ]
+    },
+    {
+      "id": "N02-matched-pair-097c68f1",
+      "kind": "matched-pair",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 5665,
+      "requestId": "n02-57120b0e-90cc-468f-98f4-e3f7db73239d",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "BLACK",
+          "WHITE",
+          "RED"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "casual",
+          "thường ngày",
+          "đơn giản"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "BLACK",
+          "WHITE",
+          "RED"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "N03-matched-pair-1df9ecb9",
+      "kind": "matched-pair",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 3497,
+      "requestId": "n03-b7d58e46-0917-4e9b-9a14-e17c1f914211",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 0.6666666666666666,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "BLACK",
+          "RED"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "thường ngày",
+          "thoải mái"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "RED",
+          "GRAY"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "N10-cross-pair",
+      "kind": "conflicting-pair",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 1768,
+      "requestId": "n10-c9569e8a-c071-4c3d-aedd-498b678a77a2",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 0.5,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "thường ngày",
+          "thoải mái"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "RED"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "category",
+        "colors",
+        "pattern",
+        "styleTags",
+        "material",
+        "formality",
+        "seasonTags"
+      ],
+      "warnings": [
+        "VIEWS_LOOK_LIKE_DIFFERENT_ITEMS"
+      ],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-f05a884a-5cbe-5f81-8fac-a82280a295fd",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 3035,
+      "requestId": "f-f-b8fb96f5-23e4-4ae7-95bd-c03cdb90ebf1",
+      "score": {
+        "categoryCorrect": false,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "RED",
+          "BLACK"
+        ],
+        "pattern": "CHECKED",
+        "styleTags": [
+          "casual",
+          "ấm áp"
+        ],
+        "material": null,
+        "formality": 2,
+        "seasonTags": [
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "RED",
+          "BLACK"
+        ],
+        "pattern": "CHECKED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-9e8a5c51-7ff1-56fd-9ae5-30377c174e1c",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4790,
+      "requestId": "f-9-0daebd41-b79f-413b-a7d5-b33ab492e4f7",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "công sở",
+          "lịch sự",
+          "cơ bản"
+        ],
+        "material": null,
+        "formality": 4,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER",
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-914979a5-24cc-5af7-a0b4-50628d23e122",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4865,
+      "requestId": "f-9-26d17841-ae50-4449-b014-86c1155fe70c",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": false,
+        "colorOverlap": 0,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "RED"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "thường ngày",
+          "cơ bản"
+        ],
+        "material": null,
+        "formality": 2,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "PURPLE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-2b7c2338-7c4f-5a8f-b996-6537ba80b64b",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 1992,
+      "requestId": "f-2-e5a83806-8712-4fb0-b132-b283d22f7357",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "BOTTOM",
+        "colors": [
+          "BLUE"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "casual",
+          "năng động",
+          "streetwear"
+        ],
+        "material": "denim",
+        "formality": 2,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER",
+          "AUTUMN"
+        ]
+      },
+      "labels": {
+        "category": "BOTTOM",
+        "colors": [
+          "BLUE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-8cca0e89-76f2-53bd-981a-3abd3c7bc9d5",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 7175,
+      "requestId": "f-8-597ac794-2ab9-44db-ad68-6568d1a9be88",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "BOTTOM",
+        "colors": [
+          "GRAY"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "thoải mái",
+          "ở nhà"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER",
+          "AUTUMN"
+        ]
+      },
+      "labels": {
+        "category": "BOTTOM",
+        "colors": [
+          "GRAY"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-4d0ffc98-c648-5150-89e4-467902677386",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4306,
+      "requestId": "f-4-115748e0-c8c9-445b-b327-635ea3e31e37",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": false,
+        "colorOverlap": 0.5,
+        "patternCorrect": false
+      },
+      "predicted": {
+        "category": "BOTTOM",
+        "colors": [
+          "BLACK",
+          "WHITE"
+        ],
+        "pattern": "STRIPED",
+        "styleTags": [
+          "thể thao",
+          "thoải mái"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "BOTTOM",
+        "colors": [
+          "BLUE",
+          "WHITE"
+        ],
+        "pattern": "OTHER"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-ae39f6ec-2220-570e-965c-a098feb8fdcb",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2309,
+      "requestId": "f-a-1d54098a-b7c0-4d23-a455-bcd062ba4ebc",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": false,
+        "colorOverlap": 0.3333333333333333,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "DRESS",
+        "colors": [
+          "BEIGE",
+          "PURPLE",
+          "GREEN"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "nữ tính",
+          "dạo phố",
+          "hoa"
+        ],
+        "material": null,
+        "formality": 2,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "DRESS",
+        "colors": [
+          "WHITE",
+          "PINK",
+          "GREEN"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-a06aab12-9fbb-5fd9-9c7a-1af5cd789242",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 5174,
+      "requestId": "f-a-7f10b4d9-7d85-454c-9cb3-dfb9b26b1381",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": false,
+        "colorOverlap": 0,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "DRESS",
+        "colors": [
+          "BLACK"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "nữ tính",
+          "dự tiệc",
+          "thanh lịch"
+        ],
+        "material": null,
+        "formality": 4,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "DRESS",
+        "colors": [
+          "BLUE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-40d61e48-eb69-5b29-8d5f-f677a3310a4e",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4342,
+      "requestId": "f-4-7d1be63a-dfb9-4070-be8b-fb7b9367d792",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "DRESS",
+        "colors": [
+          "GREEN"
+        ],
+        "pattern": "OTHER",
+        "styleTags": [
+          "thanh lịch",
+          "dạ hội",
+          "công sở"
+        ],
+        "material": null,
+        "formality": 4,
+        "seasonTags": [
+          "SPRING",
+          "AUTUMN"
+        ]
+      },
+      "labels": {
+        "category": "DRESS",
+        "colors": [
+          "GREEN"
+        ],
+        "pattern": "OTHER"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-4a93098c-cb1a-507a-bede-311b6b9027ea",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2557,
+      "requestId": "f-4-7c611eb5-e48e-4887-8f06-1f18149a7eb9",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "GREEN",
+          "BROWN"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "casual",
+          "ấm áp",
+          "ngoài trời"
+        ],
+        "material": null,
+        "formality": 2,
+        "seasonTags": [
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "GREEN"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-12f79b37-045d-509c-8458-1b65c2abdc6f",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2695,
+      "requestId": "f-1-32350a69-7830-4692-8c68-7b93e1ba2b70",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": false,
+        "colorOverlap": 0,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "WHITE",
+          "YELLOW"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "mùa đông",
+          "thể thao",
+          "ngoài trời"
+        ],
+        "material": null,
+        "formality": 2,
+        "seasonTags": [
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "GRAY"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-8fff6408-b532-5c5b-b21e-eadccea35fb6",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 3323,
+      "requestId": "f-8-a04de94f-fcd5-44f8-9161-830c6ac6de0a",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "BLACK"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "cá tính",
+          "thể thao",
+          "đường phố"
+        ],
+        "material": "da",
+        "formality": 2,
+        "seasonTags": [
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "OUTERWEAR",
+        "colors": [
+          "BLACK"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-d05f08c5-2560-5ae4-952b-86857583722e",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4790,
+      "requestId": "f-d-2200ecd0-621e-4a49-8167-3ba231a9c5e7",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "SHOES",
+        "colors": [
+          "BLACK",
+          "WHITE"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "casual",
+          "tối giản",
+          "thể thao"
+        ],
+        "material": "da",
+        "formality": 2,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER",
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "SHOES",
+        "colors": [
+          "BLACK",
+          "WHITE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-fd8339a5-a377-5390-b240-e5b7866d5acc",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2734,
+      "requestId": "f-f-9f49b134-f3a1-433a-91b5-d302b72846dd",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "SHOES",
+        "colors": [
+          "BLUE",
+          "WHITE"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "thoải mái",
+          "dạo phố"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "SHOES",
+        "colors": [
+          "BLUE"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-287f9233-6405-599f-9509-4942425579f4",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 3865,
+      "requestId": "f-2-45ff3ea3-5aa6-493b-87b9-f6bbcc2bfaf2",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": false
+      },
+      "predicted": {
+        "category": "SHOES",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "thanh lịch",
+          "công sở",
+          "dự tiệc"
+        ],
+        "material": null,
+        "formality": 4,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER",
+          "AUTUMN"
+        ]
+      },
+      "labels": {
+        "category": "SHOES",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "OTHER"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-77fa7ad0-4aaa-5da2-a061-7eccb5006cbc",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 4322,
+      "requestId": "f-7-d5b2fcb1-47a3-4b2b-9b22-9619ef0d0b4f",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "ACCESSORY",
+        "colors": [
+          "BLACK"
+        ],
+        "pattern": "SOLID",
+        "styleTags": [
+          "mùa đông",
+          "thường ngày"
+        ],
+        "material": "len dệt kim",
+        "formality": 1,
+        "seasonTags": [
+          "AUTUMN",
+          "WINTER"
+        ]
+      },
+      "labels": {
+        "category": "ACCESSORY",
+        "colors": [
+          "BLACK"
+        ],
+        "pattern": "SOLID"
+      },
+      "needsReviewFields": [],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-a3b267a2-2aef-55ba-9679-e82c9db039e9",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 5031,
+      "requestId": "f-a-425c87ec-c482-465e-ac48-5813a7c7d76a",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "ACCESSORY",
+        "colors": [
+          "BLUE",
+          "YELLOW",
+          "RED"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "thể thao",
+          "năng động",
+          "dạo phố"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "ACCESSORY",
+        "colors": [
+          "BLUE",
+          "YELLOW"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-64d3d6f7-25bf-5cec-a8b9-1f0d9cead259",
+      "kind": "front-only",
+      "outcome": "FAIL",
+      "status": 502,
+      "latencyMs": 4862,
+      "requestId": "f-6-4b2a893c-c644-4835-bd92-32a7b0a4a327",
+      "problems": [
+        "HTTP 502 UPSTREAM_ERROR"
+      ]
+    },
+    {
+      "id": "F-90c35860-7e9d-5e80-a2ab-8642cebce60f",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2282,
+      "requestId": "f-9-12b2365d-f0a6-447b-8481-75b13e832209",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 1,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "RED"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "thoải mái",
+          "thường ngày"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "RED"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    },
+    {
+      "id": "F-097c68f1-452f-5626-b75a-b1f89db7cb75",
+      "kind": "front-only",
+      "outcome": "FAIL",
+      "status": 502,
+      "latencyMs": 1598,
+      "requestId": "f-0-28a5b497-6a45-4ce7-9ca0-b1f6729b25c3",
+      "problems": [
+        "HTTP 502 UPSTREAM_ERROR"
+      ]
+    },
+    {
+      "id": "F-1df9ecb9-22ed-5bd3-b5db-188eebfe1041",
+      "kind": "front-only",
+      "outcome": "PASS",
+      "problems": [],
+      "status": 200,
+      "latencyMs": 2702,
+      "requestId": "f-1-a8916031-b26e-4529-b4c1-40d6d3230b3f",
+      "score": {
+        "categoryCorrect": true,
+        "primaryColorFound": true,
+        "colorOverlap": 0.3333333333333333,
+        "patternCorrect": true
+      },
+      "predicted": {
+        "category": "TOP",
+        "colors": [
+          "WHITE"
+        ],
+        "pattern": "PRINTED",
+        "styleTags": [
+          "casual",
+          "đơn giản"
+        ],
+        "material": null,
+        "formality": 1,
+        "seasonTags": [
+          "SPRING",
+          "SUMMER"
+        ]
+      },
+      "labels": {
+        "category": "TOP",
+        "colors": [
+          "WHITE",
+          "RED",
+          "GRAY"
+        ],
+        "pattern": "PRINTED"
+      },
+      "needsReviewFields": [
+        "material"
+      ],
+      "warnings": [],
+      "source": "AI_LIVE"
+    }
+  ]
+}

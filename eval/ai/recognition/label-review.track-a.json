@@ -1,0 +1,17 @@
+{
+  "_comment": "Review nhãn độc lập của Track B cho fixtures Track A (data/fixtures/modern-clothing/manifest.json), theo yêu cầu 'nhãn cần B review độc lập' trên TASK_BOARD (PRE-004). File này KHÔNG sửa manifest của A; labels-from-track-a.mjs áp các override này khi sinh nhãn eval. Lưu ý thiên lệch: review được làm SAU khi xem dự đoán của model (B-006 lần 1), nên điểm 'sau review' là mức đồng thuận, không phải accuracy độc lập.",
+  "reviewedBy": "B (người dùng, xem ảnh trực tiếp)",
+  "reviewedAt": "2026-11-11",
+  "sourceManifestCommit": "e117153",
+  "overrides": [
+    { "id": "f05a884a-5cbe-5f81-8fac-a82280a295fd", "field": "category", "from": "TOP", "to": "OUTERWEAR", "note": "Sơ mi flannel dày mặc ngoài (overshirt); ranh giới TOP/OUTERWEAR mơ hồ." },
+    { "id": "914979a5-24cc-5af7-a0b4-50628d23e122", "field": "colors", "from": ["PURPLE"], "to": ["RED"], "note": "Áo thun đỏ đô (burgundy)." },
+    { "id": "4d0ffc98-c648-5150-89e4-467902677386", "field": "colors", "from": ["BLUE", "WHITE"], "to": ["BLACK", "WHITE"], "note": "Quần jogger xanh navy rất đậm, gần đen trong ảnh; ranh giới BLUE/BLACK mơ hồ." },
+    { "id": "4d0ffc98-c648-5150-89e4-467902677386", "field": "pattern", "from": "OTHER", "to": "STRIPED", "note": "Sọc trắng dọc hai bên ống." },
+    { "id": "ae39f6ec-2220-570e-965c-a098feb8fdcb", "field": "colors", "from": ["WHITE", "PINK", "GREEN"], "to": ["BEIGE", "PURPLE", "GREEN"], "note": "Nền be/xám nhạt, hoa tím chủ đạo." },
+    { "id": "a06aab12-9fbb-5fd9-9c7a-1af5cd789242", "field": "colors", "from": ["BLUE"], "to": ["BLACK"], "note": "Váy đen." },
+    { "id": "12f79b37-045d-509c-8458-1b65c2abdc6f", "field": "colors", "from": ["GRAY"], "to": ["WHITE", "YELLOW"], "note": "Áo parka trắng kem, lót vàng." },
+    { "id": "287f9233-6405-599f-9509-4942425579f4", "field": "pattern", "from": "OTHER", "to": "SOLID", "note": "Giày trắng trơn, có đính đá trang trí nhỏ." },
+    { "id": "64d3d6f7-25bf-5cec-a8b9-1f0d9cead259", "field": "pattern", "from": "OTHER", "to": "PRINTED", "note": "Mũ len đen có logo in." }
+  ]
+}

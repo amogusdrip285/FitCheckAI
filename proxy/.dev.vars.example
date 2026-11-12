@@ -1,0 +1,15 @@
+# Copy thành proxy/.dev.vars (đã gitignore). KHÔNG commit file .dev.vars thật.
+
+# Test miễn phí bằng Gemini free tier (key tạo ở Google AI Studio).
+# Free tier: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm ⇒ chỉ dùng ảnh/dữ liệu test.
+AI_PROVIDER=gemini
+GEMINI_API_KEY=
+
+# Hoặc Anthropic (trả phí): AI_PROVIDER=anthropic và điền ANTHROPIC_API_KEY.
+ANTHROPIC_API_KEY=
+
+SESSION_SECRET=thay-bang-chuoi-ngau-nhien-dai-it-nhat-32-ky-tu
+DEMO_ACCESS_CODE=thay-bang-ma-demo
+# Bật service khi chạy local (mặc định trong wrangler.toml là off):
+SERVICE_RECOGNITION=on
+SERVICE_OUTFITS=on
