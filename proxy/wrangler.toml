@@ -7,7 +7,7 @@ APP_VERSION = "dev"
 # Provider: "anthropic", "gemini" hoặc "openai" (OpenAI-compatible, vd. FOSTA). Gemini free tier CHỈ để test: Google được dùng dữ liệu gửi lên
 # để cải thiện sản phẩm ⇒ không gửi ảnh người dùng thật.
 AI_PROVIDER = "anthropic"
-# Bỏ trống = mặc định theo provider (anthropic: claude-opus-5-5, gemini: gemini-3.5-flash-lite, openai: gpt-6.1-sol).
+# Bỏ trống = mặc định theo provider (anthropic: claude-opus-5-5, gemini: gemini-3.5-flash-lite, openai: gpt-6-luna).
 # Đổi model = chạy lại eval B-004/B-006.
 AI_MODEL = ""
 # Ghi đè provider/model từng service (trống = dùng cấu hình chung ở trên).
@@ -27,6 +27,9 @@ RECOGNITION_VIEWS = "DUAL"
 DAILY_CAP_RECOGNITION = "200"
 DAILY_CAP_OUTFITS = "200"
 RATE_LIMIT_PER_MINUTE = "20"
+# Deadline mặc định CT-07 (ms). Chỉ nới khi test provider chậm; app Android vẫn cắt ở 20s.
+PROVIDER_TIMEOUT_MS = "15000"
+PROXY_DEADLINE_MS = "18000"
 SESSION_TTL_SECONDS = "43200"
 
 # Secrets (KHÔNG ghi vào file này, KHÔNG commit):

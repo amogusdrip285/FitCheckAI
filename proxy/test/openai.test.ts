@@ -1,7 +1,7 @@
 // Kiểm adapter OpenAI-compatible bằng fetch giả — không gọi mạng.
 import { describe, expect, it } from "vitest";
 import { createApp, defaultDeps } from "../src/app";
-import { aiProvider, providerLabel } from "../src/env";
+import { aiProvider, providerLabel, providerTimeoutMs, proxyDeadlineMs } from "../src/env";
 import { GeminiModelClient } from "../src/shared/gemini";
 import { ModelOutfitsSchema } from "../src/outfits/schema";
 import { ModelRecognitionSchema } from "../src/recognition/schema";
@@ -222,6 +222,21 @@ describe("provider riêng từng service", () => {
   });
 });
 
+describe("deadline cấu hình được", () => {
+  const base = { APP_VERSION: "t" };
+  it("mặc định đúng CT-07 15s/18s", () => {
+    expect(providerTimeoutMs(base)).toBe(15_000);
+    expect(proxyDeadlineMs(base)).toBe(18_000);
+  });
+  it("nới để test; proxy luôn > provider; giá trị rác/vượt biên bị kẹp", () => {
+    expect(providerTimeoutMs({ ...base, PROVIDER_TIMEOUT_MS: "45000" })).toBe(45_000);
+    expect(proxyDeadlineMs({ ...base, PROVIDER_TIMEOUT_MS: "45000" })).toBe(46_000);
+    expect(proxyDeadlineMs({ ...base, PROVIDER_TIMEOUT_MS: "45000", PROXY_DEADLINE_MS: "50000" })).toBe(50_000);
+    expect(providerTimeoutMs({ ...base, PROVIDER_TIMEOUT_MS: "abc" })).toBe(15_000);
+    expect(providerTimeoutMs({ ...base, PROVIDER_TIMEOUT_MS: "999999" })).toBe(120_000);
+  });
+});
+
 describe("cấu hình provider openai", () => {
   it("base URL chỉ HTTPS, mặc định OpenAI", () => {
     expect(normalizeBaseUrl(undefined)).toBe("https://api.openai.com/v1");
@@ -235,7 +250,7 @@ describe("cấu hình provider openai", () => {
     const modelFor = defaultDeps().modelFor;
     const env = { APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_API_KEY: "sk-x", OPENAI_BASE_URL: BASE };
     expect(modelFor(env)).toBeInstanceOf(OpenAICompatibleModelClient);
-    expect(modelFor(env)?.model).toBe("gpt-6.1-sol");
+    expect(modelFor(env)?.model).toBe("gpt-6-luna"); // mặc định openai khi không đặt AI_MODEL
     expect(modelFor({ ...env, OPENAI_API_KEY: "" })).toBeNull();
     expect(modelFor({ ...env, OPENAI_BASE_URL: "http://insecure.test/v1" })).toBeNull();
   });

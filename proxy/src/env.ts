@@ -42,6 +42,12 @@ export interface Env {
   /** Số call upstream tối đa mỗi ngày (UTC) mỗi isolate — best-effort, KHÔNG phải hard cap tiền. */
   DAILY_CAP_RECOGNITION?: string;
   DAILY_CAP_OUTFITS?: string;
+  /**
+   * Deadline (ms). Mặc định CT-07: provider 15000, proxy 18000 — đổi mặc định là đổi contract với client.
+   * Chỉ nới để TEST provider chậm (vd. gateway FOSTA ~20s); client Android vẫn cắt ở 20s.
+   */
+  PROVIDER_TIMEOUT_MS?: string;
+  PROXY_DEADLINE_MS?: string;
   /** Request/phút mỗi session (best-effort theo isolate). */
   RATE_LIMIT_PER_MINUTE?: string;
 }
@@ -52,8 +58,9 @@ export const DEFAULT_MODELS: Record<AiProvider, string> = {
   anthropic: "claude-opus-5-5",
   // 11/11/2026: gemini-3.8-flash free tier quá tải (timeout/503); flash-lite trả lời ~1–3s.
   gemini: "gemini-3.5-flash-lite",
-  // 12/11/2026 qua FOSTA: gpt-6.1-sol 8–21s/call (vision + tool strict); xem docs/track-b/PRE-003-provider-budget.md.
-  openai: "gpt-6.1-sol",
+  // 12/11/2026 qua FOSTA: luna ("việc nhỏ, rẻ nhất") nhanh ngang sol (gateway chiếm phần lớn độ trễ) nên chọn luna
+  // để tiết kiệm; chất lượng giải thích chưa chấm. Xem docs/track-b/PRE-003-provider-budget.md.
+  openai: "gpt-6-luna",
 };
 
 /** Service gọi AI (tryon do Track C tự quản provider). */
@@ -126,4 +133,17 @@ export function recognitionViews(env: Env): RecognitionViews {
 export function dailyCap(env: Env, service: ServiceName): number {
   const raw = service === "recognition" ? env.DAILY_CAP_RECOGNITION : service === "outfits" ? env.DAILY_CAP_OUTFITS : undefined;
   return intVar(raw, 200, 0, 100_000);
+}
+
+export const DEFAULT_PROVIDER_TIMEOUT_MS = 15_000;
+export const DEFAULT_PROXY_DEADLINE_MS = 18_000;
+
+/** Timeout một call provider (1s–120s). */
+export function providerTimeoutMs(env: Env): number {
+  return intVar(env.PROVIDER_TIMEOUT_MS, DEFAULT_PROVIDER_TIMEOUT_MS, 1_000, 120_000);
+}
+
+/** Deadline tổng của request; luôn lớn hơn provider timeout ≥1s để kịp trả lỗi có kiểu thay vì bị cắt ngang. */
+export function proxyDeadlineMs(env: Env): number {
+  return Math.max(intVar(env.PROXY_DEADLINE_MS, DEFAULT_PROXY_DEADLINE_MS, 1_000, 125_000), providerTimeoutMs(env) + 1_000);
 }

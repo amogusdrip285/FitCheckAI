@@ -56,7 +56,7 @@ Không cần auth.
   "services": { "recognition": true, "outfits": true, "tryon": false },
   "recognitionViews": "DUAL", "provider": "openai@codex.fosta.app", "providerConfigured": true,
   "providers": { "recognition": { "provider": "gemini", "model": "gemini-3.5-flash-lite", "configured": true },
-                 "outfits":     { "provider": "openai@codex.fosta.app", "model": "gpt-6.1-sol", "configured": true } } }
+                 "outfits":     { "provider": "openai@codex.fosta.app", "model": "gpt-6-luna", "configured": true } } }
 ```
 
 Client dùng `services`/`recognitionViews` để ẩn CTA chưa khả dụng; đây không phải bằng chứng AI chạy tốt. `provider`/`providerConfigured` là cấu hình chung; `providers.<service>` là provider thật từng service dùng (có thể khác nhau) — Android recognition lấy `providers.recognition` để hiện trong consent và tính `configVersion` (đổi provider/model ⇒ consent cũ không còn khớp).
@@ -165,7 +165,7 @@ C export `RouteDef[]` từ `proxy/src/tryon/**` (interface ở `proxy/src/shared
 
 ## Vận hành
 
-- Provider: `AI_PROVIDER = "anthropic" | "gemini" | "openai"` (adapter ở `proxy/src/shared/model.ts`, `gemini.ts`, `openai.ts`; wire format client không đổi). `AI_MODEL` trống ⇒ mặc định `claude-opus-5-5` / `gemini-3.5-flash-lite` / `gpt-6.1-sol`. Ghi đè từng service: `AI_PROVIDER_RECOGNITION|OUTFITS`, `AI_MODEL_RECOGNITION|OUTFITS` (trống ⇒ cấu hình chung; `AI_MODEL` chung chỉ áp khi service cùng provider chung). `openai` dùng `OPENAI_API_KEY` + `OPENAI_BASE_URL` (HTTPS, mặc định `https://api.openai.com/v1`; gateway FOSTA `https://codex.fosta.app/v1`) và `/health.provider` = `openai@<host>`. FOSTA: outfits ~10–13s, recognition ~19–25s (vượt deadline 15s hiện tại) — xem `docs/track-b/PRE-003-provider-budget.md`. **Gemini free tier chỉ để test**: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm — không gửi ảnh người dùng thật; `/health` báo `provider`.
+- Provider: `AI_PROVIDER = "anthropic" | "gemini" | "openai"` (adapter ở `proxy/src/shared/model.ts`, `gemini.ts`, `openai.ts`; wire format client không đổi). `AI_MODEL` trống ⇒ mặc định `claude-opus-5-5` / `gemini-3.5-flash-lite` / `gpt-6-luna`. Ghi đè từng service: `AI_PROVIDER_RECOGNITION|OUTFITS`, `AI_MODEL_RECOGNITION|OUTFITS` (trống ⇒ cấu hình chung; `AI_MODEL` chung chỉ áp khi service cùng provider chung). `openai` dùng `OPENAI_API_KEY` + `OPENAI_BASE_URL` (HTTPS, mặc định `https://api.openai.com/v1`; gateway FOSTA `https://codex.fosta.app/v1`) và `/health.provider` = `openai@<host>`. FOSTA: outfits ~10–13s, recognition ~19–25s (vượt deadline 15s hiện tại) — xem `docs/track-b/PRE-003-provider-budget.md`. **Gemini free tier chỉ để test**: Google được dùng dữ liệu gửi lên để cải thiện sản phẩm — không gửi ảnh người dùng thật; `/health` báo `provider`.
 - Secrets: `ANTHROPIC_API_KEY` hoặc `GEMINI_API_KEY` (theo provider), `SESSION_SECRET`, `DEMO_ACCESS_CODE` (xem `proxy/wrangler.toml`, `proxy/.dev.vars.example`). Key không bao giờ nằm trong APK/git/log.
 - Bật/tắt: `SERVICE_RECOGNITION|OUTFITS|TRYON = "on"|"off"` (mặc định off). Đổi biến ⇒ redeploy.
 - `DAILY_CAP_*` và rate limit đếm **theo isolate**, best-effort — không phải quota toàn cục hay trần tiền. Trần tiền thật: spend limit ở console provider (PRE-003). Quota atomic/toàn cục: BACK-011.

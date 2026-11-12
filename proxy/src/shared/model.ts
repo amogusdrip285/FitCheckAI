@@ -61,14 +61,19 @@ export class AnthropicModelClient implements ModelClient {
     private readonly timeoutMs: number = PROVIDER_TIMEOUT_MS,
   ) {}
 
-  static fromApiKey(apiKey: string, model: string, fetchImpl?: typeof fetch): AnthropicModelClient {
+  static fromApiKey(
+    apiKey: string,
+    model: string,
+    fetchImpl?: typeof fetch,
+    timeoutMs: number = PROVIDER_TIMEOUT_MS,
+  ): AnthropicModelClient {
     const client = new Anthropic({
       apiKey,
       maxRetries: 0,
-      timeout: PROVIDER_TIMEOUT_MS,
+      timeout: timeoutMs,
       ...(fetchImpl ? { fetch: fetchImpl } : {}),
     });
-    return new AnthropicModelClient(client, model);
+    return new AnthropicModelClient(client, model, timeoutMs);
   }
 
   async generate<S extends z.ZodType>(call: StructuredCall<S>): Promise<ModelOutcome<z.infer<S>>> {

@@ -7,11 +7,14 @@ GEMINI_API_KEY=
 
 # Hoặc OpenAI-compatible (vd. gateway FOSTA cho demo GPT). FOSTA là bên thứ ba ⇒ chỉ dữ liệu test.
 # AI_PROVIDER=openai
-# AI_MODEL=gpt-6.1-sol
+# AI_MODEL=gpt-6-luna
 # OPENAI_BASE_URL=https://codex.fosta.app/v1
 OPENAI_API_KEY=
 # Ghi đè từng service (trống = dùng AI_PROVIDER/AI_MODEL chung), vd. outfits GPT + recognition Gemini:
 # AI_PROVIDER_RECOGNITION=gemini
+# Nới deadline CHỈ để test provider chậm (mặc định CT-07: 15000/18000; app Android vẫn cắt ở 20s):
+# PROVIDER_TIMEOUT_MS=60000
+# PROXY_DEADLINE_MS=65000
 # AI_MODEL_RECOGNITION=
 
 # Hoặc Anthropic (trả phí): AI_PROVIDER=anthropic và điền ANTHROPIC_API_KEY.

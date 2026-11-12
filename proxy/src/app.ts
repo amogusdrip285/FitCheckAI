@@ -9,6 +9,8 @@ import {
   SERVICES,
   aiModel,
   aiProvider,
+  providerTimeoutMs,
+  proxyDeadlineMs,
   dailyCap,
   intVar,
   providerLabel,
@@ -26,6 +28,7 @@ import { AnthropicModelClient, type ModelClient } from "./shared/model";
 import { type AppDeps, matchPath, type RouteContext, type RouteDef } from "./shared/registry";
 
 /** Deadline tổng của proxy (CT-07: client 20s, proxy ≤18s, provider ≤15s). */
+/** Mặc định CT-07; giá trị thật theo env qua proxyDeadlineMs(). */
 export const PROXY_DEADLINE_MS = 18_000;
 const SESSION_BODY_BYTES = 1024;
 
@@ -42,15 +45,16 @@ function defaultModelFor(): (env: Env, service?: AiService) => ModelClient | nul
     const baseUrl = provider === "openai" ? normalizeBaseUrl(env.OPENAI_BASE_URL) : "";
     if (baseUrl === null) return null;
     const model = aiModel(env, service);
-    const cacheKey = `${provider}:${baseUrl}:${model}:${apiKey.length}:${apiKey.slice(-6)}`;
+    const timeoutMs = providerTimeoutMs(env);
+    const cacheKey = `${provider}:${baseUrl}:${model}:${timeoutMs}:${apiKey.length}:${apiKey.slice(-6)}`;
     let client = cache.get(cacheKey);
     if (client === undefined) {
       client =
         provider === "gemini"
-          ? new GeminiModelClient(apiKey, model)
+          ? new GeminiModelClient(apiKey, model, undefined, timeoutMs)
           : provider === "openai"
-            ? new OpenAICompatibleModelClient(apiKey, model, baseUrl)
-            : AnthropicModelClient.fromApiKey(apiKey, model);
+            ? new OpenAICompatibleModelClient(apiKey, model, baseUrl, undefined, timeoutMs)
+            : AnthropicModelClient.fromApiKey(apiKey, model, undefined, timeoutMs);
       // Vài service có thể dùng provider khác nhau cùng lúc ⇒ giữ vài client, không xoá nhau.
       if (cache.size >= 4) cache.clear();
       cache.set(cacheKey, client);
@@ -163,7 +167,7 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       requestId: log.requestId,
       session,
       params,
-      signal: AbortSignal.timeout(PROXY_DEADLINE_MS),
+      signal: AbortSignal.timeout(proxyDeadlineMs(env)),
       reserveUpstreamCall() {
         if (!deps.guard.tryReserveDaily(service, dailyCap(env, service), deps.now())) {
           throw new ApiError("BUDGET_EXCEEDED", "Đã hết hạn mức AI hôm nay");
