@@ -54,6 +54,10 @@ python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 
 Bộ [manifest](fixtures/modern-clothing/manifest.json) gồm **21 món, 24 ảnh thật, 3 cặp trước/sau**, đủ 6 nhóm, kèm [ca lỗi](fixtures/modern-clothing/cases.json). Các nhãn màu/họa tiết và tên hiển thị đã được trợ lý rà từ ảnh. `fieldProvenance` ghi nguồn từng trường, `referenceFields` liệt kê nhãn tham chiếu và `groundTruthFields` để rỗng trong khi chờ review độc lập.
 
+Ngày 12/11/2026, người dùng xác nhận đầm `a06aab12` màu đen. Track A đối chiếu tám trường còn lại từ review của B với ảnh gốc và sửa bảy trường. Quần `4d0ffc98` giữ `BLUE,WHITE` do thấy sắc navy ở vùng sáng, đồng thời cập nhật họa tiết `STRIPED`. Manifest ghi lý do theo từng trường. [Review nhãn của B](../eval/ai/recognition/label-review.track-a.json).
+
+Script tạo nhãn eval ưu tiên các trường đã chốt trong manifest. Các số liệu từ lần chạy ngày 11/11/2026 vẫn dùng bộ nhãn của lần chạy đó. Một phép đo accuracy độc lập cần bộ ảnh mới được gắn nhãn trước khi chạy model.
+
 - **18 ảnh đơn:** [Alexey Grigorev clothing-dataset](https://github.com/alexeygrigorev/clothing-dataset), revision `7ed86a9cc56763b6acb35e41cb35184e43a5d218`, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Credit: các contributor của clothing-dataset và Tagias.
 - **DDC International T-shirt, front/back:** Jonathan Schilling, [front](https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_front.jpg), [back](https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_back.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 - **Wiki Loves Monuments female shirt, front/back:** [Béria L. Rodríguez @ Wikimedia Commons](https://commons.wikimedia.org/wiki/User:Beria), [front](https://commons.wikimedia.org/wiki/File:WLM_shirt_-_Female_(front).jpg), [back](https://commons.wikimedia.org/wiki/File:WLM_shirt_-_Female_(back).jpg), [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).

@@ -5,8 +5,8 @@
   "items": [
     {
       "id": "f05a884a-5cbe-5f81-8fac-a82280a295fd",
-      "name": "Áo sơ mi kẻ đỏ đen",
-      "category": "TOP",
+      "name": "Áo khoác sơ mi kẻ đỏ đen",
+      "category": "OUTERWEAR",
       "colors": [
         "RED",
         "BLACK"
@@ -48,8 +48,9 @@
           "method": "assistant_authored_display_name"
         },
         "category": {
-          "method": "source_label_mapped_and_assistant_visual_review",
-          "sourceLabel": "Shirt"
+          "method": "track_a_visual_review",
+          "sourceLabel": "Shirt",
+          "note": "Dáng sơ mi mặc ngoài, có lớp lót thấy ở cổ tay và gấu."
         },
         "colors": {
           "method": "assistant_visual_review"
@@ -116,10 +117,10 @@
     },
     {
       "id": "914979a5-24cc-5af7-a0b4-50628d23e122",
-      "name": "Áo thun tím hồng",
+      "name": "Áo thun đỏ đô",
       "category": "TOP",
       "colors": [
-        "PURPLE"
+        "RED"
       ],
       "pattern": "SOLID",
       "material": null,
@@ -162,7 +163,8 @@
           "sourceLabel": "T-Shirt"
         },
         "colors": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Màu đỏ đô được quy về RED trong bảng màu của app."
         },
         "pattern": {
           "method": "assistant_visual_review"
@@ -281,13 +283,13 @@
     },
     {
       "id": "4d0ffc98-c648-5150-89e4-467902677386",
-      "name": "Quần thể thao tối màu",
+      "name": "Quần thể thao xanh navy",
       "category": "BOTTOM",
       "colors": [
         "BLUE",
         "WHITE"
       ],
-      "pattern": "OTHER",
+      "pattern": "STRIPED",
       "material": null,
       "formality": null,
       "seasonTags": [],
@@ -328,20 +330,22 @@
           "sourceLabel": "Pants"
         },
         "colors": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Giữ BLUE và WHITE. Vùng sáng thấy sắc xanh navy dù vùng tối gần đen."
         },
         "pattern": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Hai dải sọc trắng dọc ống đủ rõ để dùng STRIPED."
         }
       }
     },
     {
       "id": "ae39f6ec-2220-570e-965c-a098feb8fdcb",
-      "name": "Đầm hoa nền trắng",
+      "name": "Đầm hoa tím nền be",
       "category": "DRESS",
       "colors": [
-        "WHITE",
-        "PINK",
+        "BEIGE",
+        "PURPLE",
         "GREEN"
       ],
       "pattern": "PRINTED",
@@ -385,7 +389,8 @@
           "sourceLabel": "Dress"
         },
         "colors": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Nền be nhạt, cụm hoa tím và lá xanh là ba màu thấy rõ."
         },
         "pattern": {
           "method": "assistant_visual_review"
@@ -394,10 +399,10 @@
     },
     {
       "id": "a06aab12-9fbb-5fd9-9c7a-1af5cd789242",
-      "name": "Đầm xanh đậm",
+      "name": "Đầm đen",
       "category": "DRESS",
       "colors": [
-        "BLUE"
+        "BLACK"
       ],
       "pattern": "SOLID",
       "material": null,
@@ -440,7 +445,7 @@
           "sourceLabel": "Dress"
         },
         "colors": {
-          "method": "assistant_visual_review"
+          "method": "user_visual_confirmation"
         },
         "pattern": {
           "method": "assistant_visual_review"
@@ -559,10 +564,11 @@
     },
     {
       "id": "12f79b37-045d-509c-8458-1b65c2abdc6f",
-      "name": "Áo khoác xám sáng",
+      "name": "Áo khoác trắng lót vàng",
       "category": "OUTERWEAR",
       "colors": [
-        "GRAY"
+        "WHITE",
+        "YELLOW"
       ],
       "pattern": "SOLID",
       "material": null,
@@ -605,7 +611,8 @@
           "sourceLabel": "Outwear"
         },
         "colors": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Vỏ trắng kem, phần lót vàng thấy rõ ở cổ áo."
         },
         "pattern": {
           "method": "assistant_visual_review"
@@ -785,7 +792,7 @@
       "colors": [
         "WHITE"
       ],
-      "pattern": "OTHER",
+      "pattern": "SOLID",
       "material": null,
       "formality": null,
       "seasonTags": [],
@@ -829,7 +836,8 @@
           "method": "assistant_visual_review"
         },
         "pattern": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Bề mặt trắng trơn là chủ đạo, đính đá tập trung ở mũi."
         }
       }
     },
@@ -951,7 +959,7 @@
       "colors": [
         "BLACK"
       ],
-      "pattern": "OTHER",
+      "pattern": "PRINTED",
       "material": null,
       "formality": null,
       "seasonTags": [],
@@ -995,7 +1003,8 @@
           "method": "assistant_visual_review"
         },
         "pattern": {
-          "method": "assistant_visual_review"
+          "method": "track_a_visual_review",
+          "note": "Logo chữ là họa tiết đồ họa thấy rõ. Không suy ra kỹ thuật tạo logo."
         }
       }
     },

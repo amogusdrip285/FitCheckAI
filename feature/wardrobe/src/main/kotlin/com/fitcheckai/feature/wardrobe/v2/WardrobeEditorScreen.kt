@@ -8,6 +8,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -18,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -31,6 +34,7 @@ import java.util.UUID
 fun WardrobeEditorScreen(onBack: () -> Unit, onStyleAround: ((String) -> Unit)? = null,
     viewModel: WardrobeEditorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val capability by viewModel.recognitionCapability.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     var editing by rememberSaveable { mutableStateOf(state.isNew) }
@@ -119,11 +123,18 @@ fun WardrobeEditorScreen(onBack: () -> Unit, onStyleAround: ((String) -> Unit)? 
                     if (state.item.images.front != null) SegmentationPreview(state.item.images, !locked)
                     WardrobePanel {
                         SectionHeading("Thông tin món đồ", "Chưa biết thuộc tính nào thì để trống. Bạn có thể bổ sung sau.")
-                        if (viewModel.capability.available) {
-                            OutlinedButton({ consent = viewModel.capability to state.item.images.refs().associate { it.id to it.view } }, enabled = !locked && !state.recognizing && state.item.images.front != null) {
+                        if (capability.available) {
+                            OutlinedButton({ consent = capability to viewModel.recognitionViews(capability) }, enabled = !locked && !state.recognizing && state.item.images.front != null) {
                                 Icon(Icons.Outlined.AutoAwesome, null); Spacer(Modifier.width(8.dp)); Text("Gợi ý bằng AI")
                             }
-                        } else InfoNotice("Nhận diện AI chưa được kết nối. Nhập thông tin bên dưới để lưu món đồ.")
+                        } else {
+                            InfoNotice("Nhận diện AI chưa được kết nối. Nhập thông tin bên dưới để lưu món đồ.")
+                            if (viewModel.recognitionConfigured) {
+                                TextButton(onClick = viewModel::refreshRecognitionConnection, enabled = !locked) {
+                                    Text("Thử kết nối lại")
+                                }
+                            }
+                        }
                         if (state.recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); TextButton(viewModel::cancelRecognition) { Text("Dừng nhận diện, tự điền") } }
                         WardrobeFields(state.item, !locked, viewModel::editName, viewModel::editAttributes)
                     }
@@ -150,10 +161,33 @@ fun WardrobeEditorScreen(onBack: () -> Unit, onStyleAround: ((String) -> Unit)? 
             text = { Text("Ảnh mặt trước, mặt sau và các ảnh dẫn xuất của món đồ sẽ được xóa.") },
             confirmButton = { TextButton({ delete = false; viewModel.delete() }) { Text("Xóa món đồ") } },
             dismissButton = { TextButton({ delete = false }) { Text("Giữ lại") } })
-        consent?.let { preview -> AlertDialog(onDismissRequest = { consent = null }, title = { Text("Gửi ảnh để nhận diện?") },
-            text = { Text("Gửi ${preview.second.size} ảnh (${preview.second.values.joinToString { it.label.lowercase() }}) tới ${preview.first.provider} cho lần này. Chỉ tiếp tục nếu cả hai ảnh là cùng một món đồ.") },
-            confirmButton = { TextButton({ consent = null; viewModel.recognize(preview.first, preview.second) }) { Text("Đồng ý gửi lần này") } },
-            dismissButton = { TextButton({ consent = null }) { Text("Tự điền") } }) }
+        consent?.let { (service, views) ->
+            var code by remember(service, views) { mutableStateOf("") }
+            val needsCode = viewModel.needsAccessCode
+            AlertDialog(
+                onDismissRequest = { consent = null },
+                title = { Text("Gửi ảnh để nhận diện?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Gửi ${views.size} ảnh (${views.values.joinToString { it.label.lowercase() }}) tới ${service.provider} cho lần này.")
+                        if (views.size == 2) Text("Chỉ tiếp tục nếu hai ảnh là cùng một món đồ.")
+                        else if (state.item.images.back != null) Text("Dịch vụ hiện nhận diện mặt trước. Ảnh mặt sau vẫn được lưu trong tủ đồ.")
+                        if (needsCode) OutlinedTextField(
+                            value = code, onValueChange = { code = it.take(128) }, singleLine = true,
+                            label = { Text("Mã truy cập demo") }, visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        consent = null
+                        viewModel.recognize(service, views, code.takeIf { needsCode })
+                    }, enabled = !needsCode || code.isNotBlank()) { Text("Đồng ý gửi lần này") }
+                },
+                dismissButton = { TextButton({ consent = null }) { Text("Tự điền") } },
+            )
+        }
     }
 }
 

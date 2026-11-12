@@ -3,6 +3,7 @@ package com.fitcheckai.feature.wardrobe.v2
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcheckai.core.ai.RecognitionSetup
 import com.fitcheckai.core.model.wardrobe.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.Normalizer
@@ -85,14 +86,21 @@ class WardrobeEditorViewModel @Inject constructor(
         loading = targetId != null && restored == null, isNew = targetId == null,
         expectedRevision = savedState["expectedRevision"]))
     val state = mutable.asStateFlow()
+    private val setup = recognition as? RecognitionSetup
     val capability get() = recognition.capability
+    private val mutableCapability = MutableStateFlow(capability)
+    val recognitionCapability = mutableCapability.asStateFlow()
+    val recognitionConfigured get() = setup?.configured == true
+    val needsAccessCode get() = setup?.needsAccessCode == true
     private var draftRevision: Long = savedState["draftRevision"] ?: 1
     private var touched = savedState.get<ArrayList<String>>("touched").orEmpty().map(AttributeField::valueOf).toSet()
     private var newlyImported = savedState.get<ArrayList<String>>("newMedia").orEmpty().map(WardrobeCodec::decodeMedia).toMutableList()
     private var recognitionJob: Job? = null
+    private var capabilityJob: Job? = null
     private var activeRequest: String? = null
 
     init {
+        refreshRecognitionConnection()
         viewModelScope.launch {
             if (targetId != null && restored == null) {
                 repository.get(targetId).fold({ item ->
@@ -104,6 +112,19 @@ class WardrobeEditorViewModel @Inject constructor(
                 }, { e -> mutable.update { it.copy(loading = false, error = e.message) } })
             } else refreshPaths()
         }
+    }
+
+    fun refreshRecognitionConnection() {
+        val connection = setup?.takeIf { it.configured } ?: return
+        if (capabilityJob?.isActive == true) return
+        capabilityJob = viewModelScope.launch { mutableCapability.value = connection.refreshCapability() }
+    }
+
+    fun recognitionViews(capability: RecognitionCapability): Map<String, ImageView> =
+        recognitionImages(capability).refs().associate { it.id to it.view }
+
+    private fun recognitionImages(capability: RecognitionCapability): ImagePair = state.value.item.images.let {
+        if (capability.supportsBack) it else it.copy(back = null)
     }
 
     fun editName(name: String) {
@@ -157,24 +178,30 @@ class WardrobeEditorViewModel @Inject constructor(
 
     /** Called only after the user confirms the provider and exact current views in the UI. */
     fun recognize(confirmedCapability: RecognitionCapability = capability,
-        confirmedViews: Map<String, ImageView> = state.value.item.images.refs().associate { it.id to it.view }) {
+        confirmedViews: Map<String, ImageView> = recognitionViews(capability), accessCode: String? = null) {
         if (state.value.busy || state.value.recognizing || state.value.importingView != null) return
         val start = state.value.item
-        if (confirmedCapability != capability || confirmedViews != start.images.refs().associate { it.id to it.view }) {
+        val currentCapability = capability
+        val images = recognitionImages(currentCapability)
+        if (confirmedCapability != currentCapability || confirmedViews != images.refs().associate { it.id to it.view }) {
             mutable.update { it.copy(error = "Ảnh hoặc dịch vụ đã thay đổi. Hãy xem lại và xác nhận gửi ảnh lần nữa.") }; return
         }
         val requestId = UUID.randomUUID().toString()
-        val request = RecognitionRequest(requestId, start.id, draftRevision, start.images,
-            ConsentGrant(requestId = requestId, provider = capability.provider, providerConfigVersion = capability.configVersion,
-                mediaIds = start.images.refs().map { it.id }.toSet(), mediaViews = confirmedViews,
+        val request = RecognitionRequest(requestId, start.id, draftRevision, images,
+            ConsentGrant(requestId = requestId, provider = currentCapability.provider, providerConfigVersion = currentCapability.configVersion,
+                mediaIds = images.refs().map { it.id }.toSet(), mediaViews = confirmedViews,
                 requestGeneration = draftRevision, confirmedByUser = true))
-        try { request.validate(capability) } catch (e: Exception) { mutable.update { it.copy(error = e.message) }; return }
+        try { request.validate(currentCapability) } catch (e: Exception) { mutable.update { it.copy(error = e.message) }; return }
         activeRequest = requestId
         mutable.update { it.copy(recognizing = true, error = null, item = it.item.copy(recognitionState = RecognitionState.PENDING)) }
         recognitionJob = viewModelScope.launch {
             try {
-                val result = withTimeoutOrNull(20_000) { recognition.recognize(request) }
+                val result = withTimeoutOrNull(20_000) {
+                    val loginError = setup?.takeIf { it.needsAccessCode }?.authorize(accessCode.orEmpty())?.exceptionOrNull()
+                    if (loginError == null) recognition.recognize(request) else Result.failure(loginError)
+                }
                     ?: Result.failure(WardrobeException(ErrorCode.UPSTREAM_TIMEOUT, "Nhận diện quá thời gian. Bạn vẫn có thể điền và lưu thủ công."))
+                mutableCapability.value = capability
                 if (activeRequest != requestId || draftRevision != request.inputRevision) return@launch
                 result.fold({ response ->
                     if (response.requestId != requestId || response.itemId != start.id || response.inputRevision != draftRevision) {

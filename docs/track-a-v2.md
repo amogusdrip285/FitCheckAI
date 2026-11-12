@@ -1,7 +1,6 @@
 # Track A v2 — chạy độc lập và bàn giao
 
-Ngày cập nhật: 11/11/2026. Phạm vi người dùng xác nhận: làm phần độc lập trước, chưa có máy Android thật hoặc nhánh B/D riêng.
-Không coi build thành công, fake AI hoặc test giả lập là nghiệm thu 100% các gate trong kế hoạch.
+Cập nhật ngày 12/11/2026. Nghiệm thu lần này dùng Android emulator API 35. Các gate máy thật và proxy live vẫn mở.
 
 ## Chạy trên máy tính
 
@@ -13,8 +12,7 @@ Không coi build thành công, fake AI hoặc test giả lập là nghiệm thu 
 6. Thử món mới chỉ có ảnh trước. Có thể lưu với category “Chưa xác định”; không tự điền chất liệu/mùa/phong cách.
 7. Xóa chỉ món thử của mình; hủy dialog phải giữ dữ liệu. Nhãn fixture cần được kiểm lại trước khi dùng làm dữ liệu cá nhân.
 
-APK debug: `app/build/outputs/apk/debug/app-debug.apk`. Release không có bộ fixtures; không dùng `adb uninstall` hoặc Clear storage khi kiểm migration.
-Chỉ đặt `fitcheck.proxyUrl` không kích hoạt nhận diện v2: cần client B-007 và thay binding `ClothingRecognition`.
+APK debug nằm ở `app/build/outputs/apk/debug/app-debug.apk`. Release không chứa bộ fixtures. Để kiểm migration với dữ liệu đã lưu, cài đè bằng `adb install -r`.
 
 ## Kiến trúc đã áp dụng
 
@@ -27,7 +25,8 @@ Các type v1 chỉ giữ để consumer cũ compile; không ghi S-002/PRE-007 c�
 |---|---|
 | `WardrobeRepository` v2 | `RoomWardrobeRepository`; `WardrobeListViewModel`, `WardrobeEditorViewModel` |
 | `MediaStore` | `LocalMediaStore`, một Hilt singleton; GARMENT/PERSON/TRYON_RESULT cùng API |
-| `ClothingRecognition` | `UnavailableRecognition` cho tới khi B giao implementation; test dùng `FakeRecognition` |
+| `ClothingRecognition` | `ProxyRecognitionClient` trong `core:ai`; editor chỉ bật gửi ảnh khi proxy báo recognition khả dụng |
+| `ProfileStorage` | `FileProfileStorage` dùng chung `MediaStore` với Tủ đồ; ảnh PERSON lưu ở `noBackupFilesDir` |
 | v1 wardrobe | `LegacyWardrobeBridge` chỉ đọc v2, giữ counters v1 đã có; không có write v1 cạnh tranh |
 | Reusable visual | `OutfitVisual`, `ItemThumbnail`, `OutfitVisualList`, `resolveOutfitItems`; DTO/callback, không NavHost/provider |
 | Fixtures | `core:model/src/testFixtures`; ảnh thật chỉ ở debug assets, import chủ động |
@@ -36,7 +35,7 @@ Các type v1 chỉ giữ để consumer cũ compile; không ghi S-002/PRE-007 c�
 
 v1 không biểu diễn UNKNOWN/nullable formality: bridge bỏ item chưa có category, dùng default formality 2 chỉ cho consumer v1,
 không ghi default đó vào v2 hay coi là annotation. Wear tracking nằm ngoài scope v2; bridge từ chối write/markWorn bằng lỗi rõ ràng.
-Today/Profile/Insights v1 chưa tương đương journey v2; không dùng màn stub này để chứng minh AI, ProfileStorage hay selected VTO đã xong.
+Today dùng dịch vụ phối đồ hiện tại và đối chiếu revision với tủ v2. Luồng phối đồ live và VTO được nghiệm thu ở các gate riêng.
 
 ## Dữ liệu và độ bền
 
@@ -49,6 +48,8 @@ Mỗi lần sửa cần `expectedRevision`; stale write trả CONFLICT, item đ�
 Delete ghi tombstone, loại khỏi snapshot/flow ngay, xóa payload rồi cleanup ảnh sau transaction. Cleanup có journal và retry khi đọc lại.
 Snapshot ID được tạo từ danh sách ID/revision; `isCurrent` và `resolveOutfitItems` giúp consumer chặn chọn outfit stale/deleted.
 Consumer D/C phải kiểm snapshot lại trước action/upload; events chỉ giúp làm mới UI, không thay thế kiểm revision ở boundary.
+Today chụp revision trước khi xin gợi ý và kiểm lại khi kết quả về. Sửa hoặc xóa món làm ẩn các bộ chứa revision cũ, kể cả khi Today đang ở tab nền.
+Người dùng có thể bấm **Thử lại** hoặc **Phối lại** để xin gợi ý mới.
 
 Ảnh import JPEG/PNG được xoay theo EXIF, xóa metadata, thu nhỏ tối đa 2.048 px, giới hạn 4 MiB; input tối đa 32 MiB/100 MP.
 Ảnh mỗi mặt có UUID/hash, không ghi đè file cũ khi thay view. Hai mặt không được dùng cùng content hash, nhưng hash khác không chứng minh cùng garment;
@@ -68,8 +69,19 @@ SavedStateHandle không phải bảo đảm khôi phục draft sau force-stop; A
 
 ## Recognition và imaging
 
+Để thử nhận diện với proxy của nhóm, build với origin HTTPS đã bật `SERVICE_RECOGNITION` và có phiên demo hợp lệ.
+
+```powershell
+.\gradlew.bat :app:assembleDebug "-Pfitcheck.proxyUrl=https://your-proxy.workers.dev"
+```
+
+Ở **Tủ đồ**, mở form sửa hoặc thêm món, chọn ảnh trước, rồi bấm **Gợi ý bằng AI**. Nhập mã demo trong hộp thoại nếu phiên chưa có hoặc hết hạn.
+Client đọc `/health`, lấy token ngắn hạn qua `/v2/session` và gửi ảnh đã xác nhận tới `/v2/recognition`. Token ở trong bộ nhớ trong thời gian chạy app.
+Với `FRONT_ONLY`, hộp thoại chỉ hỏi gửi mặt trước. Với `DUAL`, hộp thoại liệt kê từng mặt được gửi. URL mặc định để app ở chế độ nhập tay.
+Ảnh gửi là JPEG/PNG tối đa 1 MiB và cạnh dài tối đa 1.024 px. Nếu cần thu nhỏ, client dọn ảnh dẫn xuất sau request. Hợp đồng wire và cấu hình server ở [Proxy API](contracts/proxy-api.md).
+
 Chỉ bấm **Gợi ý bằng AI** rồi xác nhận đúng provider/views mới tạo request. Consent gắn purpose, request ID/generation, config version và media IDs/views.
-Provider đổi config, revoked consent, sai request hay thiếu capability phải bị từ chối. Timeout 20 giây, có hủy và đường tự điền.
+Thay đổi capability hoặc version proxy giữa lúc xác nhận và gửi làm request bị từ chối. Timeout 20 giây, có hủy và đường tự điền.
 Field đã sửa tay thắng kết quả trả chậm; thay ảnh/hủy/lưu làm request cũ vô hiệu. FAKE hiện nhãn rõ trong test, không thành AI_LIVE.
 Các trường UNKNOWN/null không bị đổi thành nhãn đoán chắc chắn. Kết quả chưa biết không giữ provenance AI cũ.
 
@@ -90,17 +102,18 @@ Catalog Kaggle dùng cho thử nhập ảnh và đối chiếu nhãn trên PC. C
 python tools/data/validate_fixtures.py
 python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 .\gradlew.bat :core:model:test :core:database:testDebugUnitTest :core:imaging:testDebugUnitTest :feature:wardrobe:testDebugUnitTest
+.\gradlew.bat :core:ai:testDebugUnitTest :feature:today:testDebugUnitTest :core:datastore:testDebugUnitTest
+.\gradlew.bat :core:datastore:connectedDebugAndroidTest
 .\gradlew.bat assembleDebug testDebugUnitTest :core:model:test lintDebug :core:database:verifyDatabaseCoverage
 ```
 
 Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process`.
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
-Evidence ban đầu ở [QA](qa/track-a-acceptance.md), kết quả mới ở [QA bổ sung độc lập](qa/track-a-independent-followup.md);
-trạng thái card chỉ cập nhật tại [board](execution/TASK_BOARD.md).
+Evidence chạy mới nhất ở [QA trên emulator](qa/track-a-emulator-integration.md). Các lần trước có [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
+Trạng thái card ở [board](execution/TASK_BOARD.md).
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.
 
-Điểm D/B/C cần review: namespace/API v2, singleton media ownership, ProfileStorage chưa có, binding recognition, invalidation/stale outfit,
-consent/revoke qua job, adapter đường dẫn sang request bytes và gate artifact máy thật. Không có API key hoặc paid resource được tự provision.
+Điểm D/B/C cần review gồm quyền sở hữu media, luồng live qua proxy, revision khi chọn outfit cho VTO, consent qua job và gate artifact máy thật.
 
 ## Điểm nhận việc để làm song song
 
@@ -108,10 +121,8 @@ Nhánh bàn giao trên remote: `track/a-wardrobe-imaging`. Bản đầu `80d33d8
 người dùng yêu cầu các cải tiến độc lập tiếp theo được push lên **main** bằng `NQKhaixyz`.
 Lấy bản mới bằng `git fetch origin`, rồi tích hợp `origin/main` vào nhánh riêng sau khi review; nhánh A cũ không phải điểm lấy bản mới nhất.
 
-- **B:** implement `ClothingRecognition`/`RecognitionCapability` từ `core:model/.../wardrobe/WardrobeContracts.kt`, kiểm `RecognitionRequest.validate` trước gửi;
-  thay `UnavailableRecognition` trong `feature:wardrobe/.../v2/WardrobeBindings.kt` khi có client v2 thật. Fake và lỗi/timeout fixtures đã có trong testFixtures.
-- **D:** review shared contracts/DI/schema migration; dùng cùng `MediaStore` cho PERSON và cùng v2 repository cho Today. Nối `OutfitVisualList` qua DTO/callback,
-  kiểm snapshot/ID/revision lại trước selection, share hoặc chuyển VTO; bridge v1 chưa giải quyết Today invalidation v2.
+- **B:** review client Android theo CT-05 và chạy INT-002 với proxy live, sau khi nhóm xác nhận provider và ngân sách. Bộ test mock nằm trong `core:ai`.
+- **D:** review shared contracts, DI và schema migration. Khi nối `OutfitVisualList` cho selection, share hoặc VTO, kiểm snapshot/ID/revision lại trước action.
 - **C:** nhận `MediaRef`/scope từ owner, dùng API đọc media thay vì tự dựng path; review cleanup/retention ảnh người và kết quả cùng D.
   `OutfitVisual` hiện là ảnh garment, không phải kết quả try-on.
 

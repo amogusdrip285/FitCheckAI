@@ -24,4 +24,5 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(testFixtures(project(":core:model")))
 }

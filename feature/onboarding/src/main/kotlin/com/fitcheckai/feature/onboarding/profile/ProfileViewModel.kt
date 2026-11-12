@@ -132,10 +132,15 @@ class ProfileViewModel @Inject constructor(
     /** Caller must confirm with the user first. */
     fun reset() = runBusy {
         storage.clearProfile()
-            .onSuccess {
+            .onSuccess { receipt ->
                 profile = null
+                val message = if (receipt.cleanupPending) {
+                    "Đã xóa hồ sơ. Một số ảnh có thể vẫn còn trên máy."
+                } else {
+                    "Đã xóa hồ sơ và ảnh cá nhân trên máy."
+                }
                 _state.update { it.copy(load = ProfileLoad.Ready, form = ProfileForm(), hasProfile = false, photos = emptyMap(),
-                    message = "Đã xóa hồ sơ và ảnh cá nhân trên máy.") }
+                    message = message) }
             }
             .onFailure(::showError)
     }

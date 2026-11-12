@@ -1,5 +1,6 @@
 package com.fitcheckai.feature.onboarding.profile
 
+import com.fitcheckai.core.model.profile.ProfileStorage
 import com.fitcheckai.core.model.profile.fakes.FakeProfileStorage
 import com.fitcheckai.core.model.profile.fakes.fullProfile
 import com.fitcheckai.core.model.wardrobe.Category
@@ -149,6 +150,20 @@ class ProfileViewModelTest {
         assertNull(storage.current())
         assertFalse(vm.state.value.hasProfile)
         assertEquals(ProfileForm(), vm.state.value.form)
+    }
+
+    @Test
+    fun `reset reports pending photo cleanup`() = runTest {
+        val backing = FakeProfileStorage(fullProfile())
+        val storage = object : ProfileStorage by backing {
+            override suspend fun clearProfile() = backing.clearProfile().map { it.copy(cleanupPending = true) }
+        }
+        val vm = ProfileViewModel(storage, media)
+
+        vm.reset()
+
+        assertNull(backing.current())
+        assertEquals("Đã xóa hồ sơ. Một số ảnh có thể vẫn còn trên máy.", vm.state.value.message)
     }
 
     @Test

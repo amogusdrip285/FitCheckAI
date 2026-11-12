@@ -98,7 +98,7 @@ class FileProfileStorage(
                 state.value = LoadState.Ready(null)
                 if (old == null) return@withLock DeletionReceipt(UNKNOWN_PROFILE_ID, 1, clock(), cleanupPending = true)
                 val refs = old.bodyImages.refs()
-                val pending = refs.map { media.remove(it) }.any { it.isFailure }
+                val pending = refs.map { media.remove(it) }.any { it.getOrNull()?.cleanupPending != false }
                 events.tryEmit(ProfileInvalidation(old.id, old.revision + 1, refs.map { it.id }.toSet(), ProfileInvalidationReason.PROFILE_CLEARED))
                 DeletionReceipt(old.id, old.revision + 1, maxOf(clock(), old.updatedAt), cleanupPending = pending)
             }
