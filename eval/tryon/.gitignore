@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.poc_outputs/
+
+# Secrets, env files & private try-on photos (never commit)
+.env
+.env.*
+*.env
+!*.env.example
+*.key
+*.pem
+private/
+private_*/
+images/
+*.jpg
+*.jpeg
+*.png
+*.webp
