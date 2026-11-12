@@ -190,6 +190,24 @@ class ProxyClothingRecognitionTest {
         assertTrue(client.capability.available)
     }
 
+    @Test fun `per-service provider in health drives the recognition consent label`() = runTest {
+        val proxy = FakeProxy().apply { route = { ok("""{"status":"ok","version":"dev","schemaVersion":2,
+            "services":{"recognition":true,"outfits":true,"tryon":false},"recognitionViews":"DUAL",
+            "provider":"openai@codex.fosta.app","providerConfigured":true,
+            "providers":{"recognition":{"provider":"gemini","model":"gemini-3.5-flash-lite","configured":true},
+                         "outfits":{"provider":"openai@codex.fosta.app","model":"gpt-6.1-sol","configured":true}}}""") } }
+        val client = ProxyClothingRecognition(proxy.transport, media)
+        val capability = client.refreshCapability().getOrThrow()
+        assertEquals("gemini", capability.provider)
+        assertTrue(capability.available && capability.supportsBack)
+        assertTrue("gemini-3.5-flash-lite" in capability.configVersion)
+
+        val unconfigured = FakeProxy().apply { route = { ok("""{"version":"dev","schemaVersion":2,"services":{"recognition":true},
+            "recognitionViews":"DUAL","provider":"openai@codex.fosta.app","providerConfigured":true,
+            "providers":{"recognition":{"provider":"gemini","model":"","configured":false}}}""") } }
+        assertFalse(ProxyClothingRecognition(unconfigured.transport, media).refreshCapability().getOrThrow().available)
+    }
+
     @Test fun `disabled service in health is unavailable`() = runTest {
         val proxy = FakeProxy().apply { route = { ok(health(enabled = false)) } }
         val client = ProxyClothingRecognition(proxy.transport, media)

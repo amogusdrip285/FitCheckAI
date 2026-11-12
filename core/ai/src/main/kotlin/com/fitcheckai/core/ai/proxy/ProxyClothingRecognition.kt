@@ -72,6 +72,8 @@ internal const val UNVERIFIED_CONFIG = "unverified"
     val source: String,
 )
 @Serializable internal data class WireServices(val recognition: Boolean = false)
+/** Provider riêng của một service (proxy có thể dùng provider khác nhau cho recognition và outfits). */
+@Serializable internal data class WireServiceProvider(val provider: String, val model: String = "", val configured: Boolean)
 @Serializable internal data class WireHealth(
     val version: String,
     val schemaVersion: Int,
@@ -79,6 +81,7 @@ internal const val UNVERIFIED_CONFIG = "unverified"
     val recognitionViews: String,
     val provider: String,
     val providerConfigured: Boolean,
+    val providers: Map<String, WireServiceProvider> = emptyMap(),
 )
 
 /**
@@ -102,10 +105,15 @@ class ProxyClothingRecognition(
             is ProxyResponse.Failed -> Result.failure(response.error)
             is ProxyResponse.Ok -> runCatching { wireJson.decodeFromString(WireHealth.serializer(), response.body) }.fold(
                 { health ->
-                    val usable = health.schemaVersion == 2 && health.services.recognition && health.providerConfigured
+                    // Ưu tiên provider riêng của recognition: consent phải nêu đúng nơi ẢNH được gửi.
+                    val own = health.providers["recognition"]
+                    val provider = own?.provider ?: health.provider
+                    val usable = health.schemaVersion == 2 && health.services.recognition && (own?.configured ?: health.providerConfigured)
                     val capability = RecognitionCapability(
-                        provider = health.provider.ifBlank { UNVERIFIED_PROVIDER }.take(32),
-                        configVersion = "${health.version}/${health.recognitionViews}".take(64),
+                        provider = provider.ifBlank { UNVERIFIED_PROVIDER }.take(32),
+                        // Đổi provider/model ⇒ configVersion đổi ⇒ consent cũ không còn khớp.
+                        configVersion = listOf(health.version, health.recognitionViews, provider, own?.model.orEmpty())
+                            .joinToString("/").take(64),
                         available = usable,
                         supportsBack = usable && health.recognitionViews == "DUAL",
                     )

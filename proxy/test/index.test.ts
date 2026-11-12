@@ -17,6 +17,10 @@ describe("B-001 proxy bootstrap", () => {
       recognitionViews: "DUAL",
       provider: "anthropic",
       providerConfigured: true,
+      providers: {
+        recognition: { provider: "anthropic", model: "claude-opus-5-5", configured: true },
+        outfits: { provider: "anthropic", model: "claude-opus-5-5", configured: true },
+      },
     });
   });
 

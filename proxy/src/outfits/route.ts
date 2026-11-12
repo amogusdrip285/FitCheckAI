@@ -45,7 +45,7 @@ export const outfitsRoute: RouteDef = {
       throw new ApiError("INSUFFICIENT_WARDROBE", "Tủ đồ chưa đủ món để tạo một bộ hợp lệ (cần TOP+BOTTOM hoặc DRESS)");
     }
 
-    const model = ctx.deps.modelFor(ctx.env);
+    const model = ctx.deps.modelFor(ctx.env, "outfits");
     if (model === null) throw new ApiError("UNSUPPORTED_CAPABILITY", "AI provider chưa được cấu hình", { status: 503 });
 
     ctx.reserveUpstreamCall();
