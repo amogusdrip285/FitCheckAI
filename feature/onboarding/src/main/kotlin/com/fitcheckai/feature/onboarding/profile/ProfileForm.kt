@@ -2,11 +2,10 @@ package com.fitcheckai.feature.onboarding.profile
 
 import com.fitcheckai.core.model.profile.HEIGHT_CM_RANGE
 import com.fitcheckai.core.model.profile.MAX_STYLE_PREFERENCES
+import com.fitcheckai.core.model.profile.STYLE_OPTIONS
 import com.fitcheckai.core.model.profile.UserProfile
 import com.fitcheckai.core.model.profile.WEIGHT_KG_RANGE
 import com.fitcheckai.core.model.wardrobe.Category
-
-val STYLE_OPTIONS = listOf("Minimal", "Streetwear", "Công sở", "Năng động", "Vintage", "Nữ tính", "Smart casual")
 
 val CATEGORY_OPTIONS: List<Pair<Category, String>> = listOf(
     Category.TOP to "Áo", Category.BOTTOM to "Quần / chân váy", Category.DRESS to "Đầm",

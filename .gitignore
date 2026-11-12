@@ -42,3 +42,6 @@ data/raw/
 data/processed/
 __pycache__/
 *.pyc
+
+# INT-004 packaged artifacts (tools/release/package_apk.py)
+dist/

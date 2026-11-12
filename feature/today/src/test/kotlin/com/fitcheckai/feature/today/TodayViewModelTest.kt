@@ -187,6 +187,72 @@ class TodayViewModelTest {
         assertEquals(ErrorCode.STALE_INPUT, error.code)
     }
 
+    @Test fun `style, free text and count are sent only when the user applies them`() = runTest(dispatcher) {
+        val viewModel = create()
+        viewModel.settled()
+        assertEquals(1, fake.requests.size)
+
+        viewModel.onStyleToggled("Minimal")
+        viewModel.onFreeTextChanged("Trời mưa, cần đi bộ nhiều")
+        viewModel.onCountSelected(3)
+        runCurrent()
+        assertEquals(1, fake.requests.size)
+        val draft = viewModel.state.value
+        assertEquals(listOf("Minimal"), draft.styleOverrides)
+        assertEquals(3, draft.requestedCount)
+
+        viewModel.applyPreferences()
+        runCurrent()
+        viewModel.settled()
+        val sent = fake.requests.last()
+        assertEquals(2, fake.requests.size)
+        assertEquals(listOf("Minimal"), sent.styleOverrides)
+        assertEquals("Trời mưa, cần đi bộ nhiều", sent.freeText)
+        assertEquals(3, sent.requestedCount)
+        assertEquals("Minimal", viewModel.state.value.styleOverrides.single())
+    }
+
+    @Test fun `free text, style and count stay within the request limits`() = runTest(dispatcher) {
+        val viewModel = create()
+        viewModel.settled()
+        viewModel.onFreeTextChanged("x".repeat(600))
+        viewModel.onCountSelected(9)
+        listOf("Minimal", "Streetwear", "Công sở", "Năng động", "Vintage", "Nữ tính").forEach(viewModel::onStyleToggled)
+        runCurrent()
+        val state = viewModel.state.value
+        assertEquals(500, state.freeText.length)
+        assertEquals(5, state.requestedCount)
+        assertEquals(5, state.styleOverrides.size)
+        viewModel.onStyleToggled("Minimal")
+        runCurrent()
+        assertFalse("Minimal" in viewModel.state.value.styleOverrides)
+
+        viewModel.applyPreferences()
+        runCurrent()
+        viewModel.settled()
+        fake.requests.last().validate()
+    }
+
+    @Test fun `offline recommendation ends loading with a labelled rules outfit`() = runTest(dispatcher) {
+        val offline = object : OutfitRecommendation by fake {
+            override suspend fun recommend(request: OutfitRequest) =
+                Result.failure<com.fitcheckai.core.model.recommendation.RecommendationResult>(
+                    WardrobeException(ErrorCode.NETWORK, "offline"),
+                )
+        }
+        val state = create(engine = offline).settled()
+        assertFalse(state.isLoading)
+        assertEquals(OutfitSource.RULES, state.outfits.single().source)
+    }
+
+    @Test fun `an empty wardrobe shows guidance instead of an endless spinner`() = runTest(dispatcher) {
+        fixtures.forEach { repository.delete(it.id, it.revision).getOrThrow() }
+        val state = create().settled()
+        assertTrue(state.outfits.isEmpty())
+        assertTrue(state.message!!.contains("Hãy thêm"))
+        assertTrue(fake.requests.isEmpty())
+    }
+
     private fun create(focus: String? = null, engine: OutfitRecommendation = fake): TodayViewModel {
         val handle = SavedStateHandle(mapOf(Routes.ARG_FOCUS_ITEM_ID to focus))
         val viewModel = TodayViewModel(

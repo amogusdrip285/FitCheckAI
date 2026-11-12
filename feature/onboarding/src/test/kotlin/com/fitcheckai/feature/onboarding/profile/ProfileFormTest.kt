@@ -1,5 +1,6 @@
 package com.fitcheckai.feature.onboarding.profile
 
+import com.fitcheckai.core.model.profile.STYLE_OPTIONS
 import com.fitcheckai.core.model.profile.fakes.fullProfile
 import com.fitcheckai.core.model.profile.fakes.minimalProfile
 import com.fitcheckai.core.model.wardrobe.Category

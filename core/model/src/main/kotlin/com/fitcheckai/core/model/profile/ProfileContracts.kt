@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 // CT-04 — OWNER: Track D. Consumers (B projection, C try-on inputs) depend on these types only.
 
 const val MAX_STYLE_PREFERENCES = 5
+
+/** Shared style vocabulary for Profile defaults and Today overrides (each ≤32 chars, CT-02). */
+val STYLE_OPTIONS = listOf("Minimal", "Streetwear", "Công sở", "Năng động", "Vintage", "Nữ tính", "Smart casual")
 const val MAX_STYLE_LENGTH = 32
 val HEIGHT_CM_RANGE = 50.0..250.0
 val WEIGHT_KG_RANGE = 20.0..300.0

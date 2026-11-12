@@ -16,6 +16,8 @@ import com.fitcheckai.core.model.WearLogRepository
 import com.fitcheckai.core.model.nav.Routes
 import com.fitcheckai.core.model.profile.ProfileStorage
 import com.fitcheckai.core.model.recommendation.ItemSummary
+import com.fitcheckai.core.model.recommendation.MAX_FREE_TEXT
+import com.fitcheckai.core.model.recommendation.MAX_OUTFITS
 import com.fitcheckai.core.model.recommendation.MAX_REQUEST_ITEMS
 import com.fitcheckai.core.model.recommendation.Occasion
 import com.fitcheckai.core.model.recommendation.Outfit
@@ -60,7 +62,19 @@ data class TodayUiState(
     val outfits: List<OutfitVisualData> = emptyList(),
     val message: String? = null,
     val wornOutfitId: String? = null,
+    val styleOverrides: List<String> = emptyList(),
+    val freeText: String = "",
+    val requestedCount: Int = MAX_OUTFITS,
 )
+
+/** C-001 request inputs. Editing them never calls the AI; only [TodayViewModel.applyPreferences] does. */
+private data class TodayPreferences(
+    val styleOverrides: List<String> = emptyList(),
+    val freeText: String = "",
+    val requestedCount: Int = MAX_OUTFITS,
+)
+
+private const val MAX_STYLE_OVERRIDES = 5
 
 private const val STALE_MESSAGE = "Tủ đồ đã thay đổi. Hãy phối lại với các món hiện tại."
 
@@ -99,11 +113,16 @@ class TodayViewModel @Inject constructor(
 ) : ViewModel() {
     private val focusItemId: String? = savedStateHandle[Routes.ARG_FOCUS_ITEM_ID]
     private val proposal = MutableStateFlow(TodayProposal())
+    private val preferences = MutableStateFlow(TodayPreferences())
     private var suggestionJob: Job? = null
     private var wearJob: Job? = null
 
-    val state: StateFlow<TodayUiState> = combine(proposal, wardrobe.observeItems()) { current, items ->
-        current.visibleTo(items)
+    val state: StateFlow<TodayUiState> = combine(proposal, wardrobe.observeItems(), preferences) { current, items, prefs ->
+        current.visibleTo(items).copy(
+            styleOverrides = prefs.styleOverrides,
+            freeText = prefs.freeText,
+            requestedCount = prefs.requestedCount,
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TodayUiState())
 
     init { suggest() }
@@ -116,12 +135,29 @@ class TodayViewModel @Inject constructor(
         if (suggestionJob?.isActive != true) requestOutfits(proposal.value.ui.occasion, reroll = false)
     }
 
+    fun onStyleToggled(style: String) = preferences.update { prefs ->
+        val styles = prefs.styleOverrides
+        when {
+            style in styles -> prefs.copy(styleOverrides = styles - style)
+            styles.size >= MAX_STYLE_OVERRIDES || style.isBlank() -> prefs
+            else -> prefs.copy(styleOverrides = styles + style)
+        }
+    }
+
+    fun onFreeTextChanged(text: String) = preferences.update { it.copy(freeText = text.take(MAX_FREE_TEXT)) }
+
+    fun onCountSelected(count: Int) = preferences.update { it.copy(requestedCount = count.coerceIn(1, MAX_OUTFITS)) }
+
+    /** Explicit user action: replaces any in-flight request with one using the current inputs. */
+    fun applyPreferences() = requestOutfits(proposal.value.ui.occasion, reroll = false)
+
     fun reroll() {
         if (suggestionJob?.isActive != true) requestOutfits(proposal.value.ui.occasion, reroll = true)
     }
 
     private fun requestOutfits(occasion: Occasion, reroll: Boolean) {
         val previous = proposal.value
+        val prefs = preferences.value
         suggestionJob?.cancel()
         proposal.value = TodayProposal(TodayUiState(occasion))
         metrics.track(MetricEvent(MetricNames.OUTFIT_REQUESTED, mapOf("occasion" to occasion.name)))
@@ -129,7 +165,7 @@ class TodayViewModel @Inject constructor(
             val startedAt = System.currentTimeMillis()
             try {
                 val snapshot = wardrobe.getSnapshot().getOrThrow()
-                val draft = buildRequest(snapshot, occasion)
+                val draft = buildRequest(snapshot, occasion, prefs)
                 val previousRequest = previous.request
                 val previousResult = previous.result
                 val request = if (reroll && previousRequest != null && previousResult != null &&
@@ -174,7 +210,7 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private suspend fun buildRequest(snapshot: WardrobeSnapshot, occasion: Occasion): OutfitRequest {
+    private suspend fun buildRequest(snapshot: WardrobeSnapshot, occasion: Occasion, prefs: TodayPreferences): OutfitRequest {
         val known = snapshot.items.filter { it.attributes.category != Category.UNKNOWN }
         val focus = focusItemId?.let { id -> known.find { it.id == id } ?: throw WardrobeException(
             ErrorCode.NEEDS_INPUT, "Món được chọn đã bị xóa hoặc chưa có loại đồ. Hãy chọn món khác.",
@@ -194,6 +230,9 @@ class TodayViewModel @Inject constructor(
             items = items.map { ItemSummary(it.id, it.revision, it.attributes) },
             profile = profile?.value?.toProjection(),
             occasion = occasion,
+            styleOverrides = prefs.styleOverrides,
+            freeText = prefs.freeText.trim(),
+            requestedCount = prefs.requestedCount,
             focusItemId = focus?.id,
         )
     }

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fitcheckai.core.model.profile.STYLE_OPTIONS
 import com.fitcheckai.core.model.wardrobe.Category
 import com.fitcheckai.core.model.wardrobe.ImageView
 import com.fitcheckai.core.ui.component.ScreenHeader

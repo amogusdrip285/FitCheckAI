@@ -7,18 +7,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fitcheckai.core.model.profile.STYLE_OPTIONS
+import com.fitcheckai.core.model.recommendation.MAX_FREE_TEXT
+import com.fitcheckai.core.model.recommendation.MAX_OUTFITS
 import com.fitcheckai.core.model.recommendation.Occasion
 import com.fitcheckai.core.ui.component.EmptyState
 import com.fitcheckai.core.ui.component.OutfitVisual
@@ -45,6 +51,17 @@ fun TodayScreen(
             shareError = null
             viewModel.onOccasionSelected(it)
         }
+        RequestOptions(
+            state = state,
+            enabled = !state.isLoading,
+            onStyleToggled = viewModel::onStyleToggled,
+            onFreeTextChanged = viewModel::onFreeTextChanged,
+            onCountSelected = viewModel::onCountSelected,
+            onApply = {
+                shareError = null
+                viewModel.applyPreferences()
+            },
+        )
         shareError?.let {
             Text(it, Modifier.padding(horizontal = Spacing.md), color = MaterialTheme.colorScheme.error)
         }
@@ -112,6 +129,56 @@ fun TodayScreen(
                 state.message?.let { note -> item { Text(note, style = MaterialTheme.typography.bodySmall) } }
                 item { OutlinedButton(onClick = viewModel::reroll) { Text("Phối lại") } }
             }
+        }
+    }
+}
+
+/** C-001: optional style/free-text/count. Collapsed by default; editing never triggers a request. */
+@Composable
+private fun RequestOptions(
+    state: TodayUiState,
+    enabled: Boolean,
+    onStyleToggled: (String) -> Unit,
+    onFreeTextChanged: (String) -> Unit,
+    onCountSelected: (Int) -> Unit,
+    onApply: () -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = Spacing.md)) {
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(if (expanded) "Ẩn tùy chỉnh" else "Tùy chỉnh yêu cầu")
+        }
+        if (!expanded) return@Column
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text("Phong cách (để trống = theo hồ sơ)", style = MaterialTheme.typography.labelMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                STYLE_OPTIONS.forEach { style ->
+                    FilterChip(
+                        selected = style in state.styleOverrides,
+                        onClick = { onStyleToggled(style) },
+                        label = { Text(style) },
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = state.freeText,
+                onValueChange = onFreeTextChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Yêu cầu thêm (không bắt buộc)") },
+                supportingText = { Text("${state.freeText.length}/$MAX_FREE_TEXT") },
+                maxLines = 3,
+            )
+            Text("Số bộ muốn xem", style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                (1..MAX_OUTFITS).forEach { count ->
+                    FilterChip(
+                        selected = count == state.requestedCount,
+                        onClick = { onCountSelected(count) },
+                        label = { Text("$count") },
+                    )
+                }
+            }
+            Button(onClick = onApply, enabled = enabled) { Text("Gợi ý theo yêu cầu") }
         }
     }
 }
