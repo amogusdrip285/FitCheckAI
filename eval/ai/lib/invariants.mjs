@@ -2,7 +2,7 @@
 // để eval bắt được cả lỗi của chính validator. Luật theo CONTRACTS.md v2 CT-02.
 
 export function outfitSignature(itemIds) {
-  return [...itemIds].sort().join("+");
+  return [...itemIds].sort().join("|");
 }
 
 const ADDON = ["OUTERWEAR", "SHOES", "ACCESSORY"];
@@ -33,7 +33,7 @@ export function checkRecommendation(request, body) {
   if (outfits.length === request.requestedCount && body.shortfallReason) add("Đủ số bộ nhưng vẫn có shortfallReason");
 
   const items = new Map(request.items.map((i) => [i.id, i]));
-  const excluded = new Set((request.excludeOutfitSignatures ?? []).map((s) => outfitSignature(s.split("+"))));
+  const excluded = new Set((request.excludeOutfitSignatures ?? []).map((s) => outfitSignature(s.split("|"))));
   const seenSignatures = new Set();
   const seenIds = new Set();
 

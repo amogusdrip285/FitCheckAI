@@ -3,13 +3,13 @@ import type { Category } from "../shared/domain";
 import { LIMITS } from "../shared/domain";
 import type { ItemSummary, ModelOutfits, OutfitRequest } from "./schema";
 
-/** Signature canonical: ID sắp xếp tăng dần nối bằng "+". Client tính giống hệt để gửi excludeOutfitSignatures. */
+/** Signature canonical: ID sắp xếp tăng dần nối bằng "|" (khớp outfitSignature() trong core/model của D). Client tính giống hệt để gửi excludeOutfitSignatures. */
 export function outfitSignature(itemIds: readonly string[]): string {
-  return [...itemIds].sort().join("+");
+  return [...itemIds].sort().join("|");
 }
 
 export function parseSignature(signature: string): string[] {
-  return signature.split("+").filter((s) => s.length > 0);
+  return signature.split("|").filter((s) => s.length > 0);
 }
 
 /**

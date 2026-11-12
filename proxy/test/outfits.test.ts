@@ -48,13 +48,13 @@ describe("slot rule CT-02", () => {
 
 describe("selectValidOutfits", () => {
   it("signature canonical không phụ thuộc thứ tự", () => {
-    expect(outfitSignature(["t2", "b1", "s1"])).toBe("b1+s1+t2");
-    expect(outfitSignature(["s1", "t2", "b1"])).toBe("b1+s1+t2");
+    expect(outfitSignature(["t2", "b1", "s1"])).toBe("b1|s1|t2");
+    expect(outfitSignature(["s1", "t2", "b1"])).toBe("b1|s1|t2");
   });
 
   it("loại ID lạ, trùng món, sai slot, trùng bộ, giải thích rỗng; giữ bộ hợp lệ", () => {
     const { accepted, rejected } = selectValidOutfits(modelOutfits.mixedInvalid, parsed());
-    expect(accepted.map((o) => o.signature)).toEqual(["b1+t1"]);
+    expect(accepted.map((o) => o.signature)).toEqual(["b1|t1"]);
     expect(rejected).toEqual({
       UNKNOWN_ITEM: 1,
       DUPLICATE_ITEM: 1,
@@ -78,8 +78,8 @@ describe("selectValidOutfits", () => {
   });
 
   it("exclude: bỏ bộ đã bị loại trừ dù khác thứ tự ID", () => {
-    const { accepted, rejected } = selectValidOutfits(modelOutfits.fiveValid, parsed({ excludeOutfitSignatures: ["t1+b1"] }));
-    expect(accepted.map((o) => o.signature)).not.toContain("b1+t1");
+    const { accepted, rejected } = selectValidOutfits(modelOutfits.fiveValid, parsed({ excludeOutfitSignatures: ["t1|b1"] }));
+    expect(accepted.map((o) => o.signature)).not.toContain("b1|t1");
     expect(rejected.EXCLUDED_SET).toBe(1);
   });
 
@@ -117,7 +117,7 @@ describe("POST /v2/outfits", () => {
         explanation: modelOutfits.fewerWithReason.outfits[0]!.explanation,
         source: "AI_LIVE",
         createdAt: t.clock.now,
-        signature: "bottom1+top1",
+        signature: "bottom1|top1",
       },
     ]);
   });
@@ -142,7 +142,7 @@ describe("POST /v2/outfits", () => {
     t.model.respond(modelOutfits.mixedInvalid);
     const res = await t.post("/v2/outfits", fullRequest());
     const body = (await res.json()) as RecommendationResultDto;
-    expect(body.outfits.map((o) => o.signature)).toEqual(["b1+t1"]);
+    expect(body.outfits.map((o) => o.signature)).toEqual(["b1|t1"]);
     expect(body.shortfallReason).toBe("INVALID_OUTFITS_REMOVED");
     expect(t.logs[0]?.rejected).toMatchObject({ UNKNOWN_ITEM: 1 });
   });
@@ -158,7 +158,7 @@ describe("POST /v2/outfits", () => {
   it("model trả rỗng ⇒ 409 INSUFFICIENT_WARDROBE", async () => {
     const t = setup();
     t.model.respond(modelOutfits.empty);
-    const res = await t.post("/v2/outfits", fullRequest({ focusItemId: "s1", excludeOutfitSignatures: ["s1+t2+b1"] }));
+    const res = await t.post("/v2/outfits", fullRequest({ focusItemId: "s1", excludeOutfitSignatures: ["s1|t2|b1"] }));
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ error: { code: "INSUFFICIENT_WARDROBE" } });
   });
