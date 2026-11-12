@@ -44,7 +44,7 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 | [ ] | [PRE-003](tracks/B.md#pre-003) — Xác minh provider và ngân sách | P0 | readiness | M0 | 45–75 | — | TODO | — |
 | [ ] | [PRE-008](tracks/B.md#pre-008) — Phân vai theo kỹ năng và rehearsal rủi ro | P0 | readiness | M0 | 20–35 | — | TODO | — |
 | [ ] | [B-001](tracks/B.md#b-001) — Proxy HTTPS và hàng rào chi phí | P0 | core | M3 | 60–100 | PRE-001, PRE-003, PRE-007 | TODO | — |
-| [ ] | [B-005](tracks/B.md#b-005) — Fake AI và compatibility fixtures | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
+| [ ] | [B-005](tracks/B.md#b-005) — Fake AI và compatibility fixtures | P0 | foundation | M1 | 25–40 | S-002 | REVIEW | `core/model` testFixtures `ai/fakes/AiFakes.kt`: FakeOutfitRecommendation (5/1/fewer/insufficient/focus/exclude/failure/hang), FakeClothingRecognition (front/dual/conflict/unknown/failure/hang, kiểm consent), FakeWeather current/stale/null; 14 tests + 4 compatibility tests enum/field Kotlin↔proxy pass. Chưa có interface WeatherProvider v2; A/D chưa dùng fakes. |
 | [ ] | [BACK-004](tracks/B.md#back-004) — Recognition proxy cho ảnh trước/sau | P0 | core | M3 | 75–120 | B-001, B-005 | TODO | — |
 | [ ] | [B-002](tracks/B.md#b-002) — Recommendation tối đa 5 outfit có giải thích | P0 | core | M3 | 90–150 | B-001, B-005 | TODO | — |
 | [ ] | [B-003](tracks/B.md#b-003) — Android client cancellable và parser | P0 | core | M3 | 45–75 | S-002, B-005 | PARTIAL | `ProxyOutfitRecommendation` + 14 MockEngine tests pass (1/5 bộ, invalid ID/revision/count/slot/signature, lỗi CT-07, timeout, cancel, chặn gửi trùng). Chưa build app/Hilt graph, chưa gọi proxy thật; D chưa nối (C-003). |
