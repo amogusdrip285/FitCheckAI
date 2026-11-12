@@ -120,6 +120,18 @@ Bảo đảm từ server:
 
 Client vẫn phải so `items[].revision` với repository hiện tại trước khi hiển thị/chọn Try-On (CT-02): món đã sửa/xóa ⇒ stale.
 
+### Phối lại (C-102) và phối quanh một món (LATER-006) — semantics cho D
+
+`RecommendationCapability.supportsReroll = supportsFocus = true` ở `ProxyOutfitRecommendation`.
+
+- **Phối bộ khác:** mỗi lần người dùng bấm = **một** request mới tạo bằng `request.rerollAfter(kếtQuảVừaHiện)` (`core/ai/.../proxy/Reroll.kt`): `requestId` mới, `regenerationOfRequestId` = request trước, giữ nguyên dịp/ghi chú/focus/profile/thời tiết/số bộ, `excludeOutfitSignatures` = các bộ vừa hiện + các bộ đã loại trước (chuẩn hoá, tối đa 5, ưu tiên bộ vừa hiện). Không tự gọi lại, không gọi do recomposition (gửi lại cùng `requestId` ⇒ client trả `CONFLICT`).
+- **Phối quanh một món:** đặt `focusItemId` = id món (phải thuộc snapshot, không `UNKNOWN`). Mọi bộ trả về chứa món đó; món phụ (giày/áo khoác/phụ kiện) được gắn vào một bộ chính.
+- **Kết quả:**
+  - `200` có thể ít bộ hơn với `shortfallReason` (`CONSTRAINTS_TOO_STRICT` khi do focus/loại trừ) — hiển thị bình thường kèm giải thích.
+  - `409 INSUFFICIENT_WARDROBE` = "không còn lựa chọn khác hợp lệ" (mọi tổ hợp đã bị loại, hoặc focus không ghép được, vd. áo mà tủ không có quần). Server kiểm **trước khi gọi AI** nên không tốn tiền. Hiển thị thông báo, không ẩn ràng buộc rồi gọi lại.
+  - `UNSUPPORTED_CAPABILITY` khi focus vào món chưa rõ loại ⇒ ẩn/khóa CTA "phối quanh món này" cho món `UNKNOWN`.
+- Fallback không dùng AI `BasicOutfitFallback` (C-002) tôn trọng cùng focus/loại trừ.
+
 ## `POST /v2/recognition` — nhận diện thuộc tính (CT-05)
 
 Body ≤ 4 MiB; mỗi ảnh ≤ 1 MiB sau decode; JPEG/PNG/WebP (kiểm magic bytes khớp `mimeType`). Ảnh gửi dưới dạng base64 — **không nhận URL**. Không gửi ảnh người/profile.

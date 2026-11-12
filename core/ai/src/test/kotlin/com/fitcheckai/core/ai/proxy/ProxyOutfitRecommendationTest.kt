@@ -224,6 +224,54 @@ class ProxyOutfitRecommendationTest {
         assertEquals(2, proxy.posts("/v2/session").size)
     }
 
+    @Test fun `capability advertises reroll and focus`() {
+        val capability = ProxyOutfitRecommendation(FakeProxy().transport).capability
+        assertTrue(capability.supportsReroll && capability.supportsFocus)
+        assertEquals(OutfitSource.AI_LIVE, capability.source)
+    }
+
+    @Test fun `rerollAfter keeps constraints, links the previous request and excludes what was shown`() {
+        val first = request(focus = top.id, exclude = setOf("${bottom.id}|${top2.id}"))
+        val shown = com.fitcheckai.core.model.recommendation.RecommendationResult(first.requestId, listOf(
+            outfitOf(first, top, bottom), outfitOf(first, top, bottom, shoes)), ShortfallReason.CONSTRAINTS_TOO_STRICT)
+        val next = first.rerollAfter(shown, newRequestId = UUID.randomUUID().toString())
+
+        assertTrue(next.requestId != first.requestId)
+        assertEquals(first.requestId, next.regenerationOfRequestId)
+        assertEquals(listOf(
+            listOf(top.id, bottom.id).sorted().joinToString("|"),
+            listOf(top.id, bottom.id, shoes.id).sorted().joinToString("|"),
+            listOf(top2.id, bottom.id).sorted().joinToString("|"),
+        ), next.excludeOutfitSignatures.toList())
+        assertEquals(first.copy(requestId = next.requestId, regenerationOfRequestId = first.requestId,
+            excludeOutfitSignatures = next.excludeOutfitSignatures), next)
+        next.validate()
+
+        // Tối đa 5 loại trừ, ưu tiên các bộ vừa hiển thị.
+        val many = request(exclude = (1..5).map { "old$it|x$it" }.toSet())
+        val five = com.fitcheckai.core.model.recommendation.RecommendationResult(many.requestId, listOf(outfitOf(many, dress)), null)
+        val capped = many.rerollAfter(five)
+        assertEquals(5, capped.excludeOutfitSignatures.size)
+        assertEquals(dress.id, capped.excludeOutfitSignatures.first())
+    }
+
+    @Test fun `reroll goes out once with exclusions and no-alternative is a typed failure`() = runTest {
+        val first = request()
+        val shown = com.fitcheckai.core.model.recommendation.RecommendationResult(first.requestId, listOf(outfitOf(first, top, bottom)),
+            ShortfallReason.NOT_ENOUGH_DISTINCT_COMBINATIONS)
+        val proxy = FakeProxy().apply { route = { errorJson(409, "INSUFFICIENT_WARDROBE") } }
+        val reroll = first.rerollAfter(shown)
+        ProxyOutfitRecommendation(proxy.transport).recommend(reroll).assertFailure(ErrorCode.INSUFFICIENT_WARDROBE)
+        val wire = Json.parseToJsonElement(proxy.posts("/v2/outfits").single().body).jsonObject
+        assertEquals("\"${first.requestId}\"", wire["regenerationOfRequestId"].toString())
+        assertEquals(1, wire["excludeOutfitSignatures"]!!.jsonArray.size)
+        assertEquals(1, proxy.posts("/v2/outfits").size) // không tự gọi lại
+    }
+
+    private fun outfitOf(req: OutfitRequest, vararg items: ItemSummary) = com.fitcheckai.core.model.recommendation.Outfit(
+        UUID.randomUUID().toString(), req.requestId, req.wardrobeSnapshotId, items.map { ItemRevision(it.id, it.revision) },
+        "x", OutfitSource.AI_LIVE, 1)
+
     @Test fun `long material is dropped and invalid weather is sent as null`() = runTest {
         val longMaterial = top.copy(attributes = top.attributes.copy(material = "m".repeat(60)))
         val req = request().copy(items = listOf(longMaterial, bottom),

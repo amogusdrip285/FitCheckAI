@@ -11,7 +11,7 @@ import {
   OutfitRequestSchema,
   type RecommendationResultDto,
 } from "./schema";
-import { selectValidOutfits, wardrobeCanFormOutfit } from "./validate";
+import { hasAvailableOutfit, selectValidOutfits, wardrobeCanFormOutfit } from "./validate";
 
 export const OUTFITS_MAX_TOKENS = 8_000;
 
@@ -43,6 +43,10 @@ export const outfitsRoute: RouteDef = {
     // Tủ không đủ ⇒ trả lỗi có kiểu, không tốn tiền gọi AI.
     if (!wardrobeCanFormOutfit(request.items, request.focusItemId)) {
       throw new ApiError("INSUFFICIENT_WARDROBE", "Tủ đồ chưa đủ món để tạo một bộ hợp lệ (cần TOP+BOTTOM hoặc DRESS)");
+    }
+    // Phối lại (C-102) khi mọi tổ hợp còn lại đều đã bị loại ⇒ báo "không còn lựa chọn khác", không gọi AI.
+    if (!hasAvailableOutfit(request.items, request.focusItemId, request.excludeOutfitSignatures)) {
+      throw new ApiError("INSUFFICIENT_WARDROBE", "Không còn bộ hợp lệ nào khác ngoài các bộ đã loại");
     }
 
     const model = ctx.deps.modelFor(ctx.env, "outfits");

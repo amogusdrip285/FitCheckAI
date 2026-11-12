@@ -80,8 +80,11 @@ class ProxyOutfitRecommendation(
 ) : OutfitRecommendation {
     private val ledger = RequestLedger()
 
-    /** Focus/reroll: server đã kiểm, nhưng C-102/LATER-006 chưa có evidence ⇒ chưa bật CTA. */
-    override val capability = RecommendationCapability(supportsReroll = false, supportsFocus = false, source = OutfitSource.AI_LIVE)
+    /**
+     * Reroll (C-102, dùng [rerollAfter]) và focus (LATER-006): server lọc bộ sai/đã loại/thiếu focus và chặn trước AI khi
+     * không còn tổ hợp nào; client kiểm lại response. D bật CTA theo hai cờ này.
+     */
+    override val capability = RecommendationCapability(supportsReroll = true, supportsFocus = true, source = OutfitSource.AI_LIVE)
 
     override suspend fun recommend(request: OutfitRequest): Result<RecommendationResult> = try {
         val body = encodeOutfitRequest(request)

@@ -53,10 +53,10 @@ Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải k
 | [ ] | [B-007](tracks/B.md#b-007) — Android recognition client và upload có giới hạn | P0 | core | M3 | 45–75 | S-002, B-005 | REVIEW | Nhóm giữ `ProxyRecognitionClient` của A (12/11). B review: sửa parse `/health` bỏ qua field mới (trước đó field `providers` làm client luôn Unavailable), đọc `providers.recognition`, nhận `openai@host`; bỏ client trùng của B. MockEngine tests + `:app:assembleDebug`. Chưa INT-002 live. |
 | [ ] | [INT-002](tracks/B.md#int-002) — Tích hợp recognition và recommendation live | P0 | core | M3 | 45–75 | INT-001, B-004, B-006, B-007, BACK-005, C-003, A-006 | TODO | — |
 | [ ] | [BACK-011](tracks/B.md#back-011) — Củng cố bảo mật/quota trước public beta | P1 | quality | M6 | 120–240 | B-004 | TODO | — |
-| [ ] | [LATER-006](tracks/B.md#later-006) — Phối quanh một món có contract xuyên suốt | P1 | quality | M3 | 45–75 | B-002 | TODO | — |
+| [ ] | [LATER-006](tracks/B.md#later-006) — Phối quanh một món có contract xuyên suốt | P1 | quality | M3 | 45–75 | B-002 | REVIEW | Focus: mọi bộ chứa món (server + client kiểm), món UNKNOWN ⇒ UNSUPPORTED_CAPABILITY, không ghép được ⇒ 409 trước AI; `supportsFocus=true`; tests pass. CTA ở A/D chưa nối. |
 | [ ] | [C-002](tracks/B.md#c-002) — Fallback tối thiểu và phát hiện thiếu đồ | P1 | quality | M3 | 15–25 | S-002, B-005 | REVIEW | `core/ai/fallback/BasicOutfitFallback`: 1 quy tắc (độ trang trọng gần dịp), 1 bộ, source RULES, offline; 7 unit tests pass (rỗng/chỉ TOP thiếu đồ, TOP+BOTTOM, DRESS, focus, exclusions, ổn định). D chưa nối vào Today. |
 | [ ] | [C-101](tracks/B.md#c-101) — Thời tiết một thành phố có timestamp | P1 | quality | M3 | 45–75 | B-005 | TODO | — |
-| [ ] | [C-102](tracks/B.md#c-102) — Phối lại tránh bộ vừa chọn | P1 | quality | M3 | 40–70 | B-002 | TODO | — |
+| [ ] | [C-102](tracks/B.md#c-102) — Phối lại tránh bộ vừa chọn | P1 | quality | M3 | 40–70 | B-002 | REVIEW | Server chặn trước AI khi mọi tổ hợp đã bị loại (409), `Reroll.kt` `rerollAfter` (requestId mới, giữ ràng buộc, ≤5 loại trừ ưu tiên bộ vừa hiện), capability `supportsReroll=true`; proxy 125 + Kotlin tests pass; semantics trong proxy-api.md. Nút ở D (C-003) chưa nối. |
 
 ## C — Virtual Try-On
 
