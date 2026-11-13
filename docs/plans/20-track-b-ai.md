@@ -1,5 +1,8 @@
 # Track B — AI & Proxy
 
+> **Kế hoạch gốc Sprint 0, giữ làm lịch sử.** Phần v1 (`/v1/tag`, Claude, `ClaudeClothingTagger`…) đã được thay bằng contract v2.
+> Trạng thái hiện tại: [board](../execution/TASK_BOARD.md) · [card Track B](../execution/tracks/B.md) · [proxy-api v2](../contracts/proxy-api.md) · [PRE-003 provider/ngân sách](../track-b/PRE-003-provider-budget.md) · [cập nhật Track B trong decision log](../execution/REVIEW_AND_DECISIONS.md#cập-nhật-track-b--1113112026).
+
 **Sở hữu:** `proxy/` (Cloudflare Worker, TypeScript), `core:ai`, `eval/`
 **Implement:** `ClothingTagger`, `AiOutfitGenerator`
 **Dùng của người khác:** không (track độc lập nhất)

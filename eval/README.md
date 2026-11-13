@@ -26,6 +26,10 @@ node eval/ai/run-recognition.mjs --base-url http://127.0.0.1:8787
 Mặc định **không tốn tiền**: chỉ chạy case `guard` (proxy phải chặn trước AI) và liệt kê case AI là `NOT_RUN`.
 Thêm `--confirm-spend` để gọi model thật — chỉ khi PRE-003 đã có account + spend limit + budget được duyệt.
 Giới hạn số call: `--max-ai-calls N`. Chạy một phần: `--only R05,R06`. Recognition đo theo field mọi món: `--all-front`.
+Nhãn recognition lấy từ fixtures A trong repo: `node eval/ai/tools/labels-from-track-a.mjs --fixtures data/fixtures/modern-clothing`,
+rồi chạy với `--labels labels.track-a.json --images-dir data/fixtures/modern-clothing`.
+Provider chậm: script cắt mỗi request ở 20s như app; nới bằng `FITCHECK_EVAL_TIMEOUT_MS=130000` **cùng lúc** với
+`PROVIDER_TIMEOUT_MS`/`PROXY_DEADLINE_MS` trong `proxy/.dev.vars`, và ghi rõ trong report là đã nới.
 
 ## Đọc kết quả
 
@@ -34,3 +38,13 @@ Giới hạn số call: `--max-ai-calls N`. Chạy một phần: `--only R05,R06
 - Model/token/chi phí: response không chứa usage — xem `npx wrangler tail` (log JSON theo `requestId`).
 - Mẫu nhỏ ⇒ ghi denominator và giới hạn; không suy tỷ lệ production, p90 latency, độ chính xác material/fit.
 - Đổi prompt (`proxy/src/*/prompt.ts`, tăng `*_PROMPT_VERSION`) ⇒ chạy lại và commit report mới.
+- Token/latency từng call: log Worker (dòng JSON có `inputTokens`, `outputTokens`, `latencyMs` theo `requestId`).
+
+## Kết quả hiện có
+
+| Ngày | Provider / model | B-004 recommendation | B-006 recognition |
+|---|---|---|---|
+| 11/11/2026 | Gemini `gemini-3.5-flash-lite` (free tier) | 8/10 case, invariant 0 lỗi | [25 case](ai/results/2026-11-11-B-006-summary.md): 25/25/25 sau review nhãn |
+| 12/11/2026 | `gpt-6-luna` qua gateway FOSTA, deadline nới | 8/10 case, invariant 0 lỗi; **A và B chấm 17/17 bộ ≥3/5** | 24/25 category, 23/25 màu, 21/25 pattern |
+
+Tổng hợp: [luna 12/11](ai/results/2026-11-12-luna-summary.md). Chưa có lượt chạy trên OpenAI chính chủ (chờ key, PRE-003) và trên prompt `outfits-v2.1`.

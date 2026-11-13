@@ -26,15 +26,18 @@ Phần recovery/preview lifecycle và kiểm thử Android bổ sung sau merge: 
 ./gradlew installDebug                  # cài lên máy thật đang cắm USB (bật USB debugging)
 ./gradlew testDebugUnitTest :core:model:test
 ```
-Khi Track B tích hợp client thật, cấu hình proxy bằng `./gradlew installDebug -Pfitcheck.proxyUrl=https://<your-worker>.workers.dev`.
+App gọi AI qua proxy: `./gradlew installDebug -Pfitcheck.proxyUrl=https://<your-worker>.workers.dev -Pfitcheck.accessCode=<mã demo>`
+(đặt hai property này trong `~/.gradle/gradle.properties` thay vì gõ mỗi lần; không commit mã). Nhận diện ảnh chỉ nhận proxy HTTPS và cho nhập mã trên màn hình.
 
 ## Chạy proxy
 ```bash
 cd proxy
 npm install
 npm test
-npm run dev        # cần proxy/.dev.vars: ANTHROPIC_API_KEY=...
+npm run dev        # copy proxy/.dev.vars.example thành proxy/.dev.vars rồi điền key (không commit)
 ```
+Pitching/demo dùng OpenAI chính chủ: `AI_PROVIDER=openai`, `OPENAI_API_KEY=...`, model mặc định `gpt-6-luna`.
+Provider, ngân sách và lý do chọn: [PRE-003](docs/track-b/PRE-003-provider-budget.md). Wire format và biến môi trường: [proxy-api.md](docs/contracts/proxy-api.md).
 
 ## Cấu trúc module
 
@@ -45,7 +48,7 @@ npm run dev        # cần proxy/.dev.vars: ANTHROPIC_API_KEY=...
 | `core:ui` | D | Theme, component dùng chung |
 | `core:database` | A | Room schema 2, revision/tombstone/cleanup journal, bridge đọc v1 |
 | `core:imaging` | A | MediaStore dùng chung, CameraX, ML Kit tùy chọn |
-| `core:ai` | B | Client gọi proxy: `ClothingTagger`, `AiOutfitGenerator` |
+| `core:ai` | B | Client v2 gọi proxy: `ProxyOutfitRecommendation` (+ `rerollAfter`), `ProxyRecognitionClient` (A viết, B review), fallback `BasicOutfitFallback`; stub v1 cho consumer cũ |
 | `core:weather` | C | `WeatherProvider` (Open-Meteo) |
 | `core:stylist` | C | `OutfitService` (AI + fallback rule-based) |
 | `core:datastore` | D | `ProfileRepository`, `WearLogRepository` |
@@ -54,7 +57,7 @@ npm run dev        # cần proxy/.dev.vars: ANTHROPIC_API_KEY=...
 | `feature:today` | C | Màn "Hôm nay" |
 | `feature:onboarding` | D | Onboarding |
 | `feature:insights` | D | Thống kê, đồ bị bỏ quên |
-| `proxy/` | B | Cloudflare Worker giữ API key |
+| `proxy/` | B | Cloudflare Worker giữ API key: `/v2/outfits`, `/v2/recognition`, session, kill switch, cap; `src/tryon/` của C chưa mount |
 | `build-logic/` | FROZEN | Convention plugin Gradle |
 
 ## Trạng thái triển khai
@@ -70,7 +73,8 @@ Bản debug có bộ kiểm thử riêng gồm 21 món, 24 ảnh thật và 3 c�
 Tủ đồ → **Ảnh kiểm thử** → **Thêm bộ ảnh vào tủ đồ**. Không tự seed khi tạo database; release không đóng gói fixtures.
 Nguồn/quyền, scripts tái tạo, giới hạn nhãn và đánh giá Polyvore nằm tại [data/README.md](data/README.md).
 
-**AI:** Track A bind `UnavailableRecognition` cho đến khi B giao client v2. Không tự chuyển sang fake AI.
+**AI (Track B):** `core:ai` bind client v2 thật cho recognition và recommendation; khi proxy chưa cấu hình, client trả lỗi có kiểu, app vẫn cho nhập tay và có bộ phối cơ bản offline (`source = RULES`). Không tự chuyển sang fake AI.
+Proxy có adapter OpenAI (gồm gateway tương thích), Gemini, Anthropic; chưa deploy HTTPS nên AI live mới chạy qua proxy local. Eval: [luna 12/11](eval/ai/results/2026-11-12-luna-summary.md).
 Form thủ công vẫn lưu được; fake v2 nằm trong `core:model` testFixtures, không được đóng gói trong APK.
 ML Kit tách nền là tùy chọn, kiểm tra model readiness và giữ ảnh gốc. Không báo chất lượng máy thật nếu chưa chạy.
 Các màn Today/Profile/Insights của checkout hiện còn code v1/stub; xem bảng nghiệm thu trước khi gọi đây là sản phẩm end-to-end hoàn chỉnh.

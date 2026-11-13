@@ -4,7 +4,7 @@
 > Nguồn domain: [CONTRACTS.md v2](../execution/CONTRACTS.md) CT-02/05/07. File này mô tả **wire format** proxy đang triển khai trong `proxy/src`.
 > `/v1/*` của Sprint 0 đã gỡ (chưa từng được triển khai, chỉ trả 501).
 
-Trạng thái: implementation + unit/HTTP tests với model giả (B-001/B-002/BACK-004). **Chưa có evidence live**: cần PRE-003 (provider/budget), deploy và B-004/B-006.
+Trạng thái (13/11/2026): implementation + 167 unit/HTTP tests với model giả (B-001/B-002/BACK-004). Đã chạy live qua proxy **local** với Gemini (11/11) và `gpt-6-luna` qua gateway (12/11) — eval B-004/B-006 tại `eval/ai/results/`. **Chưa deploy HTTPS** và chưa chạy trên OpenAI chính chủ (provider dự kiến cho pitching/demo, xem [PRE-003](../track-b/PRE-003-provider-budget.md)).
 
 **Android client:** recommendation (B-003) — `core/ai/.../proxy/ProxyOutfitRecommendation` (bind vào `OutfitRecommendation`) qua `ProxyTransport` (session token, deadline 20s, map lỗi CT-07, không auto-retry, mỗi `requestId` chỉ gửi một lần); mã truy cập demo từ gradle property `fitcheck.accessCode` (đặt trong `~/.gradle/gradle.properties`, không commit; trống ⇒ `UNSUPPORTED_CAPABILITY`, không gọi mạng). Recognition (B-007) — nhóm chọn ngày 12/11/2026 giữ `core/ai/ProxyRecognitionClient` do A viết (bind vào `ClothingRecognition`), mã truy cập nhập trên UI (`RecognitionSetup.authorize`); B đã review và sửa để đọc `providers.recognition`, nhận `openai@host`, bỏ qua field `/health` mới. Hai client đang có hai cơ chế lấy session khác nhau — nên hợp nhất ở INT-002. Client kiểm lại mọi invariant response; một bộ/field sai cấu trúc ⇒ bỏ cả response. Test chỉ dùng MockEngine, chưa chạy với proxy thật.
 

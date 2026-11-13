@@ -1,95 +1,108 @@
 # PRE-003 — Provider và ngân sách AI (recognition + recommendation)
 
-> Owner: B · Trạng thái: **DRAFT — BLOCKED ở phần account/budget** cho tới khi nhóm điền các ô `TODO(nhóm)`.
-> Không lưu secret trong file này. Không gọi API có phí khi lập tài liệu. Ngân sách VTO của C tách riêng.
+> Owner: B · Cập nhật 13/11/2026 · Trạng thái: **ĐỀ XUẤT của B — BLOCKED ở account/ngân sách** cho tới khi nhóm xác nhận mục 5.
+> Không lưu secret trong file này. Ngân sách VTO của C tách riêng. Không gọi API có phí khi lập tài liệu này (giá đọc từ trang chính thức, token lấy từ log các lần eval đã chạy).
 
-## 1. Yêu cầu kỹ thuật với provider (từ CT-02/05/07)
+## Tóm tắt đề xuất
 
-| Yêu cầu | Vì sao | Cách proxy đang dùng |
+| | Đề xuất |
+|---|---|
+| Provider cho pitching, demo và chạy thật | **OpenAI chính chủ** (`api.openai.com`), model **`gpt-6-luna`** cho cả recognition và recommendation — **không qua FOSTA** (quyết định nhóm 13/11/2026) |
+| Dự phòng | `gpt-6.1-sol` nếu chất lượng luna không đủ; Gemini `gemini-3.5-flash-lite` (free tier, **chỉ dữ liệu test**) nếu chưa có key OpenAI |
+| FOSTA (gateway bên thứ ba) | Chỉ để thử model GPT trong lúc **chưa có key OpenAI**; không dùng khi pitching, không dùng cho dữ liệu người dùng thật |
+| Ngân sách dev + eval + demo | ước **< $1** với luna (~$5 với sol) ⇒ đặt **spend limit $10** trên console OpenAI |
+| Còn chặn | account OpenAI + spend limit + người giữ key; account Cloudflare để deploy proxy HTTPS; đo lại latency trên OpenAI chính chủ (app cắt ở 20s) |
+
+## 1. Yêu cầu kỹ thuật với provider (CT-02/05/07)
+
+| Yêu cầu | Vì sao | Proxy đang làm |
 |---|---|---|
-| Vision nhiều ảnh trong một request | Recognition gửi FRONT + BACK | 2 image block base64 |
-| Structured output theo JSON schema | Output parse được, enum hợp lệ | `output_config.format` (zod → JSON schema) |
-| Tắt auto-retry, timeout ≤15s | Không tốn tiền ngầm, CT-07 deadline | SDK `maxRetries: 0`, `timeout: 15000` |
-| Spend limit thật ở phía provider | Daily cap của proxy chỉ best-effort | **TODO(nhóm)**: đặt trên console |
-| Không train trên dữ liệu gửi lên / retention rõ | Ảnh garment rời máy người dùng | **TODO(nhóm)**: kiểm điều khoản account |
+| Vision nhiều ảnh trong một request | Recognition gửi FRONT + BACK | 2 image part base64 (data URL với `openai`) |
+| Structured output theo JSON schema | Output parse được, enum hợp lệ | `openai`: function calling bắt buộc (`tool_choice` + `strict`); `gemini`: `responseJsonSchema`; `anthropic`: `output_config.format`. Validator ngữ nghĩa luôn chạy sau |
+| Không auto-retry, có deadline | Không tốn tiền ngầm (CT-07) | `maxRetries: 0`; provider 15s / proxy 18s mặc định, chỉnh bằng `PROVIDER_TIMEOUT_MS` / `PROXY_DEADLINE_MS`; route có thể khai `deadlineMs` riêng |
+| Spend limit thật phía provider | Daily cap của proxy chỉ best-effort theo isolate | **Cần nhóm đặt trên console** (mục 5) |
+| Không train trên dữ liệu gửi lên / retention rõ | Ảnh garment rời máy người dùng | **Cần nhóm đọc điều khoản account** (mục 5) |
+| Key chỉ ở server | Không nằm trong APK/git/log | `wrangler secret` / `.dev.vars` (gitignore). `OPENAI_API_KEY` = OpenAI chính chủ (dùng chung với C), `OPENAI_COMPAT_API_KEY` = gateway, không dùng chéo |
 
-## 2. Ứng viên (tối đa 2 — theo card)
+## 2. Ma trận provider/model (tối đa 2 ứng viên chính theo card)
 
-Proxy hiện có adapter **Anthropic** (`proxy/src/shared/model.ts`). Đổi provider = viết adapter mới cùng interface `ModelClient`; route/validator/test giữ nguyên.
+Giá: trang giá chính thức OpenAI `developers.openai.com/api/docs/pricing`, đọc 13/11/2026, standard tier, ngữ cảnh ≤272K token, USD / 1M token. **Kiểm lại trước khi chốt.**
 
-| | A. Claude Opus 5.5 (`claude-opus-5-5`) — mặc định hiện tại | B. Claude Haiku 5.5 (`claude-haiku-5-5`) — phương án rẻ |
+| | A. `gpt-6-luna` — **đề xuất** | B. `gpt-6.1-sol` — dự phòng chất lượng |
 |---|---|---|
-| Giá niêm yết / 1M token (in / out) | $4 / $20 | $0.10 / $0.50 (prompt ≤100K token) |
-| Vision nhiều ảnh, structured output | Có | Có |
-| Ghi chú | Chất lượng giải thích tốt hơn dự kiến; đắt hơn ~40× | Cần đo chất lượng giải thích theo rubric B-004 trước khi chọn |
-| Đổi sang | mặc định | `AI_MODEL = "claude-haiku-5-5"` trong `wrangler.toml` |
+| Giá input / cached input / output | $0.10 / $0.01 / $0.50 | $2.00 / $0.10 / $10.00 |
+| Vision nhiều ảnh | Có — đã chạy cặp FRONT+BACK (qua FOSTA) | Có (qua FOSTA) |
+| Structured output | Qua FOSTA: tool strict chạy, `response_format` bị gateway bỏ qua. **Chưa kiểm trên OpenAI chính chủ** | như A |
+| Chất lượng đo được | B-004: invariant 0 lỗi, 2 reviewer chấm 17/17 bộ ≥3/5 (A 3,94/3,94; B 3,94/3,82). B-006: category 24/25, màu 23/25, pattern 21/25 | Chưa eval đầy đủ |
+| Latency đo được | Qua FOSTA 12–43s/call — **do gateway** (cùng prompt, sol không nhanh hơn); chưa đo trên OpenAI chính chủ | Qua FOSTA tương tự hoặc chậm hơn |
+| Đổi sang | `AI_PROVIDER=openai`, `AI_MODEL=gpt-6-luna` (mặc định của adapter) | `AI_MODEL=gpt-6.1-sol` hoặc `AI_MODEL_<SERVICE>` |
 
-Giá lấy từ bảng giá Anthropic (bản cache 2026-11-03) — **kiểm lại trên trang giá chính thức trước khi chốt**.
+Provider khác có sẵn adapter trong proxy, không phải ứng viên chính:
 
-### Giai đoạn test: Gemini free tier (quyết định 11/11/2026)
+- **Gemini** `gemini-3.5-flash-lite` (free tier): 1,3–7,2s/call ngày 11/11, B-006 25/25/25 (nhãn review sau khi xem Gemini nên nghiêng về Gemini). Free tier: Google ghi "Used to improve our products: Yes" và hay 503 khi quá tải (12/11: 2/3 call lỗi) ⇒ **chỉ test**.
+- **Anthropic** (`claude-opus-5-5` mặc định adapter): giữ code + test, nhóm không có kế hoạch account.
 
-Để phát triển/test không tốn tiền, proxy có thêm adapter **Gemini** (`AI_PROVIDER = "gemini"`, model mặc định `gemini-3.5-flash-lite`, có free tier theo trang giá Google AI Studio kiểm ngày 11/11/2026).
+## 3. Chi phí mỗi call — từ token thật
 
-- Đo ngày 11/11/2026 với key free tier của nhóm: `gemini-3.8-flash` timeout >40s / HTTP 503 ngay cả với request tối thiểu; `gemini-3.5-flash-lite` trả 200 trong ~1–3s qua proxy; `gemini-2.5-flash` trả 404 (không còn cho người dùng mới). ⇒ mặc định flash-lite. Có thể thử lại 3.8-flash bằng `AI_MODEL` khi hết quá tải.
-- Request format `generateContent` + `responseJsonSchema` đã xác nhận chạy live (eval B-004 lần đầu, xem `eval/ai/results/`).
+Token lấy từ log Worker của eval luna 12/11/2026 (`inputTokens` / `outputTokens` do FOSTA trả về; OpenAI chính chủ có thể đếm token ảnh/reasoning khác ⇒ dùng hệ số an toàn ×5 khi lập ngân sách).
 
-- **Privacy:** ở free tier, Google ghi "Used to improve our products: Yes" ⇒ chỉ gửi ảnh garment test nhóm tự chụp, **không** gửi ảnh/dữ liệu người dùng thật. Demo với người dùng thật cần chuyển sang tier trả phí hoặc provider khác.
-- **Giới hạn:** free tier có rate limit thấp (trang giá không ghi số cụ thể) ⇒ có thể gặp `429 RATE_LIMITED`; eval chạy tuần tự, ít call.
-- **Evidence:** kết quả eval phải ghi provider/model thật đã dùng. Chất lượng đo trên Gemini **không** chứng minh chất lượng trên Claude và ngược lại; đổi provider ⇒ chạy lại B-004/B-006.
-
-### Giai đoạn pitching: gateway OpenAI-compatible FOSTA (quyết định 12/11/2026)
-
-Nhóm muốn demo/pitching bằng model GPT nên proxy có thêm adapter **`openai`** (`proxy/src/shared/openai.ts`) gọi Chat Completions chuẩn OpenAI; FOSTA dùng qua `OPENAI_BASE_URL = https://codex.fosta.app/v1`, model mặc định `gpt-6-luna` (đổi từ `gpt-6.1-sol` ngày 12/11/2026 để tiết kiệm: đo được luna nhanh ngang sol — recognition 18.9–19.8s vs 19.1–19.9s, schema nhỏ 9.0s vs 8.6–10.4s — vì phần lớn độ trễ nằm ở gateway; chất lượng giải thích của luna **chưa chấm** theo rubric B-004; FOSTA còn có `gpt-6.1-sol`, `gpt-6-astra`; tên đầy đủ trong `/v1/models` có tiền tố `cx/`). Key nằm ở `.dev.vars`/`wrangler secret` — không APK, không git.
-
-- **Không phải OpenAI trực tiếp.** FOSTA là gateway bên thứ ba: ảnh garment và metadata tủ đồ đi qua máy chủ của họ. Chưa có điều khoản retention/training/giá công khai được nhóm đọc ⇒ chỉ dùng ảnh test (vd. `data/fixtures/modern-clothing`), không ảnh người dùng thật. `/health` ghi `provider = "openai@codex.fosta.app"` để consent không gọi nhầm là OpenAI.
-- **Đo ngày 12/11/2026** (laptop dev → FOSTA, mỗi cấu hình 1–3 lần, mẫu nhỏ):
-  - `response_format: json_schema` **bị bỏ qua** (trả văn bản tự do) ⇒ adapter dùng function calling bắt buộc (`tool_choice` + `strict`). Tool strict vẫn có lúc bỏ key nullable (`sameItem`) ⇒ adapter điền `null` cho key nullable bị thiếu, key bắt buộc khác vẫn bị zod chặn.
-  - Vision chạy: ảnh áo thun in hình nhận đúng `TOP`, `BLACK/WHITE/RED`, `PRINTED`.
-  - `/v2/outfits` qua proxy local: 3/3 lần 200 trong **10.4–13.3s**, 1 bộ hợp lệ + shortfall đúng fixture CT-02.
-  - `/v2/recognition`: model mất **~19–25s** (sol/luna, effort low/none, ảnh 1024px hay gốc đều vậy) ⇒ **vượt deadline provider 15s** ⇒ qua proxy trả `504 UPSTREAM_TIMEOUT` 2/2 lần. Muốn dùng recognition qua FOSTA phải nới deadline CT-07 (provider/proxy/client + `withTimeoutOrNull(20_000)` ở A) — **quyết định nhóm, chưa đổi**.
-- **Chạy song song (quyết định 12/11/2026, tạm cho tới khi test UI trên app thật):** outfits = GPT qua FOSTA, recognition = Gemini (`AI_PROVIDER=openai`, `AI_PROVIDER_RECOGNITION=gemini`). Đo cùng ngày qua proxy local: outfits 2/3 lần 200 (13.4–14.3s), 1 lần 504 ở mốc 15s; recognition qua Gemini 2/2 lần 504. Gọi thẳng Gemini: text 2.5–6.8s; recognition 1 ảnh 1/3 OK (8.2s), 2/3 HTTP 503 ⇒ free tier đang quá tải. **Hiện chưa cấu hình nào ổn định dưới deadline 15s**; xem lại khi test UI thật.
-- **Toàn bộ luna + nới deadline để test (quyết định 12/11/2026, chiều):** `AI_MODEL=gpt-6-luna` cho cả hai service, `PROVIDER_TIMEOUT_MS=120000` / `PROXY_DEADLINE_MS=125000` chỉ trong `.dev.vars` (mặc định code/wrangler vẫn 15000/18000). Lý do: khi chạy thật nhóm sẽ dùng API OpenAI trực tiếp; mục tiêu bây giờ là kiểm model trả **đúng**, không phải nhanh.
-  - FOSTA rất thất thường cùng buổi: "Xin chao" luna 10.5s, sol 46.6s; outfits tủ 6 món luna 2/2 lần timeout ở 60s, gọi thẳng luna >180s và sol 115s → 502; ~30 phút sau lại chạy tốt ⇒ độ trễ do gateway, không suy ra được từ model.
-  - Lần chạy tốt qua proxy local (limit 120s): outfits tủ 6 món xin 5 bộ — **2/2 lần 200, 5 bộ hợp lệ, không shortfall, 23.4–24.8s**, giải thích tiếng Việt cụ thể theo màu/hoạ tiết/dịp; recognition luna — FRONT 17.8s, cặp khớp 21.6s, cặp chéo 24.5s, cả 3 nhận đúng `TOP / BLACK,WHITE,RED / PRINTED`; cặp chéo có `VIEWS_LOOK_LIKE_DIFFERENT_ITEMS` + mọi field cần review ✔.
-  - Đây là smoke test (n nhỏ), chưa phải eval B-004/B-006 có reviewer chấm.
-- **Prompt `outfits-v2.1` (13/11/2026):** thêm luật không ghi số/tên trường nội bộ ("độ trang trọng 3") trong giải thích — lỗi A và B cùng thấy ở eval luna. **Chưa chạy eval lại trên v2.1**; điểm B-004 hiện có thuộc bản `outfits-v2.0`.
-- Chất lượng/latency đo trên FOSTA không chứng minh cho OpenAI trực tiếp hay provider khác; đổi provider ⇒ chạy lại B-004/B-006.
-
-## 3. Ước lượng chi phí mỗi call (THÔ — phải thay bằng số đo usage thật ở B-004/B-006)
-
-Giả định: ảnh derivative ≤1024px cạnh dài ⇒ ~1.4K token/ảnh (≈ rộng×cao/750); system prompt ~0.6–0.8K token; output gồm cả thinking.
-
-| Call | Input ước tính | Output ước tính | Opus 5.5 | Haiku 5.5 | Trần do `max_tokens` (Opus) |
+| Call (n đo) | Input token (min · trung vị · max) | Output token | luna / call | sol / call | Trần do `max_tokens` (luna · sol) |
 |---|---|---|---|---|---|
-| Recognition, 1 ảnh | ~2.2K | ~0.5–1K | ~$0.02–0.03 | <$0.001 | 4K out ⇒ ≤ ~$0.09 |
-| Recognition, 2 ảnh | ~3.6K | ~0.5–1K | ~$0.03–0.04 | <$0.001 | ≤ ~$0.10 |
-| Recommendation, 20 món, 5 bộ | ~2.5K | ~1–3K | ~$0.03–0.07 | ~$0.002 | 8K out ⇒ ≤ ~$0.17 |
+| Recommendation (6) | 674 · 982 · 998 | 56 · 170 · 225 | ~$0.0002 | ~$0.004 | 8 000 out ⇒ ≤ $0.004 · ≤ $0.08 |
+| Recognition 1 ảnh (21) | 1 946 | 112 · 129 · 144 | ~$0.0003 | ~$0.005 | 4 000 out ⇒ ≤ $0.002 · ≤ $0.044 |
+| Recognition 2 ảnh (4) | ~3 057 | ~140 | ~$0.0004 | ~$0.0075 | ≤ $0.002 · ≤ $0.046 |
+
+Cách tính: input × giá input + output × giá output (không tính cache). Ví dụ recommendation luna: 982 × $0.10/1M + 170 × $0.50/1M ≈ $0.00018.
 
 ## 4. Ngân sách đề xuất (nhóm quyết)
 
-| Hạng mục | Số call | Opus 5.5 (ước) | Haiku 5.5 (ước) |
+| Hạng mục | Số call | luna (ước ×5 an toàn) | sol (ước ×5 an toàn) |
 |---|---|---|---|
-| B-004: 10 case recommendation live + chạy lại 1 lần | ~20 | ~$1.5–3.5 | <$0.1 |
-| B-006: 3 case recognition live + chạy lại | ~6 | ~$0.3 | <$0.01 |
-| Dev/smoke + INT-002 | ~50 | ~$2–4 | <$0.2 |
-| Demo + diễn tập | ~100 | ~$4–7 | <$0.3 |
-| **Tổng đề xuất** | ~180 | **~$8–15 → đặt spend limit $20** | **~$1 → spend limit $5** |
+| Eval lại trên OpenAI chính chủ: B-004 (6 AI case × 2) + B-006 (25 case) | ~40 | ~$0.06 | ~$1.0 |
+| Dev/smoke + INT-002 (A/D thử trên máy) | ~60 | ~$0.08 | ~$1.4 |
+| Demo + diễn tập | ~100 | ~$0.15 | ~$2.3 |
+| **Tổng** | ~200 | **~$0.3** | **~$4.7** |
+| Trần tuyệt đối nếu mọi call chạm `max_tokens` | ~200 | ≤ $0.8 | ≤ $16 |
 
-## 5. Quyết định cần chốt — TODO(nhóm)
+⇒ Đề xuất **spend limit $10** trên console OpenAI (đủ cho luna dư nhiều lần, đủ cho sol ở mức dùng thật; trần tuyệt đối sol vượt $10 chỉ khi mọi call hỏng ở mức tối đa). Daily cap proxy giữ `200` call/service/isolate.
 
-| # | Câu hỏi | Trả lời | Người chịu trách nhiệm | Ngày |
+## 5. Quyết định cần chốt (DEC-03/04)
+
+| # | Câu hỏi | Đề xuất của B | Người chịu trách nhiệm | Trạng thái |
 |---|---|---|---|---|
-| 1 | Nhóm đã có account Anthropic (hoặc provider khác) dùng được ngay chưa? Có credit/thẻ không? | | | |
-| 2 | Model cho recognition / recommendation (có thể khác nhau sau khi đo) | | | |
-| 3 | Spend limit đặt trên console là bao nhiêu? Đã đặt chưa (ảnh chụp màn hình lưu riêng, không có key)? | | | |
-| 4 | Ai giữ API key; key chỉ nằm ở `wrangler secret` | | | |
-| 5 | Account Cloudflare để deploy Worker (free plan đủ: bundle ~314 KB gzip) | | | |
-| 6 | Điều khoản dữ liệu/retention của account đã đọc và chấp nhận cho ảnh garment | | | |
+| 1 | Account provider dùng được ngay, có thẻ/credit? | OpenAI chính chủ (API platform) | nhóm — TODO | **BLOCKED** |
+| 2 | Model recognition / recommendation | `gpt-6-luna` cho cả hai; đổi riêng từng service bằng `AI_MODEL_<SERVICE>` nếu cần | B | Đề xuất, chờ nhóm |
+| 3 | Spend limit trên console | $10, ảnh chụp lưu riêng (không có key) | người giữ account — TODO | **BLOCKED** |
+| 4 | Ai giữ API key | 1 người; key chỉ ở `wrangler secret put OPENAI_API_KEY` | nhóm — TODO | **BLOCKED** |
+| 5 | Account Cloudflare deploy Worker | free plan; bundle nhỏ | nhóm — TODO | **BLOCKED** |
+| 6 | Điều khoản dữ liệu/retention | đọc điều khoản API OpenAI cho ảnh garment trước khi gửi ảnh thật | người giữ account — TODO | **BLOCKED** |
+| 7 | Deadline app (20s) với latency thật | đo trên OpenAI chính chủ trước; nếu >15s thì A/D/B thống nhất nới deadline phía app | B đo, A/D quyết | Chờ (1)–(5) |
 
-Khi chưa có (1), (3), (5): B-001 live, B-004, B-006, INT-002 ở trạng thái **BLOCKED**; mock/test vẫn chạy (89 test). Không nhúng key vào APK để "chạy tạm".
+Khi chưa có (1), (3), (4), (5): B-001 live, INT-002 vẫn **BLOCKED**; mock, fake, fallback RULES và proxy local vẫn chạy. Không nhúng key vào APK để "chạy tạm".
 
 ## 6. Kill switch và vận hành
 
-- Tắt nhanh: đặt `SERVICE_RECOGNITION` / `SERVICE_OUTFITS` = `"off"` rồi `wrangler deploy` (hoặc sửa biến trên dashboard Cloudflare).
+- Tắt nhanh: `SERVICE_RECOGNITION` / `SERVICE_OUTFITS` = `"off"` rồi `wrangler deploy` (hoặc sửa biến trên dashboard Cloudflare).
 - Tắt tuyệt đối: xoá/rotate API key trên console provider.
 - Daily cap mặc định 200 call/service/isolate — **không** phải trần tiền.
+- Đổi provider/model ⇒ `/health.providers` đổi ⇒ consent nhận diện cũ tự hết hiệu lực; chạy lại B-004/B-006.
+
+## 7. Nhật ký đo đạc
+
+### Gemini free tier (11/11/2026)
+
+- `gemini-3.8-flash` timeout >40s / HTTP 503 kể cả request tối thiểu; `gemini-3.5-flash-lite` 200 trong ~1–3s; `gemini-2.5-flash` 404 ⇒ mặc định flash-lite.
+- `generateContent` + `responseJsonSchema` chạy live (eval B-004/B-006 lần 1, `eval/ai/results/2026-11-11*`).
+- 12/11: text 2.5–6.8s; recognition 1 ảnh 1/3 OK (8.2s), 2/3 HTTP 503.
+
+### FOSTA (12/11/2026) — gateway bên thứ ba, không phải OpenAI trực tiếp
+
+- `/v1/models` liệt kê `cx/gpt-6-luna`, `cx/gpt-6.1-sol`, `cx/gpt-6-astra`… (nhận cả tên không tiền tố). Chưa có điều khoản retention/training/giá công khai ⇒ chỉ ảnh test.
+- `response_format: json_schema` bị bỏ qua ⇒ adapter dùng function calling bắt buộc; tool strict vẫn có lúc bỏ key nullable (`sameItem`) ⇒ adapter điền `null` cho key nullable bị thiếu.
+- Rất thất thường cùng một buổi: "Xin chao" luna 10.5s, sol 46.6s; outfits tủ 6 món luna 2/2 timeout ở 60s, gọi thẳng luna >180s, sol 115s → 502; ~30 phút sau chạy tốt.
+- Lần chạy tốt (deadline nới 120s): outfits 5 bộ hợp lệ 23–25s; recognition 18–24s, cặp chéo có cảnh báo đúng.
+- Eval đầy đủ trên luna: [`eval/ai/results/2026-11-12-luna-summary.md`](../../eval/ai/results/2026-11-12-luna-summary.md).
+
+### Prompt
+
+- `outfits-v2.1` (13/11/2026): không ghi số/tên trường nội bộ ("độ trang trọng 3") trong giải thích — cả hai reviewer cùng trừ điểm lỗi này ở lượt `outfits-v2.0`. **Chưa eval lại trên v2.1.**
