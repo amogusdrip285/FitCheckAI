@@ -12,6 +12,7 @@ import com.fitcheckai.feature.tryon.contract.TryOnCapability
 import com.fitcheckai.feature.tryon.contract.TryOnError
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
 import com.fitcheckai.feature.tryon.contract.TryOnException
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnJobHandle
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
 import com.fitcheckai.feature.tryon.contract.TryOnMediaStorePort
@@ -77,6 +78,7 @@ data class WireOutfitItemDto(
     val revision: Long,
     val category: Category,
     val colors: List<String> = emptyList(),
+    val slot: TryOnGarmentSlot? = null,
 )
 
 @Serializable
@@ -1045,6 +1047,12 @@ class AndroidVirtualTryOnClient(
             )
         }
 
+        val itemsById = request.outfitSnapshot.items.associateBy { it.itemId }
+        val canonicalSelectedIds = request.selectedItemIds.sortedBy { itemId ->
+            val resolvedSlot = itemsById[itemId]?.resolvedGarmentSlot()
+            resolvedSlot?.let { TryOnGarmentSlot.CANONICAL_ORDER.indexOf(it) } ?: Int.MAX_VALUE
+        }
+
         return TryOnSubmitWireDto(
             schemaVersion = 2,
             requestId = request.requestId,
@@ -1058,6 +1066,7 @@ class AndroidVirtualTryOnClient(
                         revision = it.revision,
                         category = it.category,
                         colors = it.colors,
+                        slot = it.resolvedGarmentSlot(),
                     )
                 },
             ),
@@ -1065,7 +1074,7 @@ class AndroidVirtualTryOnClient(
             personImages = personPairDto,
             garmentImages = garmentDtos,
             requestedViews = request.requestedViews.toList(),
-            selectedItemIds = request.selectedItemIds,
+            selectedItemIds = canonicalSelectedIds,
             presentationMode = request.presentationMode,
             consentGrant = WireConsentGrantDto(
                 id = request.consentGrant.id,

@@ -13,6 +13,7 @@ import com.fitcheckai.feature.tryon.contract.RemoteDeletionState
 import com.fitcheckai.feature.tryon.contract.TryOnCapability
 import com.fitcheckai.feature.tryon.contract.TryOnError
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
 import com.fitcheckai.feature.tryon.contract.TryOnMediaStorePort
@@ -134,6 +135,8 @@ object FakeTryOnFixtures {
         Category.BOTTOM,
         Category.DRESS,
         Category.OUTERWEAR,
+        Category.SHOES,
+        Category.ACCESSORY,
     )
 
     val coreUnknownCapability = TryOnCapability(
@@ -162,7 +165,7 @@ object FakeTryOnFixtures {
         decision = FeasibilityDecision.GO_FRONT_ONLY,
         supportedViews = setOf(ImageView.FRONT),
         supportedCategories = supportedCategoriesDefault,
-        maxGarmentsPerJob = 2,
+        maxGarmentsPerJob = 4,
         supportsNativePairedViews = false,
         runtimeVerifiedViews = setOf(ImageView.FRONT),
         providerId = PROVIDER_ID,
@@ -173,7 +176,7 @@ object FakeTryOnFixtures {
         decision = FeasibilityDecision.GO_DUAL,
         supportedViews = setOf(ImageView.FRONT, ImageView.BACK),
         supportedCategories = supportedCategoriesDefault,
-        maxGarmentsPerJob = 2,
+        maxGarmentsPerJob = 4,
         supportsNativePairedViews = false,
         runtimeVerifiedViews = emptySet(), // Honest: paired runtime not live-verified until C-211/C-212
         providerId = PROVIDER_ID,
@@ -187,8 +190,14 @@ object FakeTryOnFixtures {
     val fostaCapability = TryOnCapability(
         decision = FeasibilityDecision.GO_DUAL,
         supportedViews = setOf(ImageView.FRONT, ImageView.BACK),
-        supportedCategories = setOf(Category.TOP, Category.BOTTOM),
-        maxGarmentsPerJob = 2,
+        supportedCategories = setOf(
+            Category.TOP,
+            Category.OUTERWEAR,
+            Category.BOTTOM,
+            Category.SHOES,
+            Category.ACCESSORY,
+        ),
+        maxGarmentsPerJob = 4,
         supportsNativePairedViews = false,
         runtimeVerifiedViews = emptySet(),
         providerId = "fosta",
@@ -305,6 +314,34 @@ object FakeTryOnFixtures {
         revision = 1L,
     )
 
+    val hatFrontRef = MediaRef(
+        id = "dev-hat-front-1",
+        ownerEntityId = "item-hat-cap",
+        scope = MediaScope.GARMENT,
+        view = ImageView.FRONT,
+        localRelativePath = "seed://dev-hat-front",
+        mimeType = "image/png",
+        width = 512,
+        height = 512,
+        byteCount = 28_000L,
+        contentHash = "sha256:dev-hat-front",
+        revision = 1L,
+    )
+
+    val hatBackRef = MediaRef(
+        id = "dev-hat-back-1",
+        ownerEntityId = "item-hat-cap",
+        scope = MediaScope.GARMENT,
+        view = ImageView.BACK,
+        localRelativePath = "seed://dev-hat-back",
+        mimeType = "image/png",
+        width = 512,
+        height = 512,
+        byteCount = 27_500L,
+        contentHash = "sha256:dev-hat-back",
+        revision = 1L,
+    )
+
     val shoesFrontRef = MediaRef(
         id = "dev-shoes-front-1",
         ownerEntityId = "item-shoes-loafer",
@@ -316,6 +353,20 @@ object FakeTryOnFixtures {
         height = 512,
         byteCount = 32_000L,
         contentHash = "sha256:dev-shoes-front",
+        revision = 1L,
+    )
+
+    val shoesBackRef = MediaRef(
+        id = "dev-shoes-back-1",
+        ownerEntityId = "item-shoes-loafer",
+        scope = MediaScope.GARMENT,
+        view = ImageView.BACK,
+        localRelativePath = "seed://dev-shoes-back",
+        mimeType = "image/png",
+        width = 512,
+        height = 512,
+        byteCount = 31_400L,
+        contentHash = "sha256:dev-shoes-back",
         revision = 1L,
     )
 
@@ -331,6 +382,7 @@ object FakeTryOnFixtures {
                 colors = listOf("BEIGE", "WHITE"),
                 accentHex = "#E6DCCF",
                 revision = 1L,
+                slot = TryOnGarmentSlot.TOP,
             ),
             TryOnItemSummary(
                 itemId = "item-trouser-noir",
@@ -339,6 +391,7 @@ object FakeTryOnFixtures {
                 colors = listOf("BLACK"),
                 accentHex = "#252321",
                 revision = 1L,
+                slot = TryOnGarmentSlot.BOTTOM,
             ),
             TryOnItemSummary(
                 itemId = "item-shoes-loafer",
@@ -347,6 +400,51 @@ object FakeTryOnFixtures {
                 colors = listOf("BLACK"),
                 accentHex = "#3A3532",
                 revision = 1L,
+                slot = TryOnGarmentSlot.SHOES,
+            ),
+        ),
+    )
+
+    val allFourSlotsOutfit = TryOnOutfitSnapshot(
+        outfitId = "outfit-four-slots-01",
+        wardrobeSnapshotId = "snap-2026-11",
+        explanation = "Bản phối đầy đủ 4 món: Áo, Quần, Mũ lưỡi trai và Giày loafer.",
+        items = listOf(
+            TryOnItemSummary(
+                itemId = "item-top-linen",
+                label = "Áo sơ mi linen kem",
+                category = Category.TOP,
+                colors = listOf("BEIGE", "WHITE"),
+                accentHex = "#E6DCCF",
+                revision = 1L,
+                slot = TryOnGarmentSlot.TOP,
+            ),
+            TryOnItemSummary(
+                itemId = "item-trouser-noir",
+                label = "Quần âu ống suông đen",
+                category = Category.BOTTOM,
+                colors = listOf("BLACK"),
+                accentHex = "#252321",
+                revision = 1L,
+                slot = TryOnGarmentSlot.BOTTOM,
+            ),
+            TryOnItemSummary(
+                itemId = "item-hat-cap",
+                label = "Mũ lưỡi trai kaki",
+                category = Category.ACCESSORY,
+                colors = listOf("KHAKI"),
+                accentHex = "#B7A68B",
+                revision = 1L,
+                slot = TryOnGarmentSlot.HAT,
+            ),
+            TryOnItemSummary(
+                itemId = "item-shoes-loafer",
+                label = "Giày loafer da đen",
+                category = Category.SHOES,
+                colors = listOf("BLACK"),
+                accentHex = "#3A3532",
+                revision = 1L,
+                slot = TryOnGarmentSlot.SHOES,
             ),
         ),
     )
@@ -354,7 +452,13 @@ object FakeTryOnFixtures {
     val defaultGarmentImages: Map<String, ImagePair> = mapOf(
         "item-top-linen" to ImagePair(front = topFrontRef, back = topBackRef),
         "item-trouser-noir" to ImagePair(front = bottomFrontRef, back = bottomBackRef),
-        "item-shoes-loafer" to ImagePair(front = shoesFrontRef, back = null),
+    )
+
+    val allFourSlotsGarmentImages: Map<String, ImagePair> = mapOf(
+        "item-top-linen" to ImagePair(front = topFrontRef, back = topBackRef),
+        "item-trouser-noir" to ImagePair(front = bottomFrontRef, back = bottomBackRef),
+        "item-hat-cap" to ImagePair(front = hatFrontRef, back = hatBackRef),
+        "item-shoes-loafer" to ImagePair(front = shoesFrontRef, back = shoesBackRef),
     )
 
     val fakeResultFrontRef = MediaRef(
@@ -394,7 +498,10 @@ object FakeTryOnFixtures {
             topBackRef,
             bottomFrontRef,
             bottomBackRef,
+            hatFrontRef,
+            hatBackRef,
             shoesFrontRef,
+            shoesBackRef,
             fakeResultFrontRef,
             fakeResultBackRef,
         ).forEach { store.putMedia(it) }

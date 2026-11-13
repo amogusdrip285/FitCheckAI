@@ -11,6 +11,7 @@ import com.fitcheckai.feature.tryon.contract.TryOnCapability
 import com.fitcheckai.feature.tryon.contract.TryOnError
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
 import com.fitcheckai.feature.tryon.contract.TryOnException
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnMediaStorePort
 import com.fitcheckai.feature.tryon.contract.TryOnPresentationMode
 import com.fitcheckai.feature.tryon.contract.TryOnRequest
@@ -219,8 +220,7 @@ class TryOnPrivacyCoordinator(
         }
 
         val itemsById = request.outfitSnapshot.items.associateBy { it.itemId }
-        var topCount = 0
-        var bottomCount = 0
+        val seenSlots = mutableSetOf<TryOnGarmentSlot>()
         for (itemId in request.selectedItemIds) {
             val summary = itemsById[itemId] ?: return failure(
                 TryOnErrorCode.INVALID_REQUEST,
@@ -234,16 +234,20 @@ class TryOnPrivacyCoordinator(
                     request.requestId,
                 )
             }
-            if (summary.category == Category.TOP || summary.category == Category.OUTERWEAR) topCount += 1
-            if (summary.category == Category.BOTTOM) bottomCount += 1
-        }
-
-        if (capability.providerId == "fosta" && (topCount > 1 || bottomCount > 1)) {
-            return failure(
-                TryOnErrorCode.INVALID_REQUEST,
-                "Trong một lượt thử FOSTA chỉ được chọn tối đa 1 Áo (TOP) và 1 Quần (BOTTOM).",
-                request.requestId,
-            )
+            if (capability.providerId == "fosta" || capability.providerId == "openai") {
+                val resolvedSlot = summary.resolvedGarmentSlot() ?: return failure(
+                    TryOnErrorCode.UNSUPPORTED_CAPABILITY,
+                    "Danh mục '${summary.category}' chưa có ô ghép tương ứng trên nhà cung cấp '${capability.providerId}'.",
+                    request.requestId,
+                )
+                if (!seenSlots.add(resolvedSlot)) {
+                    return failure(
+                        TryOnErrorCode.UNSUPPORTED_CAPABILITY,
+                        "Mỗi ô trang phục (Áo, Quần, Mũ, Giày) chỉ nhận tối đa 1 món trong một lượt thử đồ.",
+                        request.requestId,
+                    )
+                }
+            }
         }
 
         // Check wardrobe revisions if repository port is wired (detects deleted/edited items)
@@ -339,13 +343,26 @@ class TryOnPrivacyCoordinator(
             }
         }
 
-        // Prepare upload derivatives & read bytes within CT-07 caps
+        // Prepare upload derivatives & read bytes within adaptive CT-07 caps (<= 8 MiB decoded across up to 10 images)
+        val totalImageCount = request.requestedViews.size * (1 + request.selectedItemIds.size)
+        val personMaxBytes = if (totalImageCount > 4) {
+            1_000_000L
+        } else {
+            MAX_PERSON_BYTES_PER_VIEW
+        }
+        val garmentImageSlotsCount = (request.requestedViews.size * request.selectedItemIds.size).coerceAtLeast(1)
+        val garmentMaxBytes = if (totalImageCount > 4) {
+            minOf(MAX_GARMENT_BYTES_PER_VIEW, 4_400_000L / garmentImageSlotsCount)
+        } else {
+            MAX_GARMENT_BYTES_PER_VIEW
+        }
+
         val personUploads = mutableMapOf<ImageView, AuthorizedImageUpload>()
         val garmentUploads = mutableMapOf<String, MutableMap<ImageView, AuthorizedImageUpload>>()
         var totalBytes = 0L
 
         for ((view, originalRef) in requiredPersonRefs) {
-            val uploadRef = mediaStore.prepareUploadDerivative(originalRef, MAX_PERSON_BYTES_PER_VIEW)
+            val uploadRef = mediaStore.prepareUploadDerivative(originalRef, personMaxBytes)
                 .getOrElse { cause ->
                     if (cause is TryOnException) {
                         return Result.failure(
@@ -373,10 +390,10 @@ class TryOnPrivacyCoordinator(
                     request.requestId,
                 )
             }
-            if (bytes.isEmpty() || bytes.size.toLong() > MAX_PERSON_BYTES_PER_VIEW) {
+            if (bytes.isEmpty() || bytes.size.toLong() > personMaxBytes) {
                 return failure(
                     TryOnErrorCode.PAYLOAD_TOO_LARGE,
-                    "Ảnh toàn thân ($view) vượt quá giới hạn 2 MiB.",
+                    "Ảnh toàn thân ($view) vượt quá giới hạn ${personMaxBytes / 1024} KB.",
                     request.requestId,
                 )
             }
@@ -386,7 +403,7 @@ class TryOnPrivacyCoordinator(
 
         for ((itemId, byView) in requiredGarmentRefs) {
             for ((view, originalRef) in byView) {
-                val uploadRef = mediaStore.prepareUploadDerivative(originalRef, MAX_GARMENT_BYTES_PER_VIEW)
+                val uploadRef = mediaStore.prepareUploadDerivative(originalRef, garmentMaxBytes)
                     .getOrElse { cause ->
                         if (cause is TryOnException) {
                             return Result.failure(
@@ -414,10 +431,10 @@ class TryOnPrivacyCoordinator(
                         request.requestId,
                     )
                 }
-                if (bytes.isEmpty() || bytes.size.toLong() > MAX_GARMENT_BYTES_PER_VIEW) {
+                if (bytes.isEmpty() || bytes.size.toLong() > garmentMaxBytes) {
                     return failure(
                         TryOnErrorCode.PAYLOAD_TOO_LARGE,
-                        "Ảnh trang phục ($view) vượt quá giới hạn 1 MiB.",
+                        "Ảnh trang phục ($view) vượt quá giới hạn ${garmentMaxBytes / 1024} KB.",
                         request.requestId,
                     )
                 }

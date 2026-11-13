@@ -191,6 +191,18 @@ data class TryOnCapability(
 }
 
 @Serializable
+enum class TryOnGarmentSlot {
+    TOP,
+    BOTTOM,
+    HAT,
+    SHOES;
+
+    companion object {
+        val CANONICAL_ORDER: List<TryOnGarmentSlot> = listOf(TOP, BOTTOM, HAT, SHOES)
+    }
+}
+
+@Serializable
 data class TryOnItemSummary(
     val itemId: String,
     val label: String,
@@ -198,7 +210,16 @@ data class TryOnItemSummary(
     val colors: List<String> = emptyList(),
     val accentHex: String? = null,
     val revision: Long = 1L,
-)
+    val slot: TryOnGarmentSlot? = null,
+) {
+    fun resolvedGarmentSlot(): TryOnGarmentSlot? = slot ?: when (category) {
+        Category.TOP, Category.OUTERWEAR -> TryOnGarmentSlot.TOP
+        Category.BOTTOM -> TryOnGarmentSlot.BOTTOM
+        Category.ACCESSORY -> TryOnGarmentSlot.HAT
+        Category.SHOES -> TryOnGarmentSlot.SHOES
+        else -> null
+    }
+}
 
 @Serializable
 data class TryOnOutfitSnapshot(

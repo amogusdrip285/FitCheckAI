@@ -554,7 +554,7 @@ class LocalDiskTryOnMediaStore(
             }
 
             if (encodedBytes == null) {
-                val qualitySteps = intArrayOf(92, 86, 80, 74)
+                val qualitySteps = intArrayOf(92, 86, 80, 74, 64, 54)
                 for (q in qualitySteps) {
                     val jpgOut = ByteArrayOutputStream()
                     if (working.compress(Bitmap.CompressFormat.JPEG, q, jpgOut)) {
@@ -563,6 +563,28 @@ class LocalDiskTryOnMediaStore(
                             encodedBytes = candidate
                             encodedMime = "image/jpeg"
                             break
+                        }
+                    }
+                }
+                var scaleAttempt = 0
+                while (encodedBytes == null && scaleAttempt < 2 && working.width >= 340 && working.height >= 340) {
+                    scaleAttempt += 1
+                    val targetW = (working.width * 0.75f).toInt().coerceAtLeast(256)
+                    val targetH = (working.height * 0.75f).toInt().coerceAtLeast(256)
+                    val scaled = Bitmap.createScaledBitmap(working, targetW, targetH, true)
+                    if (scaled !== working) {
+                        working.recycle()
+                        working = scaled
+                    }
+                    for (q in qualitySteps) {
+                        val jpgOut = ByteArrayOutputStream()
+                        if (working.compress(Bitmap.CompressFormat.JPEG, q, jpgOut)) {
+                            val candidate = jpgOut.toByteArray()
+                            if (candidate.isNotEmpty() && candidate.size.toLong() <= maxBytes) {
+                                encodedBytes = candidate
+                                encodedMime = "image/jpeg"
+                                break
+                            }
                         }
                     }
                 }

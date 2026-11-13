@@ -1,10 +1,16 @@
 package com.fitcheckai.feature.tryon.privacy
 
+import com.fitcheckai.core.model.Category
 import com.fitcheckai.feature.tryon.contract.ConsentPurpose
 import com.fitcheckai.feature.tryon.contract.ImagePair
 import com.fitcheckai.feature.tryon.contract.ImageView
+import com.fitcheckai.feature.tryon.contract.MediaRef
+import com.fitcheckai.feature.tryon.contract.TryOnCapability
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
 import com.fitcheckai.feature.tryon.contract.TryOnException
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
+import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
+import com.fitcheckai.feature.tryon.contract.TryOnOutfitSnapshot
 import com.fitcheckai.feature.tryon.contract.TryOnWardrobeRevisionPort
 import com.fitcheckai.feature.tryon.fake.FakeTryOnFixtures
 import com.fitcheckai.feature.tryon.fake.FakeTryOnScenario
@@ -177,5 +183,137 @@ class TryOnPrivacyCoordinatorTest {
             (cloneRes.exceptionOrNull() as TryOnException).tryOnError.code,
         )
         assertEquals(0, mediaStore.readCallCount)
+    }
+
+    @Test
+    fun `rejects duplicate HAT or SHOES slot items on both FOSTA and OpenAI before reading MediaStore bytes`() = runTest {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(512) { 0x22 })
+        val secondHatRef = FakeTryOnFixtures.hatFrontRef.copy(id = "garment-hat-2-front", ownerEntityId = "item-hat-2")
+        val secondShoesRef = FakeTryOnFixtures.shoesFrontRef.copy(id = "garment-shoes-2-front", ownerEntityId = "item-shoes-2")
+        mediaStore.putMedia(secondHatRef, ByteArray(512) { 0x12 })
+        mediaStore.putMedia(secondShoesRef, ByteArray(512) { 0x23 })
+        val coordinator = TryOnPrivacyCoordinator(mediaStore = mediaStore)
+
+        val dupHatOutfit = FakeTryOnFixtures.allFourSlotsOutfit.copy(
+            items = FakeTryOnFixtures.allFourSlotsOutfit.items + TryOnItemSummary(
+                itemId = "item-hat-2",
+                label = "Mũ bucket",
+                category = Category.ACCESSORY,
+                slot = TryOnGarmentSlot.HAT,
+            ),
+        )
+        val dupShoesOutfit = FakeTryOnFixtures.allFourSlotsOutfit.copy(
+            items = FakeTryOnFixtures.allFourSlotsOutfit.items + TryOnItemSummary(
+                itemId = "item-shoes-2",
+                label = "Giày boot",
+                category = Category.SHOES,
+                slot = TryOnGarmentSlot.SHOES,
+            ),
+        )
+
+        val openAiCap = FakeTryOnFixtures.fostaCapability.copy(providerId = "openai", providerConfigVersion = "v1-openai")
+        val cases = listOf(
+            Triple(FakeTryOnFixtures.fostaCapability, dupHatOutfit, listOf("item-hat-cap", "item-hat-2") to secondHatRef),
+            Triple(openAiCap, dupShoesOutfit, listOf("item-shoes-loafer", "item-shoes-2") to secondShoesRef),
+        )
+        for ((c: TryOnCapability, o: TryOnOutfitSnapshot, pairIdsRef: Pair<List<String>, MediaRef>) in cases) {
+            val (sel, ref) = pairIdsRef
+            val garmentMap = FakeTryOnFixtures.allFourSlotsGarmentImages + (sel[1] to ImagePair(front = ref))
+            val mediaIds = setOf(FakeTryOnFixtures.personFrontRef.id) + sel.mapNotNull { garmentMap[it]?.front?.id }
+            val consent = coordinator.createPerRequestConsentGrant(
+                capability = c,
+                selectedMediaIds = mediaIds,
+                allowedViews = setOf(ImageView.FRONT),
+                confirmedByUser = true,
+            )
+            val req = FakeTryOnFixtures.sampleDualRequest(
+                idempotencyKey = "dup-${c.providerId}",
+                requestedViews = setOf(ImageView.FRONT),
+                selectedItemIds = sel,
+            ).copy(
+                outfitSnapshot = o,
+                garmentImages = garmentMap,
+                consentGrant = consent,
+                providerConfigVersion = c.providerConfigVersion,
+            )
+            val res = coordinator.prepareAuthorizedUploadSlice(req, c)
+            assertTrue(res.isFailure)
+            assertEquals(
+                TryOnErrorCode.UNSUPPORTED_CAPABILITY,
+                (res.exceptionOrNull() as TryOnException).tryOnError.code,
+            )
+        }
+        assertEquals(0, mediaStore.readCallCount)
+    }
+
+    @Test
+    fun `adaptive byte budget caps 10 images (person front-back plus 4 garment slots front-back) below 8 MiB payload limit`() = runTest {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        // Populate all 10 views near/at the worst-case adaptive thresholds (person <= 1_000_000, garment <= 550_000)
+        val largePersonFront = FakeTryOnFixtures.personFrontRef.copy(byteCount = 1_000_000L)
+        val largePersonBack = FakeTryOnFixtures.personBackRef.copy(byteCount = 1_000_000L)
+        val topF = FakeTryOnFixtures.topFrontRef.copy(byteCount = 550_000L)
+        val topB = FakeTryOnFixtures.topBackRef.copy(byteCount = 550_000L)
+        val botF = FakeTryOnFixtures.bottomFrontRef.copy(byteCount = 550_000L)
+        val botB = FakeTryOnFixtures.bottomBackRef.copy(byteCount = 550_000L)
+        val hatF = FakeTryOnFixtures.hatFrontRef.copy(byteCount = 550_000L)
+        val hatB = FakeTryOnFixtures.hatBackRef.copy(byteCount = 550_000L)
+        val shoeF = FakeTryOnFixtures.shoesFrontRef.copy(byteCount = 550_000L)
+        val shoeB = FakeTryOnFixtures.shoesBackRef.copy(byteCount = 550_000L)
+        val allRefs = listOf(largePersonFront, largePersonBack, topF, topB, botF, botB, hatF, hatB, shoeF, shoeB)
+        allRefs.forEach { ref -> mediaStore.putMedia(ref, ByteArray(ref.byteCount.toInt()) { 0x5A }) }
+
+        val coordinator = TryOnPrivacyCoordinator(mediaStore = mediaStore)
+        val cap = FakeTryOnFixtures.fostaCapability
+        val consent = coordinator.createPerRequestConsentGrant(
+            capability = cap,
+            selectedMediaIds = allRefs.map { it.id }.toSet(),
+            allowedViews = setOf(ImageView.FRONT, ImageView.BACK),
+            confirmedByUser = true,
+        )
+        val req = FakeTryOnFixtures.sampleDualRequest(
+            idempotencyKey = "budget-10-img",
+            requestedViews = setOf(ImageView.FRONT, ImageView.BACK),
+            selectedItemIds = listOf("item-top-linen", "item-trouser-noir", "item-hat-cap", "item-shoes-loafer"),
+        ).copy(
+            outfitSnapshot = FakeTryOnFixtures.allFourSlotsOutfit,
+            personImages = ImagePair(front = largePersonFront, back = largePersonBack),
+            garmentImages = mapOf(
+                "item-top-linen" to ImagePair(front = topF, back = topB),
+                "item-trouser-noir" to ImagePair(front = botF, back = botB),
+                "item-hat-cap" to ImagePair(front = hatF, back = hatB),
+                "item-shoes-loafer" to ImagePair(front = shoeF, back = shoeB),
+            ),
+            consentGrant = consent,
+            providerConfigVersion = cap.providerConfigVersion,
+        )
+        val slice = coordinator.prepareAuthorizedUploadSlice(req, cap).getOrThrow()
+        assertEquals(2, slice.personUploads.size)
+        assertEquals(8, slice.garmentUploads.values.sumOf { it.size })
+        assertTrue("Expected total bytes < 8 MiB, got ${slice.totalBytes}", slice.totalBytes < 8L * 1024L * 1024L)
+
+        // Verify adaptive cap shrinks an oversized 600KB hat image down to 550KB (4_400_000 / 8) and keeps total < 8 MiB
+        val compressedHat = hatF.copy(byteCount = 600_000L)
+        mediaStore.putMedia(compressedHat, ByteArray(600_000) { 0x5B })
+        val compressedReq = req.copy(
+            garmentImages = req.garmentImages + ("item-hat-cap" to ImagePair(front = compressedHat, back = hatB)),
+        )
+        val compressedSlice = coordinator.prepareAuthorizedUploadSlice(compressedReq, cap).getOrThrow()
+        assertEquals(550_000, compressedSlice.garmentUploads.getValue("item-hat-cap").getValue(ImageView.FRONT).bytes.size)
+        assertTrue("Expected compressed total bytes < 8 MiB, got ${compressedSlice.totalBytes}", compressedSlice.totalBytes < 8L * 1024L * 1024L)
+
+        // Verify uncompressible payload exceeding 550KB adaptive cap triggers PAYLOAD_TOO_LARGE cleanly
+        val uncompressibleStore = object : com.fitcheckai.feature.tryon.contract.TryOnMediaStorePort by mediaStore {
+            override suspend fun prepareUploadDerivative(ref: MediaRef, maxBytes: Long): Result<MediaRef> = Result.success(ref)
+        }
+        val strictCoordinator = TryOnPrivacyCoordinator(mediaStore = uncompressibleStore)
+        val overRes = strictCoordinator.prepareAuthorizedUploadSlice(compressedReq, cap)
+        assertTrue(overRes.isFailure)
+        assertEquals(
+            TryOnErrorCode.PAYLOAD_TOO_LARGE,
+            (overRes.exceptionOrNull() as TryOnException).tryOnError.code,
+        )
     }
 }
