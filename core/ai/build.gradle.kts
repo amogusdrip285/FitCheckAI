@@ -17,6 +17,11 @@ android {
         val accessCode = providers.gradleProperty("fitcheck.accessCode").orElse("").get()
         require(Regex("[A-Za-z0-9_.-]{0,128}").matches(accessCode)) { "fitcheck.accessCode chỉ gồm chữ, số, . _ -" }
         buildConfigField("String", "PROXY_ACCESS_CODE", "\"$accessCode\"")
+        // Thời gian chờ mỗi request AI phía app (ms). Mặc định CT-07 20000. Chỉ nới khi test qua gateway chậm (FOSTA ~15–40s),
+        // đồng thời nới PROVIDER_TIMEOUT_MS/PROXY_DEADLINE_MS ở proxy. Kẹp 5000–130000.
+        val aiTimeoutMs = providers.gradleProperty("fitcheck.aiTimeoutMs").orElse("20000").get().toLongOrNull()
+            ?.coerceIn(5_000L, 130_000L) ?: error("fitcheck.aiTimeoutMs phải là số mili-giây")
+        buildConfigField("long", "AI_TIMEOUT_MS", "${aiTimeoutMs}L")
     }
 }
 

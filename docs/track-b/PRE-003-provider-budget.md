@@ -9,7 +9,7 @@
 |---|---|
 | Provider cho pitching, demo và chạy thật | **OpenAI chính chủ** (`api.openai.com`), model **`gpt-6-luna`** cho cả recognition và recommendation — **không qua FOSTA** (quyết định nhóm 13/11/2026) |
 | Dự phòng | `gpt-6.1-sol` nếu chất lượng luna không đủ; Gemini `gemini-3.5-flash-lite` (free tier, **chỉ dữ liệu test**) nếu chưa có key OpenAI |
-| FOSTA (gateway bên thứ ba) | Chỉ để thử model GPT trong lúc **chưa có key OpenAI**; không dùng khi pitching, không dùng cho dữ liệu người dùng thật |
+| FOSTA (gateway bên thứ ba) | **Dùng tạm từ giờ tới lúc pitching** vì key OpenAI chỉ có lúc pitching (13/11/2026): deploy với `OPENAI_BASE_URL` = FOSTA + `OPENAI_COMPAT_API_KEY`, deadline nới (proxy 60s, app `fitcheck.aiTimeoutMs=60000`). Không dùng khi pitching, chỉ ảnh/dữ liệu test. Cách chuyển: [runbook B-001](B-001-deploy-runbook.md#6-chuyển-sang-openai-chính-chủ-lúc-pitching) |
 | Ngân sách dev + eval + demo | ước **< $1** với luna (~$5 với sol) ⇒ đặt **spend limit $10** trên console OpenAI |
 | Còn chặn | account OpenAI + spend limit + người giữ key; account Cloudflare để deploy proxy HTTPS; đo lại latency trên OpenAI chính chủ (app cắt ở 20s) |
 
@@ -70,7 +70,7 @@ Cách tính: input × giá input + output × giá output (không tính cache). V
 
 | # | Câu hỏi | Đề xuất của B | Người chịu trách nhiệm | Trạng thái |
 |---|---|---|---|---|
-| 1 | Account provider dùng được ngay, có thẻ/credit? | OpenAI chính chủ (API platform) | nhóm — TODO | **BLOCKED** |
+| 1 | Account provider dùng được ngay, có thẻ/credit? | Tạm FOSTA (đã có key) tới pitching; OpenAI chính chủ lấy key **lúc pitching** | nhóm | FOSTA: sẵn; OpenAI: chờ pitching |
 | 2 | Model recognition / recommendation | `gpt-6-luna` cho cả hai; đổi riêng từng service bằng `AI_MODEL_<SERVICE>` nếu cần | B | Đề xuất, chờ nhóm |
 | 3 | Spend limit trên console | $10, ảnh chụp lưu riêng (không có key) | người giữ account — TODO | **BLOCKED** |
 | 4 | Ai giữ API key | 1 người; key chỉ ở `wrangler secret put OPENAI_API_KEY` | nhóm — TODO | **BLOCKED** |

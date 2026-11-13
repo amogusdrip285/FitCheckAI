@@ -1,5 +1,6 @@
 package com.fitcheckai.core.ai.di
 
+import com.fitcheckai.core.ai.AiTimeouts
 import com.fitcheckai.core.ai.BuildConfig
 import com.fitcheckai.core.ai.proxy.ProxyConfig
 import com.fitcheckai.core.ai.proxy.ProxyOutfitRecommendation
@@ -22,7 +23,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object ProxyModule {
     @Provides @Singleton
-    fun proxyConfig(): ProxyConfig = ProxyConfig(BuildConfig.PROXY_URL, BuildConfig.PROXY_ACCESS_CODE)
+    fun proxyConfig(): ProxyConfig = ProxyConfig(BuildConfig.PROXY_URL, BuildConfig.PROXY_ACCESS_CODE, AiTimeouts.requestMs)
 
     @Provides @Singleton
     fun proxyTransport(config: ProxyConfig): ProxyTransport = createProxyTransport(config, OkHttp.create())
