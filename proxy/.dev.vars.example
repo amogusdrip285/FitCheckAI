@@ -5,10 +5,13 @@
 AI_PROVIDER=gemini
 GEMINI_API_KEY=
 
-# Hoặc OpenAI-compatible (vd. gateway FOSTA cho demo GPT). FOSTA là bên thứ ba ⇒ chỉ dữ liệu test.
+# Hoặc OpenAI. Pitching/demo: OpenAI chính chủ (bỏ trống OPENAI_BASE_URL, dùng OPENAI_API_KEY).
+# Gateway OpenAI-compatible (vd. FOSTA) chỉ để thử khi chưa có key OpenAI; là bên thứ ba ⇒ chỉ dữ liệu test.
 # AI_PROVIDER=openai
 # AI_MODEL=gpt-6-luna
 # OPENAI_BASE_URL=https://codex.fosta.app/v1
+# Key gateway (OPENAI_BASE_URL khác api.openai.com, vd. FOSTA). Key OpenAI chính chủ để ở OPENAI_API_KEY (dùng chung với Track C).
+OPENAI_COMPAT_API_KEY=
 OPENAI_API_KEY=
 # Ghi đè từng service (trống = dùng AI_PROVIDER/AI_MODEL chung), vd. outfits GPT + recognition Gemini:
 # AI_PROVIDER_RECOGNITION=gemini

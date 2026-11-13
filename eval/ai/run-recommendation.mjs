@@ -10,7 +10,7 @@ import path from "node:path";
 import { EVAL_DIR, health, mdEscape, newId, openSession, parseArgs, postJson, requireConfig, writeResults } from "./lib/common.mjs";
 import { checkErrorEnvelope, checkRecommendation } from "./lib/invariants.mjs";
 
-const PROMPT_VERSION_HINT = "outfits-v2.0"; // đối chiếu proxy/src/outfits/prompt.ts
+const PROMPT_VERSION_HINT = "outfits-v2.1"; // đối chiếu proxy/src/outfits/prompt.ts
 
 function buildRequest(spec, wardrobes) {
   const r = spec.request;

@@ -31,8 +31,8 @@ class StubClothingTagger @Inject constructor() : ClothingTagger {
 }
 
 /**
- * SPRINT 0 STUB — ghép áo/quần/giày đầu tiên tìm thấy, giả lập AI.
- * TODO(Track B, B-003): RecommendationClient gọi `POST /v2/outfits` qua proxy. Chờ D (S-002).
+ * SPRINT 0 STUB v1 — chỉ còn cho consumer v1 (`AiOutfitGenerator`). Recommendation v2 thật là
+ * [com.fitcheckai.core.ai.proxy.ProxyOutfitRecommendation] (B-003), bind vào `OutfitRecommendation` ở AiModule.
  */
 @Singleton
 class StubAiOutfitGenerator @Inject constructor() : AiOutfitGenerator {

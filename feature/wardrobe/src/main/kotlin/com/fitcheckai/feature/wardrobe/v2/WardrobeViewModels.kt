@@ -3,6 +3,7 @@ package com.fitcheckai.feature.wardrobe.v2
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcheckai.core.ai.AiTimeouts
 import com.fitcheckai.core.ai.RecognitionSetup
 import com.fitcheckai.core.model.wardrobe.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -196,7 +197,8 @@ class WardrobeEditorViewModel @Inject constructor(
         mutable.update { it.copy(recognizing = true, error = null, item = it.item.copy(recognitionState = RecognitionState.PENDING)) }
         recognitionJob = viewModelScope.launch {
             try {
-                val result = withTimeoutOrNull(20_000) {
+                // Cùng thời gian chờ với client AI (fitcheck.aiTimeoutMs, mặc định 20s; nới khi proxy dùng gateway chậm).
+                val result = withTimeoutOrNull(AiTimeouts.requestMs) {
                     val loginError = setup?.takeIf { it.needsAccessCode }?.authorize(accessCode.orEmpty())?.exceptionOrNull()
                     if (loginError == null) recognition.recognize(request) else Result.failure(loginError)
                 }

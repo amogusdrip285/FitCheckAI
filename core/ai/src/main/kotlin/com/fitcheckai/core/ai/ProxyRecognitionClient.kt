@@ -102,7 +102,7 @@ class ProxyRecognitionClient internal constructor(
         // Validate the original consent before any network or media I/O.
         request.validate(capability)
         val authorized = activeSession() ?: throw unauthorized()
-        val result = withTimeoutOrNull(20_000) {
+        val result = withTimeoutOrNull(AiTimeouts.requestMs) {
             request.validate(refreshCapability())
             val temporary = mutableListOf<MediaRef>()
             try {
@@ -204,7 +204,7 @@ class ProxyRecognitionClient internal constructor(
 
         fun proxyHttpClient() = HttpClient(OkHttp) {
             followRedirects = false
-            install(HttpTimeout) { requestTimeoutMillis = 20_000; connectTimeoutMillis = 5_000 }
+            install(HttpTimeout) { requestTimeoutMillis = AiTimeouts.requestMs; connectTimeoutMillis = 5_000 }
             engine { config { retryOnConnectionFailure(false); followRedirects(false); followSslRedirects(false) } }
         }
 

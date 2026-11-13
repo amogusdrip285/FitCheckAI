@@ -13,6 +13,7 @@ import {
   proxyDeadlineMs,
   dailyCap,
   intVar,
+  openAiKeyFor,
   providerLabel,
   recognitionViews,
   serviceEnabled,
@@ -25,9 +26,16 @@ import { UsageGuard } from "./shared/guard";
 import { json, parseOrThrow, readJsonCapped } from "./shared/http";
 import { consoleLogger, type LogEvent } from "./shared/log";
 import { AnthropicModelClient, type ModelClient } from "./shared/model";
-import { type AppDeps, matchPath, type RouteContext, type RouteDef } from "./shared/registry";
+import { type AppDeps, MAX_ROUTE_DEADLINE_MS, matchPath, type RouteContext, type RouteDef } from "./shared/registry";
 
 /** Deadline tổng của proxy (CT-07: client 20s, proxy ≤18s, provider ≤15s). */
+/** Deadline của một request: route tự khai (kẹp 1s–300s) hoặc deadline chung theo env. */
+export function routeDeadlineMs(route: Pick<RouteDef, "deadlineMs">, env: Env): number {
+  const own = route.deadlineMs;
+  if (own === undefined || !Number.isFinite(own)) return proxyDeadlineMs(env);
+  return Math.min(MAX_ROUTE_DEADLINE_MS, Math.max(1_000, Math.trunc(own)));
+}
+
 /** Mặc định CT-07; giá trị thật theo env qua proxyDeadlineMs(). */
 export const PROXY_DEADLINE_MS = 18_000;
 const SESSION_BODY_BYTES = 1024;
@@ -38,12 +46,16 @@ function defaultModelFor(): (env: Env, service?: AiService) => ModelClient | nul
   const cache = new Map<string, ModelClient>();
   return (env, service) => {
     const provider = aiProvider(env, service);
-    const apiKey = (
-      provider === "gemini" ? env.GEMINI_API_KEY : provider === "openai" ? env.OPENAI_API_KEY : env.ANTHROPIC_API_KEY
-    )?.trim();
-    if (!apiKey) return null;
     const baseUrl = provider === "openai" ? normalizeBaseUrl(env.OPENAI_BASE_URL) : "";
     if (baseUrl === null) return null;
+    const apiKey = (
+      provider === "gemini"
+        ? env.GEMINI_API_KEY
+        : provider === "openai"
+          ? openAiKeyFor(env, baseUrl)
+          : env.ANTHROPIC_API_KEY
+    )?.trim();
+    if (!apiKey) return null;
     const model = aiModel(env, service);
     const timeoutMs = providerTimeoutMs(env);
     const cacheKey = `${provider}:${baseUrl}:${model}:${timeoutMs}:${apiKey.length}:${apiKey.slice(-6)}`;
@@ -167,7 +179,7 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       requestId: log.requestId,
       session,
       params,
-      signal: AbortSignal.timeout(proxyDeadlineMs(env)),
+      signal: AbortSignal.timeout(routeDeadlineMs(route, env)),
       reserveUpstreamCall() {
         if (!deps.guard.tryReserveDaily(service, dailyCap(env, service), deps.now())) {
           throw new ApiError("BUDGET_EXCEEDED", "Đã hết hạn mức AI hôm nay");
