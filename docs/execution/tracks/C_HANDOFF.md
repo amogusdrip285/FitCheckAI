@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **Đọc trước khi tích hợp hoặc bật backend:** [Cảnh báo vận hành & tích hợp (`C_WARNINGS.md`)](C_WARNINGS.md) · [Hướng dẫn nối vào `:app` & `proxy` (`C_INTEGRATION.md`)](C_INTEGRATION.md)
+
 # Track C — Tài liệu Bàn giao Virtual Try-On (VTO)
 
 - **Nhánh làm việc:** `lamb`
