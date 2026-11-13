@@ -4,6 +4,13 @@
 > Cloudflare Workers **free plan** là đủ (bundle đã build thử: 1,9 MB, **317 KiB gzip**). Không tạo tài nguyên trả phí.
 > Không dán key/mã truy cập vào chat, git, issue hay ảnh chụp.
 
+## Trạng thái deploy
+
+**13/11/2026: đã deploy** `https://fitcheck-proxy.long06hehe.workers.dev` (giai đoạn FOSTA, `gpt-6-luna`, cả hai service bật, deadline proxy 60s/65s).
+- `proxy/scripts/smoke.mjs --live`: **8/8 PASS** (live outfits 9,9s).
+- Đo thêm trên bản deploy: outfits tủ 6 món/5 bộ 23,6–25,6s (2/2 OK); recognition FRONT 17,7s, cặp khớp 20,0s, cặp chéo 23,5s (cảnh báo khác món đúng).
+- ⇒ App cần `fitcheck.aiTimeoutMs=60000` trong giai đoạn này. Mã demo gửi qua kênh riêng của nhóm.
+
 ## Hai giai đoạn
 
 | Giai đoạn | Provider | Khi nào |

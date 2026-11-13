@@ -103,6 +103,11 @@ Khi chưa có (1), (3), (4), (5): B-001 live, INT-002 vẫn **BLOCKED**; mock, f
 - Lần chạy tốt (deadline nới 120s): outfits 5 bộ hợp lệ 23–25s; recognition 18–24s, cặp chéo có cảnh báo đúng.
 - Eval đầy đủ trên luna: [`eval/ai/results/2026-11-12-luna-summary.md`](../../eval/ai/results/2026-11-12-luna-summary.md).
 
+### Bản deploy Cloudflare + FOSTA (13/11/2026)
+
+- `https://fitcheck-proxy.long06hehe.workers.dev`, `gpt-6-luna` qua FOSTA, deadline proxy 60s. Smoke 8/8 PASS.
+- Outfits tủ 6 món/5 bộ 23,6–25,6s; recognition 17,7–23,5s; mọi call 200 và đúng. Từ Workers không nhanh hơn từ laptop ⇒ xác nhận độ trễ do gateway.
+
 ### Prompt
 
 - `outfits-v2.1` (13/11/2026): không ghi số/tên trường nội bộ ("độ trang trọng 3") trong giải thích — cả hai reviewer cùng trừ điểm lỗi này ở lượt `outfits-v2.0`. **Chưa eval lại trên v2.1.**
