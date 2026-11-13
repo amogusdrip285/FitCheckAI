@@ -92,7 +92,7 @@
 
 ### 3.2. Chế độ LIVE (Có gọi upstream thật & trừ quota)
 
-1. **Tạo file cấu hình bảo mật nằm ngoài Git** từ mẫu `proxy/scripts/tryon.env.example`:
+1. **Tạo file cấu hình bảo mật nằm ngoài Git** từ mẫu [proxy/scripts/tryon.env.example](../../../proxy/scripts/tryon.env.example) (file mẫu đã liệt kê sẵn toàn bộ biến, giá trị mặc định an toàn và chú thích từng biến):
 
    ```bash
    mkdir -p -m 700 ~/.fitcheckai_private
