@@ -13,6 +13,8 @@ import { checkErrorEnvelope } from "./lib/invariants.mjs";
 
 const MAX_IMAGE_BYTES = 1024 * 1024;
 let imagesDir = path.join(EVAL_DIR, "images");
+const garmentTypes = new Map(JSON.parse(readFileSync(new URL("../../data/sources/garment-types.json", import.meta.url), "utf8"))
+  .map((type) => [type.id, type.category]));
 const ENUMS = {
   category: ["TOP", "BOTTOM", "DRESS", "OUTERWEAR", "SHOES", "ACCESSORY", "UNKNOWN"],
   colors: ["BLACK", "WHITE", "GRAY", "BEIGE", "BROWN", "BLUE", "GREEN", "RED", "YELLOW", "PINK", "PURPLE", "OTHER"],
@@ -36,13 +38,14 @@ function loadImage(file, view, mediaId) {
   return { view, mediaId, mimeType, sha256: createHash("sha256").update(bytes).digest("hex"), dataBase64: bytes.toString("base64") };
 }
 
-function buildRequest(caseId, front, back) {
+function buildRequest(caseId, front, back, detailed = false) {
   const mediaIds = [front.mediaId, ...(back ? [back.mediaId] : [])];
   return {
     schemaVersion: 2,
     requestId: newId(caseId.slice(0, 3).toLowerCase()),
     itemId: `eval-${caseId}`,
     inputRevision: 1,
+    ...(detailed ? { garmentTypeVersion: 1 } : {}),
     front,
     back,
     // Người chạy eval xác nhận đồng ý gửi đúng các ảnh garment này cho provider để nhận diện.
@@ -58,7 +61,8 @@ function validateLabels(suite) {
     ids.add(item.id);
     const l = item.labels ?? {};
     if (!ENUMS.category.includes(l.category)) problems.push(`${item.id}: category nhãn không hợp lệ`);
-    if (!Array.isArray(l.colors) || l.colors.length === 0 || l.colors.some((c) => !ENUMS.colors.includes(c))) problems.push(`${item.id}: colors nhãn không hợp lệ`);
+    if (!Array.isArray(l.colors) || l.colors.some((c) => !ENUMS.colors.includes(c))) problems.push(`${item.id}: colors nhãn không hợp lệ`);
+    if (l.garmentType !== undefined && garmentTypes.get(l.garmentType) !== l.category) problems.push(`${item.id}: garmentType không thuộc category`);
     if (l.pattern !== undefined && !ENUMS.pattern.includes(l.pattern)) problems.push(`${item.id}: pattern nhãn không hợp lệ`);
   }
   for (const c of suite.cases) {
@@ -72,8 +76,10 @@ function validateLabels(suite) {
 function score(labels, attrs) {
   return {
     categoryCorrect: attrs.category === labels.category,
-    primaryColorFound: attrs.colors.includes(labels.colors[0]),
-    colorOverlap: labels.colors.filter((c) => attrs.colors.includes(c)).length / labels.colors.length,
+    garmentTypeCorrect: labels.garmentType === undefined || !Object.hasOwn(attrs, "garmentType")
+      ? null : attrs.garmentType === labels.garmentType,
+    primaryColorFound: labels.colors.length === 0 ? null : attrs.colors.includes(labels.colors[0]),
+    colorOverlap: labels.colors.length === 0 ? null : labels.colors.filter((c) => attrs.colors.includes(c)).length / labels.colors.length,
     patternCorrect: labels.pattern === undefined ? null : attrs.pattern === labels.pattern,
   };
 }
@@ -87,6 +93,11 @@ function checkResultShape(request, body) {
   if (!ENUMS.category.includes(a.category)) v.push("category ngoài enum");
   if (!Array.isArray(a.colors) || a.colors.length > 3 || a.colors.some((c) => !ENUMS.colors.includes(c))) v.push("colors sai enum hoặc >3");
   if (!ENUMS.pattern.includes(a.pattern)) v.push("pattern ngoài enum");
+  if (request.garmentTypeVersion === 1) {
+    if (!Object.hasOwn(a, "garmentType") || (a.garmentType !== null && garmentTypes.get(a.garmentType) !== a.category)) {
+      v.push("garmentType thiếu hoặc sai nhóm");
+    }
+  }
   if (a.formality !== null && !(Number.isInteger(a.formality) && a.formality >= 1 && a.formality <= 5)) v.push("formality ngoài 1–5");
   if (!Array.isArray(a.seasonTags) || a.seasonTags.some((s) => !["SPRING", "SUMMER", "AUTUMN", "WINTER"].includes(s))) v.push("seasonTags ngoài enum (core/model sẽ từ chối)");
   if (!request.back && JSON.stringify(body.viewEvidence ?? {}).includes("BACK")) v.push("viewEvidence có BACK dù không gửi ảnh sau");
@@ -99,22 +110,49 @@ async function main() {
   const confirmSpend = args["confirm-spend"] === true;
   const maxAiCalls = Number(args["max-ai-calls"] ?? 9);
   const delayMs = Number(args["delay-ms"] ?? 0);
+  if (!Number.isSafeInteger(maxAiCalls) || maxAiCalls < 0 || !Number.isFinite(delayMs) || delayMs < 0) {
+    throw new Error("--max-ai-calls phải là số nguyên không âm và --delay-ms phải là số không âm.");
+  }
   const labelsPath = path.resolve(EVAL_DIR, "recognition", String(args.labels ?? "labels.json"));
   if (typeof args["images-dir"] === "string") imagesDir = path.resolve(args["images-dir"]);
   if (!existsSync(labelsPath)) {
     throw new Error(`Chưa có ${path.relative(process.cwd(), labelsPath)} — copy từ labels.example.json và chụp ảnh theo PRE-004`);
   }
-  const suite = JSON.parse(readFileSync(labelsPath, "utf8"));
+  const input = JSON.parse(readFileSync(labelsPath, "utf8"));
+  const suite = input.source?.dataset === "paramaggarwal/fashion-product-images-small" && !input.cases
+    ? {
+        items: input.items.map((row) => ({
+          id: row.sourceId,
+          front: row.file,
+          labels: { category: row.category, garmentType: row.garmentType, colors: row.colors },
+        })),
+        cases: [],
+      }
+    : input;
+  if (suite !== input && typeof args["images-dir"] !== "string") imagesDir = path.dirname(labelsPath);
+  if (suite.items.length === 0) throw new Error("Tập nhãn phải có ít nhất một món.");
   const labelProblems = validateLabels(suite);
   if (labelProblems.length) throw new Error(`File nhãn lỗi:\n- ${labelProblems.join("\n- ")}`);
   const items = new Map(suite.items.map((i) => [i.id, i]));
 
   const plan = suite.cases.map((c) => ({ ...c }));
   if (args["all-front"] === true) {
-    for (const item of suite.items) plan.push({ id: `F-${item.id}`, kind: "front-only", front: item.id, expectItem: item.id });
+    // Interleave types so a capped run can cover several tags before a second sample from any tag.
+    const byType = Map.groupBy(suite.items, (item) => item.labels.garmentType ?? "");
+    const max = Math.max(...Array.from(byType.values(), (bucket) => bucket.length));
+    for (let index = 0; index < max; index++) {
+      for (const bucket of byType.values()) {
+        const item = bucket[index];
+        if (item) plan.push({ id: `F-${item.id}`, kind: "front-only", front: item.id, expectItem: item.id });
+      }
+    }
   }
 
   const serverHealth = await health(config.baseUrl);
+  const detailed = serverHealth.recognitionGarmentTypeVersion === 1;
+  if (args["require-garment-type"] === true && !detailed) {
+    throw new Error("Proxy chưa công bố recognitionGarmentTypeVersion=1. Cần cập nhật Worker trước khi đo loại chi tiết.");
+  }
   console.log(`Proxy ${config.baseUrl}: recognitionViews=${serverHealth.recognitionViews} services=${JSON.stringify(serverHealth.services)}`);
   const token = await openSession(config);
   const results = [];
@@ -146,7 +184,7 @@ async function main() {
     }
     const front = loadImage(frontItem.front, "FRONT", `m-${frontItem.id}-f`);
     const back = isPair ? loadImage(backItem.back, "BACK", `m-${backItem.id}-b`) : null;
-    const request = buildRequest(c.id, front, back);
+    const request = buildRequest(c.id, front, back, detailed);
     if (!(isPair && frontOnlyServer)) {
       // --delay-ms: giãn call để không chạm rate limit của proxy (mặc định 20/phút) và free tier provider.
       if (aiCalls > 0 && delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
@@ -184,24 +222,27 @@ async function main() {
       warnings: r.body.warnings,
       source: r.body.source,
     });
-    console.log(`${c.id}: ${results.at(-1).outcome} category=${s.categoryCorrect ? "đúng" : "SAI"} màu chính=${s.primaryColorFound ? "đúng" : "SAI"} (${r.latencyMs} ms)`);
+    console.log(`${c.id}: ${results.at(-1).outcome} category=${s.categoryCorrect ? "đúng" : "SAI"} loại chi tiết=${s.garmentTypeCorrect ?? "—"} (${r.latencyMs} ms)`);
   }
 
   const scored = results.filter((r) => r.score);
   const n = scored.length;
-  const pct = (k) => (n ? `${scored.filter((r) => r.score[k] === true).length}/${n}` : "—");
+  const pct = (k) => {
+    const judged = scored.filter((r) => r.score[k] !== null);
+    return judged.length ? `${judged.filter((r) => r.score[k] === true).length}/${judged.length}` : "—";
+  };
   const md = [];
   md.push(`# B-006 — Eval recognition (${new Date().toISOString()})`);
   md.push("");
   md.push(`- Proxy: \`${config.baseUrl}\` · recognitionViews \`${serverHealth.recognitionViews}\` · call AI: ${aiCalls}${confirmSpend ? "" : " (chưa bật --confirm-spend)"}`);
-  md.push(`- Mẫu chấm được: **n = ${n}**. Category đúng ${pct("categoryCorrect")} · màu chính có mặt ${pct("primaryColorFound")} · pattern đúng ${pct("patternCorrect")}.`);
+  md.push(`- Mẫu chấm được: **n = ${n}**. Category đúng ${pct("categoryCorrect")} · loại chi tiết đúng ${pct("garmentTypeCorrect")} · màu chính có mặt ${pct("primaryColorFound")} · pattern đúng ${pct("patternCorrect")}.`);
   md.push("- Không suy material/fit accuracy từ category đúng. Mẫu nhỏ: không phải tỷ lệ production. Model/token/chi phí: xem `wrangler tail` theo requestId.");
   md.push("");
-  md.push("| Case | Loại | Kết quả | HTTP | Latency | Nhãn (cat/màu/pattern) | Dự đoán (cat/màu/pattern) | needsReview | warnings | requestId | Vấn đề |");
+  md.push("| Case | Loại | Kết quả | HTTP | Latency | Nhãn (nhóm/loại/màu/họa tiết) | Dự đoán (nhóm/loại/màu/họa tiết) | needsReview | warnings | requestId | Vấn đề |");
   md.push("|---|---|---|---|---|---|---|---|---|---|---|");
   for (const r of results) {
-    const lab = r.labels ? `${r.labels.category}/${r.labels.colors.join(",")}/${r.labels.pattern ?? "-"}` : "—";
-    const pred = r.predicted ? `${r.predicted.category}/${r.predicted.colors.join(",")}/${r.predicted.pattern}` : "—";
+    const lab = r.labels ? `${r.labels.category}/${r.labels.garmentType ?? "-"}/${r.labels.colors.join(",")}/${r.labels.pattern ?? "-"}` : "—";
+    const pred = r.predicted ? `${r.predicted.category}/${r.predicted.garmentType ?? "-"}/${r.predicted.colors.join(",")}/${r.predicted.pattern}` : "—";
     md.push(`| ${r.id} | ${r.kind} | ${r.outcome} | ${r.status ?? "—"} | ${r.latencyMs !== undefined ? `${r.latencyMs} ms` : "—"} | ${lab} | ${pred} | ${(r.needsReviewFields ?? []).join(", ") || "—"} | ${(r.warnings ?? []).join(", ") || "—"} | ${r.requestId ?? "—"} | ${mdEscape((r.problems ?? []).join("; ") || r.note || "")} |`);
   }
   const base = writeResults("recognition", `${md.join("\n")}\n`, { generatedAt: new Date().toISOString(), baseUrl: config.baseUrl, aiCalls, results });

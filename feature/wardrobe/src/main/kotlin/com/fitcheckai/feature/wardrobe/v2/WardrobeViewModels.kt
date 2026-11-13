@@ -20,12 +20,20 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 data class ItemCard(val item: ClothingItem, val frontPath: String?, val backPath: String?)
-data class Filter(val query: String = "", val category: Category? = null, val color: GarmentColor? = null) {
-    val active get() = query.isNotBlank() || category != null || color != null
+data class Filter(
+    val query: String = "",
+    val category: Category? = null,
+    val color: GarmentColor? = null,
+    val garmentType: String? = null,
+) {
+    val active get() = query.isNotBlank() || category != null || color != null || garmentType != null
     fun matches(item: ClothingItem): Boolean {
-        val text = normalize("${item.name} ${item.attributes.material.orEmpty()} ${item.attributes.category.label}")
-        return (category == null || item.attributes.category == category) &&
-            (color == null || color in item.attributes.colors) &&
+        val attrs = item.attributes
+        val type = GarmentType.find(attrs.garmentType)
+        val text = normalize("${item.name} ${attrs.material.orEmpty()} ${attrs.category.label} ${type?.label.orEmpty()}")
+        return (category == null || attrs.category == category) &&
+            (color == null || color in attrs.colors) &&
+            (garmentType == null || attrs.garmentType == garmentType) &&
             normalize(query).split(Regex("\\s+")).filter(String::isNotBlank).all { it in text }
     }
     private fun normalize(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD)
@@ -39,7 +47,8 @@ data class ListState(val cards: List<ItemCard> = emptyList(), val total: Int = 0
 class WardrobeListViewModel @Inject constructor(private val repository: WardrobeRepository, private val media: MediaStore,
     private val saved: SavedStateHandle) : ViewModel() {
     private val filters = MutableStateFlow(Filter(saved["query"] ?: "",
-        saved.get<String>("category")?.let(Category::valueOf), saved.get<String>("color")?.let(GarmentColor::valueOf)))
+        saved.get<String>("category")?.let(Category::valueOf), saved.get<String>("color")?.let(GarmentColor::valueOf),
+        saved.get<String>("garmentType")?.let(GarmentType::find)?.id))
     private val reloads = MutableStateFlow(0)
     val state = combine(reloads.flatMapLatest { repository.observeItems() }, filters) { load, filter ->
         when (load) {
@@ -53,6 +62,7 @@ class WardrobeListViewModel @Inject constructor(private val repository: Wardrobe
     fun filter(filter: Filter) {
         filters.value = filter
         saved["query"] = filter.query; saved["category"] = filter.category?.name; saved["color"] = filter.color?.name
+        saved["garmentType"] = filter.garmentType
     }
     fun retry() { reloads.value++ }
 }
@@ -134,9 +144,15 @@ class WardrobeEditorViewModel @Inject constructor(
     }
     fun editAttributes(attributes: ClothingAttributes, field: AttributeField) {
         if (state.value.busy) return
+        val changedGroup = field == AttributeField.CATEGORY && attributes.category != state.value.item.attributes.category
+        val updated = if (changedGroup) {
+            touched = touched - AttributeField.GARMENT_TYPE
+            attributes.copy(garmentType = null, attributeSources = attributes.attributeSources - AttributeField.GARMENT_TYPE,
+                needsReviewFields = attributes.needsReviewFields - AttributeField.GARMENT_TYPE)
+        } else attributes
         touched = touched + field
-        val value = attributes.copy(attributeSources = attributes.attributeSources + (field to AttributeSource.MANUAL),
-            needsReviewFields = attributes.needsReviewFields - field)
+        val value = updated.copy(attributeSources = updated.attributeSources + (field to AttributeSource.MANUAL),
+            needsReviewFields = updated.needsReviewFields - field)
         mutable.update { it.copy(item = it.item.copy(attributes = value, recognitionState = if (value.needsReviewFields.isEmpty()) RecognitionState.CONFIRMED else RecognitionState.REVIEW), error = null) }
         persist()
     }

@@ -25,7 +25,8 @@ const items = manifest.items
     name: i.name,
     front: i.front.file,
     back: i.back?.file ?? null,
-    labels: { category: i.category, colors: i.colors, ...(i.pattern ? { pattern: i.pattern } : {}) },
+    labels: { category: i.category, colors: i.colors, ...(i.pattern ? { pattern: i.pattern } : {}),
+      ...(i.garmentType ? { garmentType: i.garmentType } : {}) },
     license: i.front.license,
     annotationStatus: i.annotationStatus,
   }));

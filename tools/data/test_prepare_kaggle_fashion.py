@@ -61,15 +61,17 @@ class KaggleCatalogTest(unittest.TestCase):
             zip_file.writestr("myntradataset/images/10.jpg", rows[0][-1])
 
         with ZipFile(archive) as zip_file, patch.object(catalog, "CSV_SHA256", hashlib.sha256(data).hexdigest()):
-            items, excluded, report = catalog.audit(zip_file)
+            products, items, excluded, report = catalog.audit(zip_file)
 
+        self.assertEqual(tuple(products["10"]), catalog.COLUMNS[1:])
         self.assertEqual([(item["sourceId"], item["category"]) for item in items], [
             ("10", "TOP"), ("20", "BOTTOM"), ("30", "DRESS"), ("40", "OUTERWEAR"), ("50", "SHOES"), ("60", "ACCESSORY"),
         ])
         self.assertEqual(items[0]["colors"], ["BLUE"])
         self.assertEqual(items[0]["seasonTags"], ["AUTUMN"])
         self.assertEqual(items[3]["colors"], [])
-        self.assertEqual(items[3]["referenceFields"], ["category"])
+        self.assertEqual(items[3]["referenceFields"], ["category", "garmentType"])
+        self.assertEqual(items[0]["garmentType"], "T_SHIRT")
         self.assertEqual(report["rootPhotoFiles"], 11)
         self.assertEqual(report["mirroredPhotoFiles"], 1)
         self.assertEqual(report["exclusions"], {
@@ -77,6 +79,36 @@ class KaggleCatalogTest(unittest.TestCase):
             "exact_duplicate": 1, "conflicting_exact_duplicate_labels": 2,
         })
         self.assertEqual(next(item for item in excluded if item["sourceId"] == "100")["duplicateOf"], "10")
+
+    def test_rank_uses_all_catalog_rows_and_keeps_only_real_top_ten_values(self):
+        products = {
+            str(i): dict.fromkeys(catalog.METADATA_FACETS, f"label-{i:02d}") for i in range(12)
+        }
+        products["10"]["subCategory"] = products["11"]["subCategory"] = "Topwear"
+        products["9"]["usage"] = "NA"
+        result = catalog.metadata_rankings(products)
+        values = result["fields"]["subCategory"]["topValues"]
+        self.assertEqual(len(values), 10)
+        self.assertEqual(values[0], {"value": "Topwear", "count": 2, "percentOfCatalog": 16.6667})
+        self.assertEqual(values[1]["value"], "label-00")
+        self.assertEqual(result["fields"]["usage"]["missingRows"], 1)
+
+    def test_refinements_only_apply_with_catalog_evidence(self):
+        def classify(article, title, *, master="Apparel", sub="Topwear", usage="Casual"):
+            return catalog.classify_type({"masterCategory": master, "subCategory": sub,
+                "articleType": article, "productDisplayName": title, "usage": usage})
+
+        self.assertEqual(classify("Shirts", "U.S. Polo Assn. Formal Shirt"), ("SHIRT", "articleType"))
+        self.assertEqual(classify("Tshirts", "Cotton Polo T-shirt"), ("POLO", "articleType+productDisplayName"))
+        self.assertEqual(classify("Tshirts", "U.S. Polo Assn. Men White T-shirt"), ("T_SHIRT", "articleType"))
+        self.assertEqual(classify("Tshirts", "U.S. Polo Assn. Men Blue Polo T-shirt")[0], "POLO")
+        self.assertEqual(classify("Trousers", "Black Pants", sub="Bottomwear", usage="Formal"),
+                         ("DRESS_PANTS", "articleType+usage"))
+        self.assertEqual(classify("Trousers", "Black Pants", sub="Bottomwear"), ("TROUSERS", "articleType"))
+        self.assertEqual(classify("Formal Shoes", "Brown Leather Derby", master="Footwear", sub="Shoes")[0],
+                         "LEATHER_SHOES")
+        self.assertEqual(classify("Formal Shoes", "Brown Derby", master="Footwear", sub="Shoes")[0],
+                         "FORMAL_SHOES")
 
 
 if __name__ == "__main__":

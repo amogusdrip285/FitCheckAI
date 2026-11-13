@@ -68,9 +68,13 @@ class DatasetViewModel @Inject constructor(@ApplicationContext private val conte
                             try { refs += media.importImage(temp.path, MediaScope.GARMENT, id, view).getOrThrow() }
                             finally { temp.delete() }
                         }
+                        val kind = row["garmentType"]?.jsonPrimitive?.contentOrNull
+                        val review = setOf(AttributeField.CATEGORY, AttributeField.COLORS, AttributeField.PATTERN)
                         val attrs = ClothingAttributes(Category.valueOf(row.text("category")),
                             row.getValue("colors").jsonArray.map { GarmentColor.valueOf(it.jsonPrimitive.content) },
-                            Pattern.valueOf(row.text("pattern")), needsReviewFields = setOf(AttributeField.CATEGORY, AttributeField.COLORS, AttributeField.PATTERN))
+                            Pattern.valueOf(row.text("pattern")),
+                            needsReviewFields = if (kind == null) review else review + AttributeField.GARMENT_TYPE,
+                            garmentType = kind)
                         val item = ClothingItem(id, row.text("name"), ImagePair(refs.first { it.view == ImageView.FRONT }, refs.find { it.view == ImageView.BACK }),
                             attrs, recognitionState = RecognitionState.REVIEW)
                         repository.upsert(item).getOrThrow(); added++

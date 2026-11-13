@@ -84,7 +84,10 @@ class ProxyRecognitionClient internal constructor(
             !providerReady || provider.substringBefore('@') !in SupportedProviders ||
             health.recognitionViews !in setOf("FRONT_ONLY", "DUAL")) return Unavailable
         val version = sha256("$origin/${health.version}/$provider/${own?.model.orEmpty()}/${health.recognitionViews}".encodeToByteArray())
-        return RecognitionCapability("$provider qua ${origin?.authority}", version, true, health.recognitionViews == "DUAL")
+        return RecognitionCapability(
+            "$provider qua ${origin?.authority}", version, true, health.recognitionViews == "DUAL",
+            supportsGarmentType = health.recognitionGarmentTypeVersion == GarmentTypeVersion,
+        )
     }
 
     override suspend fun authorize(accessCode: String): Result<Unit> = networkResult {
@@ -103,7 +106,8 @@ class ProxyRecognitionClient internal constructor(
         request.validate(capability)
         val authorized = activeSession() ?: throw unauthorized()
         val result = withTimeoutOrNull(AiTimeouts.requestMs) {
-            request.validate(refreshCapability())
+            val refreshed = refreshCapability()
+            request.validate(refreshed)
             val temporary = mutableListOf<MediaRef>()
             try {
                 val front = encodeImage(requireNotNull(request.images.front), temporary)
@@ -114,7 +118,8 @@ class ProxyRecognitionClient internal constructor(
                 val grant = request.consentGrant
                 val payload = RecognitionPayload(request.schemaVersion, request.requestId, request.itemId,
                     request.inputRevision, front, back, RecognitionConsentPayload(grant.id, grant.purpose.name,
-                        grant.providerConfigVersion, grant.mediaIds.sorted(), grant.issuedAt, grant.revokedAt, grant.confirmedByUser))
+                        grant.providerConfigVersion, grant.mediaIds.sorted(), grant.issuedAt, grant.revokedAt, grant.confirmedByUser),
+                    garmentTypeVersion = GarmentTypeVersion.takeIf { refreshed.supportsGarmentType })
                 val body = Json.encodeToString(payload)
                 if (body.encodeToByteArray().size > 4 * MiB) throw tooLarge()
                 request.validate(capability)
@@ -188,6 +193,7 @@ class ProxyRecognitionClient internal constructor(
 
     private companion object {
         const val MiB = 1024 * 1024
+        const val GarmentTypeVersion = 1
         const val MaxResponseBytes = 64 * 1024
         val Unavailable = RecognitionCapability("FitCheckAI", "2", false, false)
         /** "openai" gồm cả gateway tương thích; nhãn dạng "openai@codex.fosta.app" giữ host thật để consent ghi đúng. */

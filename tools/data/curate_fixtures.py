@@ -56,15 +56,23 @@ PAIRS = [
     ("wikipedia10", "Áo thun Wikipedia trắng", "10 years of polish Wikipedia, event T-shirt front side.JPG", "10 years of polish Wikipedia, event T-shirt back side.JPG", "Juandev"),
 ]
 DEST = ROOT / "data/fixtures/modern-clothing"
+REFERENCE_TYPES = {
+    "b0c03127": "JACKET", "09f4ffb6": "SHIRT", "ea7b6656": "T_SHIRT", "97074b7f": "JEANS",
+    "c4f11a12": "TROUSERS", "c995c900": "TRACK_PANTS", "e3c8e575": "DRESS", "e6a8b33f": "DRESS",
+    "21059bce": "DRESS", "ff231d91": "JACKET", "44bf7760": "JACKET", "43ac2647": "JACKET",
+    "bf78527f": "SNEAKERS", "61bbb3a2": "SNEAKERS", "b7935371": "FLATS", "b6899eaa": "HAT",
+    "70731fd8": "CAP", "2d6afa47": "HAT", "ddc": "T_SHIRT", "wlm": "T_SHIRT", "wikipedia10": "T_SHIRT",
+}
 
 
-def annotation_metadata(raw_label=None, pair=False, *, source_prefix=None):
+def annotation_metadata(raw_label=None, pair=False, *, source_prefix):
     """Reference annotations are disclosed per field; none has independent adjudication yet."""
     provenance = {
         "name": {"method": "assistant_authored_display_name"},
         "category": {"method": "source_label_mapped_and_assistant_visual_review" if raw_label else "assistant_visual_review"},
         "colors": {"method": "user_visual_confirmation" if source_prefix == "e6a8b33f" else "assistant_visual_review"},
         "pattern": {"method": "assistant_visual_review"},
+        "garmentType": {"method": "assistant_visual_review"},
     }
     if raw_label:
         provenance["category"]["sourceLabel"] = raw_label
@@ -72,7 +80,7 @@ def annotation_metadata(raw_label=None, pair=False, *, source_prefix=None):
         provenance[field].update(method="track_a_visual_review", note=note)
     if pair:
         provenance["pairIdentity"] = {"method": "source_view_descriptions_plus_assistant_visual_comparison"}
-    return {"groundTruthFields": [], "referenceFields": ["category", "colors", "pattern"] + (["pairIdentity"] if pair else []),
+    return {"groundTruthFields": [], "referenceFields": ["category", "colors", "pattern", "garmentType"] + (["pairIdentity"] if pair else []),
             "independentReviewStatus": "PENDING", "fieldProvenance": provenance}
 
 
@@ -106,7 +114,8 @@ def main(commons_dir):
             "license": "CC0-1.0", "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
             "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
             "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."})
-        items.append({"id": identity, "name": name, "category": category, "colors": colors, "pattern": pattern,
+        items.append({"id": identity, "name": name, "category": category, "garmentType": REFERENCE_TYPES[prefix],
+                      "colors": colors, "pattern": pattern,
                       "material": None, "formality": None, "seasonTags": [], "styleTags": [],
                       "front": front, "back": None, "pairVerified": False,
                       "annotationStatus": "assistant_visual_review_not_independently_human_verified",
@@ -139,10 +148,11 @@ def main(commons_dir):
                 "attribution": credit, "attributionUrl": "https://commons.wikimedia.org/wiki/User:Beria" if key == "wlm" else info["descriptionurl"],
                 "restrictions": html.unescape(re.sub("<[^>]+>", "", meta.get("Restrictions", {}).get("value", ""))),
                 "viewEvidence": "Source description explicitly identifies view; paired files visually checked."})
-        items.append({"id": identity, "name": name, "category": "TOP", "colors": review["colors"], "pattern": "PRINTED",
+        items.append({"id": identity, "name": name, "category": "TOP", "garmentType": REFERENCE_TYPES[key],
+                      "colors": review["colors"], "pattern": "PRINTED",
                       "material": None, "formality": None, "seasonTags": [], "styleTags": [], **views, "pairVerified": True,
                       "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
-                      **annotation_metadata(pair=True), "sourceGroup": "Wikimedia-Commons"})
+                      **annotation_metadata(pair=True, source_prefix=key), "sourceGroup": "Wikimedia-Commons"})
     for item in items:
         for view in ("front", "back"):
             if item.get(view):

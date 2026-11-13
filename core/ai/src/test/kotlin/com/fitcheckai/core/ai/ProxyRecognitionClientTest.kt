@@ -48,6 +48,7 @@ class ProxyRecognitionClientTest {
             assertEquals(setOf(AttributeField.MATERIAL), result.needsReviewFields)
             assertEquals(setOf(ImageView.FRONT, ImageView.BACK), result.viewEvidence[AttributeField.COLORS])
             val body = proxy.uploads.single()
+            assertNull(body.garmentTypeVersion)
             assertEquals(request.requestId, body.requestId)
             assertEquals(request.consentGrant.mediaIds, body.consentGrant.mediaIds.toSet())
             assertTrue(body.consentGrant.userConfirmed)
@@ -63,6 +64,21 @@ class ProxyRecognitionClientTest {
             assertFalse(derivativeId in request.consentGrant.mediaIds)
             assertEquals(listOf(derivativeId, originalBack.id), proxy.media.reads)
             assertEquals(listOf("/health", "/v2/session", "/health", "/v2/recognition"), proxy.paths)
+        }
+    }
+
+    @Test fun `new proxy requests and decodes detailed garment type evidence`() = runBlocking {
+        Harness().use { proxy ->
+            proxy.health = """{"status":"ok","version":"test","schemaVersion":2,"services":{"recognition":true},
+                "recognitionViews":"DUAL","provider":"gemini","providerConfigured":true,"recognitionGarmentTypeVersion":1}"""
+            proxy.transform = {
+                it.copy(suggestedAttributes = it.suggestedAttributes.copy(category = "TOP", garmentType = "SHIRT"),
+                    viewEvidence = it.viewEvidence + ("garmentType" to listOf("FRONT")))
+            }
+            val result = proxy.client.recognize(proxy.connect(back = false)).getOrThrow()
+            assertEquals(1, proxy.uploads.single().garmentTypeVersion)
+            assertEquals("SHIRT", result.suggestedAttributes.garmentType)
+            assertEquals(setOf(ImageView.FRONT), result.viewEvidence[AttributeField.GARMENT_TYPE])
         }
     }
 
