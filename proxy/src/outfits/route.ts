@@ -3,7 +3,13 @@ import { ApiError } from "../shared/errors";
 import { json, parseOrThrow } from "../shared/http";
 import { LIMITS } from "../shared/domain";
 import type { RouteDef } from "../shared/registry";
-import { OUTFITS_PROMPT_VERSION, OUTFITS_SYSTEM_PROMPT, buildOutfitsUserText } from "./prompt";
+import {
+  OUTFITS_PROMPT_VERSION,
+  OUTFITS_SYSTEM_PROMPT,
+  buildItemAliases,
+  buildOutfitsUserText,
+  resolveItemAliases,
+} from "./prompt";
 import {
   ModelOutfitsSchema,
   type OutfitDto,
@@ -55,9 +61,10 @@ export const outfitsRoute: RouteDef = {
     ctx.reserveUpstreamCall();
     ctx.annotate({ promptVersion: OUTFITS_PROMPT_VERSION, model: model.model });
 
+    const aliases = buildItemAliases(request.items);
     const outcome = await model.generate({
       system: OUTFITS_SYSTEM_PROMPT,
-      content: [{ type: "text", text: buildOutfitsUserText(request) }],
+      content: [{ type: "text", text: buildOutfitsUserText(request, aliases) }],
       schema: ModelOutfitsSchema,
       maxTokens: OUTFITS_MAX_TOKENS,
       effort: "medium",
@@ -73,7 +80,7 @@ export const outfitsRoute: RouteDef = {
       outputTokens: outcome.meta.outputTokens,
     });
 
-    const { accepted, rejected } = selectValidOutfits(outcome.data, request);
+    const { accepted, rejected } = selectValidOutfits(resolveItemAliases(outcome.data, aliases), request);
     ctx.annotate({ accepted: accepted.length, rejected });
 
     if (accepted.length === 0) {

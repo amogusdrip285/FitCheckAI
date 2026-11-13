@@ -202,11 +202,6 @@ class ProxyRecognitionClient internal constructor(
                 it.userInfo == null && it.query == null && it.fragment == null && it.path in setOf("", "/")
         }
 
-        fun proxyHttpClient() = HttpClient(OkHttp) {
-            followRedirects = false
-            install(HttpTimeout) { requestTimeoutMillis = AiTimeouts.requestMs; connectTimeoutMillis = 5_000 }
-            engine { config { retryOnConnectionFailure(false); followRedirects(false); followSslRedirects(false) } }
-        }
 
         fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes)
             .joinToString("") { "%02x".format(it) }
@@ -247,4 +242,14 @@ class ProxyRecognitionClient internal constructor(
             }
         }
     }
+}
+
+/**
+ * OkHttp cho proxy. [timeoutMs] áp cho cả request lẫn đọc/ghi socket: không đặt socketTimeoutMillis thì OkHttp giữ
+ * readTimeout mặc định 10s và cắt mọi call AI chậm hơn (INT-002 13/11/2026, gateway 18–24s).
+ */
+internal fun proxyHttpClient(timeoutMs: Long = AiTimeouts.requestMs) = HttpClient(OkHttp) {
+    followRedirects = false
+    install(HttpTimeout) { requestTimeoutMillis = timeoutMs; socketTimeoutMillis = timeoutMs; connectTimeoutMillis = 5_000 }
+    engine { config { retryOnConnectionFailure(false); followRedirects(false); followSslRedirects(false) } }
 }
