@@ -1,5 +1,6 @@
 package com.fitcheckai.feature.wardrobe.v2
 
+import com.fitcheckai.core.ai.AiTimeouts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.fitcheckai.core.model.wardrobe.*
@@ -86,9 +87,9 @@ class WardrobeV2ViewModelTest {
         assertTrue(request.consentGrant.confirmedByUser)
     }
     @Test fun `timeout and unavailable never become fake success`() = runTest(dispatcher) {
-        recognition.respond = { delay(30_000); error("must time out") }
+        recognition.respond = { delay(AiTimeouts.requestMs + 10_000); error("must time out") }
         val vm = editor(); prepare(vm); runCurrent(); vm.recognize(); runCurrent()
-        advanceTimeBy(20_001); runCurrent()
+        advanceTimeBy(AiTimeouts.requestMs + 1); runCurrent()
         assertEquals(RecognitionState.FAILED, vm.state.value.item.recognitionState)
         assertFalse(vm.state.value.fakeResult)
         vm.save(); runCurrent(); assertTrue(vm.state.value.saved)
