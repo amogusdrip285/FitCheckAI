@@ -56,6 +56,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -74,10 +76,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.fitcheckai.core.model.Category
 import com.fitcheckai.core.ui.component.EmptyState
 import com.fitcheckai.core.ui.theme.Spacing
 import com.fitcheckai.feature.tryon.contract.FeasibilityDecision
+import com.fitcheckai.feature.tryon.contract.ImagePair
 import com.fitcheckai.feature.tryon.contract.ImageView
 import com.fitcheckai.feature.tryon.contract.MediaRef
 import com.fitcheckai.feature.tryon.contract.QualityReviewState
@@ -116,6 +120,19 @@ object TryOnTestTags {
     const val DELETE_RESULT_BUTTON = "tryon_delete_result_button"
     const val DISCLAIMER_TEXT = "tryon_disclaimer_text"
     const val PROFILE_PHOTO_CTA = "tryon_profile_photo_cta"
+    const val PICK_PERSON_FRONT_INLINE = "tryon_pick_person_front_inline"
+    const val PICK_PERSON_BACK_INLINE = "tryon_pick_person_back_inline"
+    const val PICK_GARMENT_TOP_INLINE = "tryon_pick_garment_top_inline"
+    const val PICK_GARMENT_TOP_BACK_INLINE = "tryon_pick_garment_top_back_inline"
+    const val PICK_GARMENT_BOTTOM_INLINE = "tryon_pick_garment_bottom_inline"
+    const val PICK_GARMENT_BOTTOM_BACK_INLINE = "tryon_pick_garment_bottom_back_inline"
+    const val PREVIEW_PERSON_FRONT = "tryon_preview_person_front"
+    const val PREVIEW_PERSON_BACK = "tryon_preview_person_back"
+    const val PREVIEW_GARMENT_TOP_FRONT = "tryon_preview_garment_top_front"
+    const val PREVIEW_GARMENT_TOP_BACK = "tryon_preview_garment_top_back"
+    const val PREVIEW_GARMENT_BOTTOM_FRONT = "tryon_preview_garment_bottom_front"
+    const val PREVIEW_GARMENT_BOTTOM_BACK = "tryon_preview_garment_bottom_back"
+    const val REFRESH_CONNECTION_BUTTON = "tryon_refresh_connection_button"
 }
 
 // Track A-aligned shape & surface tokens (matching WardrobeDesign.kt without cross-module internal imports)
@@ -159,6 +176,9 @@ fun TryOnRoute(
     onNavigateToProfilePhotos: () -> Unit,
     onSelectDifferentOutfit: () -> Unit = onNavigateBack,
     modifier: Modifier = Modifier,
+    onPickPersonPhoto: ((ImageView) -> Unit)? = null,
+    onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRefreshConnection: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     TryOnScreen(
@@ -178,6 +198,9 @@ fun TryOnRoute(
         onDeleteResult = viewModel::deleteLatestResult,
         onPrepareFreshAttempt = viewModel::prepareFreshAttempt,
         modifier = modifier,
+        onPickPersonPhoto = onPickPersonPhoto,
+        onPickGarmentPhoto = onPickGarmentPhoto,
+        onRefreshConnection = onRefreshConnection,
     )
 }
 
@@ -199,6 +222,9 @@ fun TryOnScreen(
     modifier: Modifier = Modifier,
     onSelectPresentationMode: (TryOnPresentationMode) -> Unit = {},
     onSelectGarmentCombo: (TryOnGarmentCombo) -> Unit = {},
+    onPickPersonPhoto: ((ImageView) -> Unit)? = null,
+    onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRefreshConnection: (() -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier
@@ -249,6 +275,9 @@ fun TryOnScreen(
                             onToggleCompareOriginal = onToggleCompareOriginal,
                             onDeleteResult = onDeleteResult,
                             onPrepareFreshAttempt = onPrepareFreshAttempt,
+                            onPickPersonPhoto = onPickPersonPhoto,
+                            onPickGarmentPhoto = onPickGarmentPhoto,
+                            onRefreshConnection = onRefreshConnection,
                         )
                     } else {
                         CompactSingleColumnLayout(
@@ -267,6 +296,9 @@ fun TryOnScreen(
                             onToggleCompareOriginal = onToggleCompareOriginal,
                             onDeleteResult = onDeleteResult,
                             onPrepareFreshAttempt = onPrepareFreshAttempt,
+                            onPickPersonPhoto = onPickPersonPhoto,
+                            onPickGarmentPhoto = onPickGarmentPhoto,
+                            onRefreshConnection = onRefreshConnection,
                         )
                     }
                 }
@@ -292,6 +324,9 @@ private fun CompactSingleColumnLayout(
     onToggleCompareOriginal: (Boolean) -> Unit,
     onDeleteResult: () -> Unit,
     onPrepareFreshAttempt: () -> Unit,
+    onPickPersonPhoto: ((ImageView) -> Unit)? = null,
+    onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRefreshConnection: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     LaunchedEffect(state.activeOrLatestResult?.jobId, state.activeOrLatestResult?.status) {
@@ -332,6 +367,7 @@ private fun CompactSingleColumnLayout(
             CapabilityUnavailableSection(
                 state = state,
                 onSelectDifferentOutfit = onSelectDifferentOutfit,
+                onRefreshConnection = onRefreshConnection,
                 modifier = Modifier.padding(horizontal = Spacing.md),
             )
         } else {
@@ -373,6 +409,7 @@ private fun CompactSingleColumnLayout(
                 PersonPhotosPanel(
                     state = state,
                     onNavigateToProfilePhotos = onNavigateToProfilePhotos,
+                    onPickPersonPhoto = onPickPersonPhoto,
                     modifier = Modifier.padding(horizontal = Spacing.md),
                 )
             }
@@ -381,6 +418,7 @@ private fun CompactSingleColumnLayout(
                 state = state,
                 onSelectGarmentCombo = onSelectGarmentCombo,
                 onToggleItem = onToggleItem,
+                onPickGarmentPhoto = onPickGarmentPhoto,
                 modifier = Modifier.padding(horizontal = Spacing.md),
             )
 
@@ -420,6 +458,9 @@ private fun TwoPaneEditorialLayout(
     onToggleCompareOriginal: (Boolean) -> Unit,
     onDeleteResult: () -> Unit,
     onPrepareFreshAttempt: () -> Unit,
+    onPickPersonPhoto: ((ImageView) -> Unit)? = null,
+    onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRefreshConnection: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         EditorialTopBar(
@@ -457,12 +498,14 @@ private fun TwoPaneEditorialLayout(
                     PersonPhotosPanel(
                         state = state,
                         onNavigateToProfilePhotos = onNavigateToProfilePhotos,
+                        onPickPersonPhoto = onPickPersonPhoto,
                     )
                 }
                 SelectedGarmentsPanel(
                     state = state,
                     onSelectGarmentCombo = onSelectGarmentCombo,
                     onToggleItem = onToggleItem,
+                    onPickGarmentPhoto = onPickGarmentPhoto,
                 )
                 if (state.isCapabilityAvailable) {
                     TryOnConfigurationPanel(
@@ -494,6 +537,7 @@ private fun TwoPaneEditorialLayout(
                     CapabilityUnavailableSection(
                         state = state,
                         onSelectDifferentOutfit = onSelectDifferentOutfit,
+                        onRefreshConnection = onRefreshConnection,
                     )
                 } else {
                     val result = state.activeOrLatestResult
@@ -603,6 +647,7 @@ private fun CapabilityUnavailableSection(
     state: TryOnUiState,
     onSelectDifferentOutfit: () -> Unit,
     modifier: Modifier = Modifier,
+    onRefreshConnection: (() -> Unit)? = null,
 ) {
     val decisionLabel = when (state.capability?.decision) {
         FeasibilityDecision.NO_GO -> "Đã khóa theo kết quả đánh giá chất lượng (NO_GO)"
@@ -653,6 +698,25 @@ private fun CapabilityUnavailableSection(
             }
         }
 
+        if (onRefreshConnection != null) {
+            Button(
+                onClick = onRefreshConnection,
+                shape = ActionButtonCornerShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .testTag(TryOnTestTags.REFRESH_CONNECTION_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(Spacing.sm))
+                Text("Thử kết nối lại Backend")
+            }
+        }
+
         OutlinedButton(
             onClick = onSelectDifferentOutfit,
             shape = ActionButtonCornerShape,
@@ -674,6 +738,7 @@ private fun PersonPhotosPanel(
     state: TryOnUiState,
     onNavigateToProfilePhotos: () -> Unit,
     modifier: Modifier = Modifier,
+    onPickPersonPhoto: ((ImageView) -> Unit)? = null,
 ) {
     TryOnEditorialPanel(modifier = modifier) {
         FlowRow(
@@ -702,6 +767,10 @@ private fun PersonPhotosPanel(
                 mediaRef = state.personProfile?.bodyImages?.front,
                 missingLabel = "Thiếu ảnh mặt trước",
                 isActiveView = ImageView.FRONT in state.requestedViews,
+                buttonLabel = "Chọn Trước",
+                onPickPhoto = onPickPersonPhoto?.let { picker -> { picker(ImageView.FRONT) } },
+                pickButtonTag = TryOnTestTags.PICK_PERSON_FRONT_INLINE,
+                previewTag = TryOnTestTags.PREVIEW_PERSON_FRONT,
                 modifier = Modifier.weight(1f),
             )
             PersonReferenceSlotCard(
@@ -709,6 +778,10 @@ private fun PersonPhotosPanel(
                 mediaRef = state.personProfile?.bodyImages?.back,
                 missingLabel = "Chưa có ảnh mặt sau",
                 isActiveView = ImageView.BACK in state.requestedViews,
+                buttonLabel = "Chọn Sau",
+                onPickPhoto = onPickPersonPhoto?.let { picker -> { picker(ImageView.BACK) } },
+                pickButtonTag = TryOnTestTags.PICK_PERSON_BACK_INLINE,
+                previewTag = TryOnTestTags.PREVIEW_PERSON_BACK,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -746,7 +819,11 @@ private fun PersonReferenceSlotCard(
     mediaRef: MediaRef?,
     missingLabel: String,
     isActiveView: Boolean,
+    buttonLabel: String,
     modifier: Modifier = Modifier,
+    onPickPhoto: (() -> Unit)? = null,
+    pickButtonTag: String? = null,
+    previewTag: String? = null,
 ) {
     val borderColor = if (isActiveView && mediaRef != null) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
@@ -775,7 +852,9 @@ private fun PersonReferenceSlotCard(
                 .aspectRatio(3f / 4f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .let { mod -> if (previewTag != null) mod.testTag(previewTag) else mod }
+                .let { mod -> if (onPickPhoto != null) mod.clickable(onClick = onPickPhoto) else mod },
             contentAlignment = Alignment.Center,
         ) {
             if (mediaRef == null) {
@@ -805,6 +884,21 @@ private fun PersonReferenceSlotCard(
             },
             textAlign = TextAlign.Center,
         )
+        if (onPickPhoto != null) {
+            OutlinedButton(
+                onClick = onPickPhoto,
+                shape = PillChipShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 38.dp)
+                    .let { mod -> if (pickButtonTag != null) mod.testTag(pickButtonTag) else mod },
+            ) {
+                Text(
+                    text = buttonLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
     }
 }
 
@@ -818,10 +912,10 @@ private fun SelectedGarmentsPanel(
     onSelectGarmentCombo: (TryOnGarmentCombo) -> Unit,
     onToggleItem: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
 ) {
     val outfit = state.outfitSnapshot ?: return
     val cap = state.capability
-    val previewView = if (state.selectedViewMode == TryOnViewMode.BACK_ONLY) ImageView.BACK else ImageView.FRONT
 
     TryOnEditorialPanel(modifier = modifier) {
         Text(
@@ -835,23 +929,55 @@ private fun SelectedGarmentsPanel(
             color = MaterialTheme.colorScheme.onSurface,
         )
 
-        // Visual Garment Thumbnail Cards (Priority 2)
+        // Visual Garment Thumbnail Cards (Priority 2) — 2-slot Front | Back per item
         if (state.supportedOutfitItems.isNotEmpty()) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 state.supportedOutfitItems.forEach { item ->
                     val selected = item.itemId in state.selectedItemIds
                     val pair = state.garmentImages[item.itemId]
-                    val garmentRef = pair?.refFor(previewView) ?: pair?.front
+                    val isPrimaryTop = item.itemId == state.availableTopItem?.itemId
+                    val isPrimaryBottom = item.itemId == state.availableBottomItem?.itemId
+                    val frontPickTag = when {
+                        isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE
+                        isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_INLINE
+                        else -> null
+                    }
+                    val backPickTag = when {
+                        isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE
+                        isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE
+                        else -> null
+                    }
+                    val frontPreviewTag = when {
+                        isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT
+                        isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT
+                        else -> null
+                    }
+                    val backPreviewTag = when {
+                        isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK
+                        isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_BACK
+                        else -> null
+                    }
                     GarmentThumbnailCard(
                         item = item,
-                        mediaRef = garmentRef,
+                        imagePair = pair,
+                        requestedViews = state.requestedViews,
                         selected = selected,
                         enabled = !state.isJobActive && !state.isSubmitting,
                         onClick = { onToggleItem(item.itemId) },
-                        modifier = Modifier.weight(1f),
+                        onPickFrontPhoto = onPickGarmentPhoto?.let { picker ->
+                            { picker(item.itemId, ImageView.FRONT) }
+                        },
+                        onPickBackPhoto = onPickGarmentPhoto?.let { picker ->
+                            { picker(item.itemId, ImageView.BACK) }
+                        },
+                        frontPickButtonTag = frontPickTag,
+                        backPickButtonTag = backPickTag,
+                        frontPreviewTag = frontPreviewTag,
+                        backPreviewTag = backPreviewTag,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -972,11 +1098,18 @@ private fun SelectedGarmentsPanel(
 @Composable
 private fun GarmentThumbnailCard(
     item: TryOnItemSummary,
-    mediaRef: MediaRef?,
+    imagePair: ImagePair?,
+    requestedViews: Set<ImageView>,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onPickFrontPhoto: (() -> Unit)? = null,
+    onPickBackPhoto: (() -> Unit)? = null,
+    frontPickButtonTag: String? = null,
+    backPickButtonTag: String? = null,
+    frontPreviewTag: String? = null,
+    backPreviewTag: String? = null,
 ) {
     val dotColor = parseSafeHex(item.accentHex) ?: MaterialTheme.colorScheme.secondary
     val borderStroke = if (selected) {
@@ -999,78 +1132,194 @@ private fun GarmentThumbnailCard(
         border = borderStroke,
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (mediaRef != null) {
-                    TryOnMediaPreviewSurface(
-                        mediaRef = mediaRef,
-                        caption = item.label,
-                        isFakeOutput = false,
-                        compactThumbnail = true,
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                     )
-                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = categoryLabelVi(item.category),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
-                        text = categoryLabelVi(item.category),
-                        style = MaterialTheme.typography.labelLarge,
+                        text = if (imagePair?.front != null && imagePair.back != null) "Đủ 2 mặt" else "Cần cho góc chọn",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-
-                if (selected) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CheckCircle,
-                            contentDescription = "Đang chọn",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier
-                                .padding(2.dp)
-                                .size(16.dp),
-                        )
+                    if (selected) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CheckCircle,
+                                contentDescription = "Đang chọn",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .size(16.dp),
+                            )
+                        }
                     }
                 }
             }
 
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(dotColor)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                GarmentReferenceSlotCard(
+                    title = "Trước",
+                    mediaRef = imagePair?.front,
+                    missingLabel = "Chưa có ảnh trước",
+                    caption = "${item.label} (Trước)",
+                    isActiveView = selected && ImageView.FRONT in requestedViews,
+                    buttonLabel = "Chọn Trước",
+                    enabled = enabled,
+                    onPickPhoto = onPickFrontPhoto,
+                    pickButtonTag = frontPickButtonTag,
+                    previewTag = frontPreviewTag,
+                    modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = categoryLabelVi(item.category),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                GarmentReferenceSlotCard(
+                    title = "Sau",
+                    mediaRef = imagePair?.back,
+                    missingLabel = "Chưa có ảnh sau",
+                    caption = "${item.label} (Sau)",
+                    isActiveView = selected && ImageView.BACK in requestedViews,
+                    buttonLabel = "Chọn Sau",
+                    enabled = enabled,
+                    onPickPhoto = onPickBackPhoto,
+                    pickButtonTag = backPickButtonTag,
+                    previewTag = backPreviewTag,
+                    modifier = Modifier.weight(1f),
                 )
             }
+        }
+    }
+}
 
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+@Composable
+private fun GarmentReferenceSlotCard(
+    title: String,
+    mediaRef: MediaRef?,
+    missingLabel: String,
+    caption: String,
+    isActiveView: Boolean,
+    buttonLabel: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onPickPhoto: (() -> Unit)? = null,
+    pickButtonTag: String? = null,
+    previewTag: String? = null,
+) {
+    val borderColor = if (isActiveView && mediaRef != null) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
+    Column(
+        modifier = modifier
+            .clip(ThumbnailCornerShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .border(1.dp, borderColor, ThumbnailCornerShape)
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Box(
+            modifier = Modifier
+                .widthIn(max = 128.dp)
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .let { mod -> if (previewTag != null) mod.testTag(previewTag) else mod }
+                .let { mod ->
+                    if (onPickPhoto != null) mod.clickable(enabled = enabled, onClick = onPickPhoto) else mod
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (mediaRef == null) {
+                Text(
+                    text = missingLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(Spacing.xs),
+                )
+            } else {
+                TryOnMediaPreviewSurface(
+                    mediaRef = mediaRef,
+                    caption = caption,
+                    isFakeOutput = false,
+                    compactThumbnail = true,
+                )
+            }
+        }
+        Text(
+            text = if (mediaRef != null) "Đã sẵn sàng" else "Chưa có ảnh",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (mediaRef != null) {
+                MaterialTheme.colorScheme.tertiary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            textAlign = TextAlign.Center,
+        )
+        if (onPickPhoto != null) {
+            OutlinedButton(
+                onClick = onPickPhoto,
+                enabled = enabled,
+                shape = PillChipShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 38.dp)
+                    .let { mod -> if (pickButtonTag != null) mod.testTag(pickButtonTag) else mod },
+            ) {
+                Text(
+                    text = buttonLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
         }
     }
 }
@@ -1227,8 +1476,24 @@ private fun TryOnConfigurationPanel(
         }
 
         state.backViewUnavailableReason?.let { reason ->
+            val selectedSet = state.selectedItemIds.toSet()
+            val missingBackTargets = buildList {
+                if (!state.hasPersonBack) {
+                    add("Ảnh người dùng (bấm 'Chọn Sau' ở mục Ảnh người dùng)")
+                }
+                state.supportedOutfitItems
+                    .filter { it.itemId in selectedSet && state.garmentImages[it.itemId]?.back == null }
+                    .forEach { item ->
+                        add("${categoryLabelVi(item.category)}: ${item.label} (bấm 'Chọn Sau' trên thẻ trang phục)")
+                    }
+            }
+            val hintText = if (missingBackTargets.isNotEmpty()) {
+                "Lưu ý mặt sau: $reason Cần chọn thêm cho: ${missingBackTargets.joinToString("; ")}. Bạn vẫn có thể thử riêng mặt trước."
+            } else {
+                "Lưu ý mặt sau: $reason Bạn vẫn có thể thử riêng mặt trước."
+            }
             Text(
-                text = "Lưu ý mặt sau: $reason Bạn vẫn có thể thử riêng mặt trước.",
+                text = hintText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1910,8 +2175,24 @@ private fun TryOnMediaPreviewSurface(
                 }
             }
         } else {
+            val context = LocalContext.current
+            // Include MediaRef identity/hash/revision because gallery picks overwrite fixed slot paths in place.
+            val imageRequest = remember(
+                context,
+                mediaRef.id,
+                mediaRef.contentHash,
+                mediaRef.revision,
+                mediaRef.localRelativePath,
+            ) {
+                val cacheKey = "${mediaRef.id}:${mediaRef.contentHash}:${mediaRef.revision}"
+                ImageRequest.Builder(context)
+                    .data(diskFile)
+                    .memoryCacheKey(cacheKey)
+                    .diskCacheKey(cacheKey)
+                    .build()
+            }
             AsyncImage(
-                model = diskFile,
+                model = imageRequest,
                 contentDescription = caption,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),

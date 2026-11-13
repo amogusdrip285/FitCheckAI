@@ -10,10 +10,12 @@ import com.fitcheckai.feature.tryon.contract.RemoteDeletionState
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
 import com.fitcheckai.feature.tryon.contract.TryOnException
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
+import com.fitcheckai.feature.tryon.contract.TryOnMediaStorePort
 import com.fitcheckai.feature.tryon.contract.TryOnPresentationMode
 import com.fitcheckai.feature.tryon.contract.TryOnSource
 import com.fitcheckai.feature.tryon.contract.ViewProcessState
 import com.fitcheckai.feature.tryon.contract.ViewResult
+import com.fitcheckai.feature.tryon.fake.FakeInMemoryMediaStore
 import com.fitcheckai.feature.tryon.fake.FakeTryOnFixtures
 import com.fitcheckai.feature.tryon.privacy.TryOnPrivacyCoordinator
 import io.ktor.client.HttpClient
@@ -30,6 +32,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -815,5 +818,332 @@ class AndroidVirtualTryOnClientTest {
             assertNotNull(res.views[ImageView.FRONT]?.outputRef)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    private class DerivativeSimulatingMediaStore(
+        private val delegate: FakeInMemoryMediaStore,
+        private val derivativeSourceIds: Set<String>,
+    ) : TryOnMediaStorePort by delegate {
+        override suspend fun prepareUploadDerivative(ref: MediaRef, maxBytes: Long): Result<MediaRef> {
+            if (ref.id !in derivativeSourceIds) {
+                return delegate.prepareUploadDerivative(ref, maxBytes)
+            }
+            val derivedRef = ref.copy(
+                id = "deriv-${ref.id}",
+                localRelativePath = "tryon/derivatives/deriv-${ref.id}.jpg",
+                mimeType = "image/jpeg",
+                width = 1152,
+                height = 1536,
+                byteCount = 512L,
+                contentHash = "${ref.contentHash}:deriv",
+                derivedFromMediaId = ref.id,
+            )
+            delegate.putMedia(derivedRef, ByteArray(512) { 0x33 })
+            return Result.success(derivedRef)
+        }
+    }
+
+    @Test
+    fun `person upload derivative restores original consented mediaId on wire DTO while keeping fast-path and cleaning temp derivative`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clientScope = TestScope(dispatcher)
+        val baseStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        val mediaStore = DerivativeSimulatingMediaStore(
+            delegate = baseStore,
+            derivativeSourceIds = setOf(FakeTryOnFixtures.personFrontRef.id),
+        )
+        val privacy = TryOnPrivacyCoordinator(mediaStore = mediaStore, clock = { testScheduler.currentTime })
+        val localStore = InMemoryTryOnLocalJobStore()
+
+        var capturedSubmitJson = ""
+        val mockConfig = MockEngineConfig().apply {
+            this.dispatcher = dispatcher
+            addHandler { request ->
+                val path = request.url.encodedPath
+                when {
+                    request.method.value == "GET" && path == "/v2/tryon/capabilities" -> {
+                        respond(
+                            content = """
+                                {
+                                  "decision":"GO_DUAL",
+                                  "supportedViews":["FRONT","BACK"],
+                                  "supportedCategories":["TOP","BOTTOM"],
+                                  "maxGarmentsPerJob":2,
+                                  "supportsNativePairedViews":true,
+                                  "runtimeVerifiedViews":["FRONT","BACK"],
+                                  "supportedPresentationModes":["ORIGINAL_PHOTO","STUDIO_WHITE"],
+                                  "providerId":"fosta",
+                                  "providerConfigVersion":"fosta-gpt-6-luna-v2.0-mock",
+                                  "executionMode":"OFFLINE_MOCK_FOSTA",
+                                  "modelId":"gpt-6-luna"
+                                }
+                            """.trimIndent(),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "POST" && path == "/v2/tryon/jobs" -> {
+                        capturedSubmitJson = request.body.toByteArray().decodeToString()
+                        respond(
+                            content = """{"jobId":"deriv-person-job","requestId":"req-deriv-person","status":"SUCCEEDED"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "GET" && path == "/v2/tryon/jobs/deriv-person-job" -> {
+                        respond(
+                            content = """
+                                {
+                                  "jobId":"deriv-person-job",
+                                  "requestId":"req-deriv-person",
+                                  "outfitId":"outfit-editorial-01",
+                                  "inputGeneration":1,
+                                  "inputRevisions":{"profile":2},
+                                  "status":"SUCCEEDED",
+                                  "views":{
+                                    "FRONT":{"view":"FRONT","state":"SUCCEEDED","output":{"mimeType":"image/png","base64Data":"$pngSampleBase64","contentHash":"sha256:p-f","width":768,"height":1024},"qualityReview":"UNREVIEWED"},
+                                    "BACK":{"view":"BACK","state":"SUCCEEDED","output":{"mimeType":"image/png","base64Data":"$pngSampleBase64","contentHash":"sha256:p-b","width":768,"height":1024},"qualityReview":"UNREVIEWED"}
+                                  },
+                                  "appliedItemIds":["item-top-linen"],
+                                  "unappliedItemIds":[],
+                                  "presentationMode":"ORIGINAL_PHOTO",
+                                  "providerId":"fosta",
+                                  "providerConfigVersion":"fosta-gpt-6-luna-v2.0-mock",
+                                  "createdAt":1000,
+                                  "expiresAt":99999999,
+                                  "source":"FAKE",
+                                  "warnings":[],
+                                  "remoteDeletionState":"UNSUPPORTED"
+                                }
+                            """.trimIndent(),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "DELETE" && path == "/v2/tryon/jobs/deriv-person-job" -> {
+                        respond(
+                            content = """{"jobId":"deriv-person-job","status":"DELETED","deletedAt":2000,"localOutputsDeleted":true,"lateCompletionSuppressed":true,"remoteDeletionState":"UNSUPPORTED","message":"Deleted"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    else -> error("Unexpected ${request.method} $path")
+                }
+            }
+        }
+
+        val transport = KtorTryOnHttpTransport(HttpClient(MockEngine(mockConfig)), "http://10.0.2.2:8788")
+        val client = AndroidVirtualTryOnClient(
+            capabilityProvider = { transport.fetchCapabilities("s-deriv-person").getOrThrow() },
+            transport = transport,
+            localJobStore = localStore,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            scope = clientScope,
+            clock = { testScheduler.currentTime },
+        )
+
+        val cap = client.capabilities().getOrThrow()
+        val consent = privacy.createPerRequestConsentGrant(
+            capability = cap,
+            selectedMediaIds = setOf(
+                FakeTryOnFixtures.personFrontRef.id,
+                FakeTryOnFixtures.personBackRef.id,
+                FakeTryOnFixtures.topFrontRef.id,
+                FakeTryOnFixtures.topBackRef.id,
+            ),
+            allowedViews = setOf(ImageView.FRONT, ImageView.BACK),
+            confirmedByUser = true,
+            grantId = "consent-deriv-person",
+        )
+        val req = FakeTryOnFixtures.sampleDualRequest(
+            idempotencyKey = "k-deriv-person",
+            requestedViews = setOf(ImageView.FRONT, ImageView.BACK),
+            selectedItemIds = listOf("item-top-linen"),
+        ).copy(
+            requestId = "req-deriv-person",
+            consentGrant = consent,
+            providerConfigVersion = cap.providerConfigVersion,
+        )
+
+        val handle = client.submit(req).getOrThrow()
+        runCurrent()
+
+        val wireDto = Json.decodeFromString<TryOnSubmitWireDto>(capturedSubmitJson)
+        val personFrontDto = wireDto.personImages.front
+        val personBackDto = wireDto.personImages.back
+        assertNotNull(personFrontDto)
+        assertNotNull(personBackDto)
+        // Derivative person FRONT must advertise original consented mediaId on the wire, not deriv-*
+        assertEquals(FakeTryOnFixtures.personFrontRef.id, personFrontDto!!.mediaId)
+        assertTrue(personFrontDto.mediaId in wireDto.consentGrant.selectedMediaIds)
+        assertEquals(1152, personFrontDto.width)
+        assertEquals(1536, personFrontDto.height)
+        assertEquals("image/jpeg", personFrontDto.mimeType)
+        // Fast-path person BACK keeps its own original mediaId
+        assertEquals(FakeTryOnFixtures.personBackRef.id, personBackDto!!.mediaId)
+        assertTrue(personBackDto.mediaId in wireDto.consentGrant.selectedMediaIds)
+
+        val derivId = "deriv-${FakeTryOnFixtures.personFrontRef.id}"
+        assertTrue(baseStore.hasMedia(derivId))
+        client.delete(handle.jobId).getOrThrow()
+        assertFalse(baseStore.hasMedia(derivId))
+        assertTrue(baseStore.hasMedia(FakeTryOnFixtures.personFrontRef.id))
+    }
+
+    @Test
+    fun `garment upload derivative restores original consented mediaId on wire DTO while keeping fast-path and cleaning temp derivative`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val clientScope = TestScope(dispatcher)
+        val baseStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        val mediaStore = DerivativeSimulatingMediaStore(
+            delegate = baseStore,
+            derivativeSourceIds = setOf(FakeTryOnFixtures.topFrontRef.id),
+        )
+        val privacy = TryOnPrivacyCoordinator(mediaStore = mediaStore, clock = { testScheduler.currentTime })
+        val localStore = InMemoryTryOnLocalJobStore()
+
+        var capturedSubmitJson = ""
+        val mockConfig = MockEngineConfig().apply {
+            this.dispatcher = dispatcher
+            addHandler { request ->
+                val path = request.url.encodedPath
+                when {
+                    request.method.value == "GET" && path == "/v2/tryon/capabilities" -> {
+                        respond(
+                            content = """
+                                {
+                                  "decision":"GO_DUAL",
+                                  "supportedViews":["FRONT","BACK"],
+                                  "supportedCategories":["TOP","BOTTOM"],
+                                  "maxGarmentsPerJob":2,
+                                  "supportsNativePairedViews":false,
+                                  "runtimeVerifiedViews":["FRONT"],
+                                  "supportedPresentationModes":["ORIGINAL_PHOTO","STUDIO_WHITE"],
+                                  "providerId":"fosta",
+                                  "providerConfigVersion":"fosta-gpt-6-luna-v2.0-mock",
+                                  "executionMode":"OFFLINE_MOCK_FOSTA",
+                                  "modelId":"gpt-6-luna"
+                                }
+                            """.trimIndent(),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "POST" && path == "/v2/tryon/jobs" -> {
+                        capturedSubmitJson = request.body.toByteArray().decodeToString()
+                        respond(
+                            content = """{"jobId":"deriv-garment-job","requestId":"req-deriv-garment","status":"SUCCEEDED"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "GET" && path == "/v2/tryon/jobs/deriv-garment-job" -> {
+                        respond(
+                            content = """
+                                {
+                                  "jobId":"deriv-garment-job",
+                                  "requestId":"req-deriv-garment",
+                                  "outfitId":"outfit-editorial-01",
+                                  "inputGeneration":1,
+                                  "inputRevisions":{"profile":2},
+                                  "status":"SUCCEEDED",
+                                  "views":{
+                                    "FRONT":{"view":"FRONT","state":"SUCCEEDED","output":{"mimeType":"image/png","base64Data":"$pngSampleBase64","contentHash":"sha256:g-f","width":768,"height":1024},"qualityReview":"UNREVIEWED"}
+                                  },
+                                  "appliedItemIds":["item-top-linen","item-trouser-noir"],
+                                  "unappliedItemIds":[],
+                                  "presentationMode":"STUDIO_WHITE",
+                                  "providerId":"fosta",
+                                  "providerConfigVersion":"fosta-gpt-6-luna-v2.0-mock",
+                                  "createdAt":1000,
+                                  "expiresAt":99999999,
+                                  "source":"FAKE",
+                                  "warnings":[],
+                                  "remoteDeletionState":"UNSUPPORTED"
+                                }
+                            """.trimIndent(),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    request.method.value == "DELETE" && path == "/v2/tryon/jobs/deriv-garment-job" -> {
+                        respond(
+                            content = """{"jobId":"deriv-garment-job","status":"DELETED","deletedAt":2000,"localOutputsDeleted":true,"lateCompletionSuppressed":true,"remoteDeletionState":"UNSUPPORTED","message":"Deleted"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+
+                    else -> error("Unexpected ${request.method} $path")
+                }
+            }
+        }
+
+        val transport = KtorTryOnHttpTransport(HttpClient(MockEngine(mockConfig)), "http://10.0.2.2:8788")
+        val client = AndroidVirtualTryOnClient(
+            capabilityProvider = { transport.fetchCapabilities("s-deriv-garment").getOrThrow() },
+            transport = transport,
+            localJobStore = localStore,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            scope = clientScope,
+            clock = { testScheduler.currentTime },
+        )
+
+        val cap = client.capabilities().getOrThrow()
+        val consent = privacy.createPerRequestConsentGrant(
+            capability = cap,
+            selectedMediaIds = setOf(
+                FakeTryOnFixtures.personFrontRef.id,
+                FakeTryOnFixtures.topFrontRef.id,
+                FakeTryOnFixtures.bottomFrontRef.id,
+            ),
+            allowedViews = setOf(ImageView.FRONT),
+            confirmedByUser = true,
+            grantId = "consent-deriv-garment",
+        )
+        val req = FakeTryOnFixtures.sampleDualRequest(
+            idempotencyKey = "k-deriv-garment",
+            requestedViews = setOf(ImageView.FRONT),
+            selectedItemIds = listOf("item-top-linen", "item-trouser-noir"),
+        ).copy(
+            requestId = "req-deriv-garment",
+            presentationMode = TryOnPresentationMode.STUDIO_WHITE,
+            consentGrant = consent,
+            providerConfigVersion = cap.providerConfigVersion,
+        )
+
+        val handle = client.submit(req).getOrThrow()
+        runCurrent()
+
+        val wireDto = Json.decodeFromString<TryOnSubmitWireDto>(capturedSubmitJson)
+        val topFrontDto = wireDto.garmentImages["item-top-linen"]?.front
+        val bottomFrontDto = wireDto.garmentImages["item-trouser-noir"]?.front
+        assertNotNull(topFrontDto)
+        assertNotNull(bottomFrontDto)
+        // Derivative garment TOP must advertise original consented mediaId on the wire, not deriv-*
+        assertEquals(FakeTryOnFixtures.topFrontRef.id, topFrontDto!!.mediaId)
+        assertTrue(topFrontDto.mediaId in wireDto.consentGrant.selectedMediaIds)
+        assertEquals(1152, topFrontDto.width)
+        assertEquals(1536, topFrontDto.height)
+        assertEquals("image/jpeg", topFrontDto.mimeType)
+        // Fast-path garment BOTTOM & person FRONT keep their original mediaIds
+        assertEquals(FakeTryOnFixtures.bottomFrontRef.id, bottomFrontDto!!.mediaId)
+        assertTrue(bottomFrontDto.mediaId in wireDto.consentGrant.selectedMediaIds)
+        assertEquals(FakeTryOnFixtures.personFrontRef.id, wireDto.personImages.front?.mediaId)
+
+        val derivId = "deriv-${FakeTryOnFixtures.topFrontRef.id}"
+        assertTrue(baseStore.hasMedia(derivId))
+        client.delete(handle.jobId).getOrThrow()
+        assertFalse(baseStore.hasMedia(derivId))
+        assertTrue(baseStore.hasMedia(FakeTryOnFixtures.topFrontRef.id))
     }
 }

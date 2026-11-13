@@ -292,21 +292,58 @@ class TryOnViewModel(
 
         viewModelScope.launch {
             profilePort.observePersonProfile().collect { snapshot ->
+                var outdatedJobIdToDelete: String? = null
+                var shouldCancelObserver = false
+                var rotatedIdempotencyKey: String? = null
                 _uiState.update { cur ->
-                    val nextState = cur.copy(personProfile = snapshot)
-                    // If user removed back photo while BACK_ONLY or FRONT_AND_BACK was selected (and no job running),
-                    // fall back cleanly to FRONT_ONLY and require fresh consent confirmation.
-                    val backInvalidated =
-                        (nextState.selectedViewMode == TryOnViewMode.FRONT_AND_BACK && !nextState.canSelectDualView) ||
-                            (nextState.selectedViewMode == TryOnViewMode.BACK_ONLY && !nextState.canSelectBackView)
-                    if (backInvalidated && !nextState.isJobActive) {
-                        nextState.copy(
-                            selectedViewMode = TryOnViewMode.FRONT_ONLY,
-                            consentConfirmed = false,
-                        )
-                    } else {
-                        nextState
+                    outdatedJobIdToDelete = null
+                    shouldCancelObserver = false
+                    val previousProfile = cur.personProfile
+                    if (previousProfile == null) {
+                        return@update normalizeViewAfterSelectionChange(cur.copy(personProfile = snapshot))
                     }
+
+                    val bodyImagesChanged = previousProfile.bodyImages != snapshot?.bodyImages
+                    if (!bodyImagesChanged) {
+                        return@update cur.copy(personProfile = snapshot)
+                    }
+                    if (cur.isJobActive || cur.isSubmitting) {
+                        return@update cur
+                    }
+
+                    val frontChanged = previousProfile.bodyImages.front != snapshot?.bodyImages?.front
+                    val backChanged = previousProfile.bodyImages.back != snapshot?.bodyImages?.back
+                    if (rotatedIdempotencyKey == null) {
+                        rotatedIdempotencyKey = "idem-${idGenerator()}"
+                    }
+
+                    val previousResult = cur.activeOrLatestResult
+                    val affectsPreviousResult = previousResult != null && (
+                        previousResult.views.isEmpty() ||
+                            (frontChanged && ImageView.FRONT in previousResult.views) ||
+                            (backChanged && ImageView.BACK in previousResult.views)
+                        )
+                    if (affectsPreviousResult) {
+                        shouldCancelObserver = true
+                        outdatedJobIdToDelete = previousResult!!.jobId
+                    }
+
+                    val updated = cur.copy(
+                        personProfile = snapshot,
+                        consentConfirmed = false,
+                        activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
+                        compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
+                        bannerError = null,
+                        statusNotice = null,
+                    )
+                    normalizeViewAfterSelectionChange(updated)
+                }
+                rotatedIdempotencyKey?.let { pendingIdempotencyKey = it }
+                if (shouldCancelObserver) {
+                    activeObserverJob?.cancel()
+                }
+                outdatedJobIdToDelete?.let { jobId ->
+                    tryOnService.delete(jobId)
                 }
             }
         }
@@ -415,6 +452,67 @@ class TryOnViewModel(
                     bannerError = null,
                 ),
             )
+        }
+    }
+
+    /**
+     * Updates garment reference photos in place without recreating the ViewModel, preserving the
+     * selected combo and view mode (or falling back to FRONT_ONLY when rear inputs are incomplete).
+     * Resets stale consent and purges any prior result bound to a replaced garment item.
+     */
+    fun updateGarmentImages(updatedImages: Map<String, ImagePair>) {
+        val snapshot = _uiState.value
+        if (snapshot.isSubmitting || snapshot.isJobActive) return
+
+        val allItemIds = snapshot.garmentImages.keys + updatedImages.keys
+        val changedItemIds = allItemIds.filter { itemId ->
+            snapshot.garmentImages[itemId] != updatedImages[itemId]
+        }
+        if (changedItemIds.isEmpty()) return
+
+        val previousResult = snapshot.activeOrLatestResult
+        val affectsPreviousResult = previousResult != null && (
+            previousResult.appliedItemIds.isEmpty() ||
+                changedItemIds.any { it in previousResult.appliedItemIds }
+            )
+        val affectsCurrentSelection = changedItemIds.any { it in snapshot.selectedItemIds }
+
+        if (affectsPreviousResult) {
+            activeObserverJob?.cancel()
+        }
+
+        val normalizedPreview = normalizeViewAfterSelectionChange(
+            snapshot.copy(garmentImages = updatedImages),
+        )
+        val viewFallbackTriggered = normalizedPreview.selectedViewMode != snapshot.selectedViewMode
+        val shouldResetConsent =
+            affectsCurrentSelection || affectsPreviousResult || viewFallbackTriggered
+
+        if (shouldResetConsent) {
+            pendingIdempotencyKey = "idem-${idGenerator()}"
+        }
+
+        _uiState.update { cur ->
+            val updated = cur.copy(
+                garmentImages = updatedImages,
+                consentConfirmed = if (shouldResetConsent) false else cur.consentConfirmed,
+                activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
+                compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
+                bannerError = null,
+                statusNotice = null,
+            )
+            val normalized = normalizeViewAfterSelectionChange(updated)
+            if (normalized.selectedViewMode != cur.selectedViewMode) {
+                normalized.copy(consentConfirmed = false)
+            } else {
+                normalized
+            }
+        }
+
+        if (affectsPreviousResult) {
+            viewModelScope.launch {
+                tryOnService.delete(previousResult.jobId)
+            }
         }
     }
 

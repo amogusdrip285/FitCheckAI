@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,6 +47,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fitcheckai.feature.tryon.fake.FakeInMemoryMediaStore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -83,11 +86,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 object TryOnDemoTags {
     const val DEMO_BANNER = "tryon_demo_banner"
@@ -196,9 +204,10 @@ class TryOnDemoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initialMode = when (intent?.getStringExtra("tryon_demo_mode")?.lowercase()) {
-            "backend_fosta", "fosta" -> DemoExecutionMode.BACKEND_FOSTA_E2E
+            "in_memory_fake", "fake", "offline" -> DemoExecutionMode.IN_MEMORY_FAKE
             "backend_openai", "openai", "backend" -> DemoExecutionMode.BACKEND_OPENAI_E2E
-            else -> DemoExecutionMode.IN_MEMORY_FAKE
+            "backend_fosta", "fosta" -> DemoExecutionMode.BACKEND_FOSTA_E2E
+            else -> DemoExecutionMode.BACKEND_FOSTA_E2E
         }
         val backendUrl = intent?.getStringExtra("tryon_backend_url")
             ?.takeIf { it.isNotBlank() }
@@ -206,7 +215,7 @@ class TryOnDemoActivity : ComponentActivity() {
         val localToken = intent?.getStringExtra("tryon_local_token")
             ?.takeIf { it.isNotBlank() }
         val collapseControlsInitially =
-            intent?.getBooleanExtra("tryon_collapse_controls", false) == true
+            intent?.getBooleanExtra("tryon_collapse_controls", true) != false
 
         setContent {
             var isDarkTheme by remember { mutableStateOf(false) }
@@ -280,12 +289,6 @@ fun TryOnDemoWorkbench(
         selectedOutfitPreset,
         selectedScenarioPreset,
         sessionNonce,
-        customPersonFront,
-        customPersonBack,
-        customGarmentFront,
-        customGarmentBack,
-        customBottomFront,
-        customBottomBack,
     ) {
         buildDemoSessionEnvironment(
             filesDir = context.filesDir,
@@ -297,6 +300,38 @@ fun TryOnDemoWorkbench(
             outfitPreset = selectedOutfitPreset,
             scenarioPreset = selectedScenarioPreset,
             delayOverrideMs = initialSimulatedDelayOverrideMs,
+            initialAllowSampleBacks = executionMode != DemoExecutionMode.BACKEND_FOSTA_E2E,
+            customPersonFront = customPersonFront,
+            customPersonBack = customPersonBack,
+            customGarmentFront = customGarmentFront,
+            customGarmentBack = customGarmentBack,
+            customBottomFront = customBottomFront,
+            customBottomBack = customBottomBack,
+        )
+    }
+
+    var fostaPreflightOfflineMock by remember(executionMode, backendBaseUrl, sessionNonce) {
+        mutableStateOf<Boolean?>(null)
+    }
+    val vmUiState by demoEnvironment.viewModel.uiState.collectAsStateWithLifecycle()
+    val isFostaMockBackend =
+        fostaPreflightOfflineMock == true ||
+            vmUiState.capability?.executionMode == "OFFLINE_MOCK_FOSTA"
+    val allowSampleBacks =
+        executionMode != DemoExecutionMode.BACKEND_FOSTA_E2E || isFostaMockBackend
+
+    LaunchedEffect(
+        demoEnvironment,
+        allowSampleBacks,
+        customPersonFront,
+        customPersonBack,
+        customGarmentFront,
+        customGarmentBack,
+        customBottomFront,
+        customBottomBack,
+    ) {
+        demoEnvironment.syncAllInputs(
+            allowSampleBacks = allowSampleBacks,
             customPersonFront = customPersonFront,
             customPersonBack = customPersonBack,
             customGarmentFront = customGarmentFront,
@@ -361,6 +396,13 @@ fun TryOnDemoWorkbench(
                 view = ImageView.FRONT,
             )?.let { imported ->
                 customGarmentFront = imported
+                demoEnvironment.syncGarmentInputs(
+                    allowSampleBacks = allowSampleBacks,
+                    customGarmentFront = imported,
+                    customGarmentBack = customGarmentBack,
+                    customBottomFront = customBottomFront,
+                    customBottomBack = customBottomBack,
+                )
                 localInputStatus = "Đã nạp ảnh Áo (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -379,6 +421,13 @@ fun TryOnDemoWorkbench(
                 view = ImageView.BACK,
             )?.let { imported ->
                 customGarmentBack = imported
+                demoEnvironment.syncGarmentInputs(
+                    allowSampleBacks = allowSampleBacks,
+                    customGarmentFront = customGarmentFront,
+                    customGarmentBack = imported,
+                    customBottomFront = customBottomFront,
+                    customBottomBack = customBottomBack,
+                )
                 localInputStatus = "Đã nạp ảnh Áo (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -398,6 +447,13 @@ fun TryOnDemoWorkbench(
                 view = ImageView.FRONT,
             )?.let { imported ->
                 customBottomFront = imported
+                demoEnvironment.syncGarmentInputs(
+                    allowSampleBacks = allowSampleBacks,
+                    customGarmentFront = customGarmentFront,
+                    customGarmentBack = customGarmentBack,
+                    customBottomFront = imported,
+                    customBottomBack = customBottomBack,
+                )
                 localInputStatus = "Đã nạp ảnh Quần (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -417,6 +473,13 @@ fun TryOnDemoWorkbench(
                 view = ImageView.BACK,
             )?.let { imported ->
                 customBottomBack = imported
+                demoEnvironment.syncGarmentInputs(
+                    allowSampleBacks = allowSampleBacks,
+                    customGarmentFront = customGarmentFront,
+                    customGarmentBack = customGarmentBack,
+                    customBottomFront = customBottomFront,
+                    customBottomBack = imported,
+                )
                 localInputStatus = "Đã nạp ảnh Quần (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -424,6 +487,60 @@ fun TryOnDemoWorkbench(
 
     val isBackendMode = executionMode == DemoExecutionMode.BACKEND_FOSTA_E2E ||
         executionMode == DemoExecutionMode.BACKEND_OPENAI_E2E
+
+    var preflightBannerSummary by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(executionMode, backendBaseUrl, sessionNonce) {
+        if (!isBackendMode) {
+            preflightBannerSummary = null
+            fostaPreflightOfflineMock = null
+            return@LaunchedEffect
+        }
+        val (summary, detectedOfflineMock) = withContext(Dispatchers.IO) {
+            runCatching {
+                val conn = (URL("$backendBaseUrl/v2/tryon/preflight").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 2_500
+                    readTimeout = 2_500
+                    requestMethod = "GET"
+                    setRequestProperty("x-session-id", "demo-ui-preflight")
+                    if (!localAuthToken.isNullOrBlank()) {
+                        setRequestProperty("x-local-tryon-token", localAuthToken)
+                    }
+                }
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(body)
+                    val provider = json.optString("provider", "fosta").uppercase()
+                    val offlineMock = json.optBoolean("offlineMockEnabled", false)
+                    val liveEnabled = json.optBoolean("liveEnabled", false)
+                    val readyLive = json.optBoolean("readyForLivePocCall", false) ||
+                        json.optBoolean("readyForLiveCall", false)
+                    val checks = json.optJSONObject("checks")
+                    val model = checks?.optString("modelId")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: json.optString("model", "gpt-6-luna")
+                    val text = when {
+                        offlineMock ->
+                            "Kết nối OK: $provider MOCK (LIVE=OFF • Chi phí $0.00)"
+                        readyLive ->
+                            "Kết nối OK: $provider LIVE READY ($model • Đã mở cổng LIVE)"
+                        else -> {
+                            val firstBlocker = json.optJSONArray("blockers")?.optString(0) ?: "LOCKED"
+                            "Backend $provider bị khóa: $firstBlocker"
+                        }
+                    }
+                    text to (offlineMock && !liveEnabled)
+                } else {
+                    "Local Backend phản hồi HTTP ${conn.responseCode} tại $backendBaseUrl" to null
+                }
+            }.getOrElse {
+                "Chưa kết nối được Local Backend ($backendBaseUrl) — Hãy chạy demo_start_mock_backend.sh" to null
+            }
+        }
+        fostaPreflightOfflineMock = detectedOfflineMock
+        preflightBannerSummary = summary
+        localInputStatus = summary
+    }
 
     Column(
         modifier = Modifier
@@ -452,30 +569,43 @@ fun TryOnDemoWorkbench(
                         Text(
                             text = when (executionMode) {
                                 DemoExecutionMode.BACKEND_FOSTA_E2E ->
-                                    "STUDIO TRACK C — BACKEND FOSTA LUNA ($backendBaseUrl)"
+                                    "FITCHECK VTO DEMO — BACKEND FOSTA LUNA"
                                 DemoExecutionMode.BACKEND_OPENAI_E2E ->
-                                    "STUDIO TRACK C — BACKEND OPENAI E2E ($backendBaseUrl)"
+                                    "FITCHECK VTO DEMO — BACKEND OPENAI E2E"
                                 DemoExecutionMode.IN_MEMORY_FAKE ->
-                                    "STUDIO DEMO TRACK C — CHẾ ĐỘ GIẢ LẬP (FAKE / OFFLINE 100%)"
+                                    "FITCHECK VTO DEMO — GIẢ LẬP OFFLINE (FAKE)"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = when (executionMode) {
+                            text = preflightBannerSummary ?: when (executionMode) {
                                 DemoExecutionMode.BACKEND_FOSTA_E2E ->
                                     "Pipeline Android -> Local Server -> FOSTA gpt-6-luna • LIVE mặc định OFF"
                                 DemoExecutionMode.BACKEND_OPENAI_E2E ->
-                                    "Kết nối HTTP tới Local Server • LIVE mặc định OFF (chỉ gọi OpenAI khi mở cổng)"
+                                    "Kết nối HTTP tới Local Server • LIVE mặc định OFF"
                                 DemoExecutionMode.IN_MEMORY_FAKE ->
                                     "0 gọi mạng • 0 upload ảnh lên provider • Chi phí $0.00"
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (isBackendMode && !controlsExpanded) {
+                            OutlinedButton(
+                                onClick = {
+                                    sessionNonce += 1
+                                    localInputStatus = "Đang kiểm tra lại kết nối tới $backendBaseUrl..."
+                                },
+                            ) {
+                                Text("Làm mới")
+                            }
+                        }
                         TextButton(
                             onClick = onToggleDarkTheme,
                             modifier = Modifier.testTag(TryOnDemoTags.TOGGLE_THEME_BUTTON),
@@ -486,7 +616,7 @@ fun TryOnDemoWorkbench(
                             onClick = { controlsExpanded = !controlsExpanded },
                             modifier = Modifier.testTag(TryOnDemoTags.TOGGLE_CONTROLS_BUTTON),
                         ) {
-                            Text(if (controlsExpanded) "Thu gọn Bảng Demo" else "Mở Bảng Demo")
+                            Text(if (controlsExpanded) "Thu gọn" else "Tùy chỉnh")
                         }
                     }
                 }
@@ -770,13 +900,11 @@ fun TryOnDemoWorkbench(
                     viewModel = demoEnvironment.viewModel,
                     onNavigateBack = { sessionNonce += 1 },
                     onNavigateToProfilePhotos = {
-                        val generated = generateSampleLocalPngInputs(
-                            filesDir = context.filesDir,
-                            primaryItemId = demoEnvironment.primaryItemId,
-                        )
-                        customPersonFront = generated.personFront
-                        customPersonBack = generated.personBack
-                        localInputStatus = "Đã bổ sung ảnh toàn thân cục bộ (Trước & Sau)."
+                        if (!vmUiState.hasPersonFront) {
+                            pickPersonFrontLauncher.launch("image/*")
+                        } else {
+                            pickPersonBackLauncher.launch("image/*")
+                        }
                     },
                     onSelectDifferentOutfit = {
                         selectedOutfitPreset = when (selectedOutfitPreset) {
@@ -784,6 +912,30 @@ fun TryOnDemoWorkbench(
                             DemoOutfitPreset.CASUAL_SINGLE_TOP -> DemoOutfitPreset.OUTERWEAR_NO_BACK
                             DemoOutfitPreset.OUTERWEAR_NO_BACK -> DemoOutfitPreset.WORK_THREE_ITEMS
                         }
+                    },
+                    onPickPersonPhoto = { view ->
+                        when (view) {
+                            ImageView.FRONT -> pickPersonFrontLauncher.launch("image/*")
+                            ImageView.BACK -> pickPersonBackLauncher.launch("image/*")
+                        }
+                    },
+                    onPickGarmentPhoto = { itemId, view ->
+                        val isBottom = itemId == demoEnvironment.secondaryBottomItemId
+                        if (isBottom) {
+                            when (view) {
+                                ImageView.FRONT -> pickBottomFrontLauncher.launch("image/*")
+                                ImageView.BACK -> pickBottomBackLauncher.launch("image/*")
+                            }
+                        } else {
+                            when (view) {
+                                ImageView.FRONT -> pickGarmentFrontLauncher.launch("image/*")
+                                ImageView.BACK -> pickGarmentBackLauncher.launch("image/*")
+                            }
+                        }
+                    },
+                    onRefreshConnection = {
+                        sessionNonce += 1
+                        localInputStatus = "Đang kiểm tra lại kết nối tới $backendBaseUrl..."
                     },
                 )
             }
@@ -796,11 +948,254 @@ private class DemoSessionEnvironment(
     val vmScope: CoroutineScope,
     val primaryItemId: String,
     val secondaryBottomItemId: String? = null,
+    private val filesDir: File,
+    private val executionMode: DemoExecutionMode,
+    private val outfitPreset: DemoOutfitPreset,
+    private val baseOutfit: TryOnOutfitSnapshot,
+    private val baseGarmentMap: Map<String, ImagePair>,
+    private val profilePort: FakeTryOnProfilePort,
+    private val inMemoryMediaStore: FakeInMemoryMediaStore? = null,
     private val httpClient: HttpClient? = null,
+    initialPersonImages: ImagePair,
 ) {
+    private var lastPersonImages: ImagePair = initialPersonImages
+
+    fun syncGarmentInputs(
+        allowSampleBacks: Boolean,
+        customGarmentFront: Pair<MediaRef, ByteArray>?,
+        customGarmentBack: Pair<MediaRef, ByteArray>?,
+        customBottomFront: Pair<MediaRef, ByteArray>?,
+        customBottomBack: Pair<MediaRef, ByteArray>?,
+    ) {
+        val nextGarmentMap = resolveDemoGarmentMap(
+            filesDir = filesDir,
+            executionMode = executionMode,
+            outfitPreset = outfitPreset,
+            baseOutfit = baseOutfit,
+            baseGarmentMap = baseGarmentMap,
+            primaryItemId = primaryItemId,
+            secondaryBottomItemId = secondaryBottomItemId,
+            allowSampleBacks = allowSampleBacks,
+            inMemoryMediaStore = inMemoryMediaStore,
+            customGarmentFront = customGarmentFront,
+            customGarmentBack = customGarmentBack,
+            customBottomFront = customBottomFront,
+            customBottomBack = customBottomBack,
+        )
+        viewModel.updateGarmentImages(nextGarmentMap)
+    }
+
+    fun syncAllInputs(
+        allowSampleBacks: Boolean,
+        customPersonFront: Pair<MediaRef, ByteArray>?,
+        customPersonBack: Pair<MediaRef, ByteArray>?,
+        customGarmentFront: Pair<MediaRef, ByteArray>?,
+        customGarmentBack: Pair<MediaRef, ByteArray>?,
+        customBottomFront: Pair<MediaRef, ByteArray>?,
+        customBottomBack: Pair<MediaRef, ByteArray>?,
+    ) {
+        if (inMemoryMediaStore != null) {
+            customPersonFront?.let { inMemoryMediaStore.putMedia(it.first, it.second) }
+            customPersonBack?.let { inMemoryMediaStore.putMedia(it.first, it.second) }
+            attachStampedFakeOutputIfNeeded(
+                filesDir = filesDir,
+                baseOutfit = baseOutfit,
+                mediaStore = inMemoryMediaStore,
+                hasCustomLocalFiles = customPersonFront != null ||
+                    customPersonBack != null ||
+                    customGarmentFront != null ||
+                    customGarmentBack != null ||
+                    customBottomFront != null ||
+                    customBottomBack != null,
+            )
+        }
+
+        val nextPersonImages = resolveDemoPersonImages(
+            filesDir = filesDir,
+            executionMode = executionMode,
+            primaryItemId = primaryItemId,
+            secondaryBottomItemId = secondaryBottomItemId,
+            allowSampleBacks = allowSampleBacks,
+            customPersonFront = customPersonFront,
+            customPersonBack = customPersonBack,
+        )
+        if (nextPersonImages != lastPersonImages) {
+            lastPersonImages = nextPersonImages
+            profilePort.update(
+                TryOnPersonProfileSnapshot(
+                    profileId = "profile-dev-1",
+                    revision = 2L,
+                    bodyImages = nextPersonImages,
+                ),
+            )
+        }
+
+        syncGarmentInputs(
+            allowSampleBacks = allowSampleBacks,
+            customGarmentFront = customGarmentFront,
+            customGarmentBack = customGarmentBack,
+            customBottomFront = customBottomFront,
+            customBottomBack = customBottomBack,
+        )
+    }
+
     fun close() {
         vmScope.cancel()
         httpClient?.close()
+    }
+}
+
+private fun attachStampedFakeOutputIfNeeded(
+    filesDir: File,
+    baseOutfit: TryOnOutfitSnapshot,
+    mediaStore: FakeInMemoryMediaStore,
+    hasCustomLocalFiles: Boolean,
+) {
+    if (!hasCustomLocalFiles || mediaStore.customOutputPathProvider != null) return
+    val outputDir = File(filesDir, "tryon_demo_outputs").apply { mkdirs() }
+    mediaStore.customOutputPathProvider = { jobId: String, view: ImageView, counter: Int, _: ByteArray ->
+        val outFile = File(outputDir, "fake_demo_${jobId}_${view.name.lowercase()}_$counter.png")
+        renderStampedFakeOutputPng(
+            targetFile = outFile,
+            view = view,
+            outfitLabel = baseOutfit.items.joinToString(" + ") { it.label },
+        )
+        outFile.absolutePath
+    }
+}
+
+private fun resolveDemoPersonImages(
+    filesDir: File,
+    executionMode: DemoExecutionMode,
+    primaryItemId: String,
+    secondaryBottomItemId: String?,
+    allowSampleBacks: Boolean,
+    customPersonFront: Pair<MediaRef, ByteArray>?,
+    customPersonBack: Pair<MediaRef, ByteArray>?,
+): ImagePair {
+    if (executionMode == DemoExecutionMode.IN_MEMORY_FAKE) {
+        return ImagePair(
+            front = customPersonFront?.first ?: FakeTryOnFixtures.personFrontRef,
+            back = customPersonBack?.first ?: FakeTryOnFixtures.personBackRef,
+        )
+    }
+
+    val discoveredRealInputs = loadRealPrivateInputsFromAppFiles(
+        filesDir = filesDir,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+    )
+    val fallbackDiskSamples by lazy {
+        generateSampleLocalPngInputs(
+            filesDir = filesDir,
+            primaryItemId = primaryItemId,
+            includeBack = allowSampleBacks,
+        )
+    }
+    val effectivePersonFront =
+        customPersonFront?.first ?: discoveredRealInputs?.personFront?.first ?: fallbackDiskSamples.personFront.first
+    val effectivePersonBack = if (allowSampleBacks) {
+        customPersonBack?.first ?: discoveredRealInputs?.personBack?.first ?: fallbackDiskSamples.personBack?.first
+    } else {
+        // In FOSTA LIVE mode, never prefill sample/discovered back photos; require explicit user selection.
+        customPersonBack?.first
+    }
+    return ImagePair(front = effectivePersonFront, back = effectivePersonBack)
+}
+
+private fun resolveDemoGarmentMap(
+    filesDir: File,
+    executionMode: DemoExecutionMode,
+    outfitPreset: DemoOutfitPreset,
+    baseOutfit: TryOnOutfitSnapshot,
+    baseGarmentMap: Map<String, ImagePair>,
+    primaryItemId: String,
+    secondaryBottomItemId: String?,
+    allowSampleBacks: Boolean,
+    inMemoryMediaStore: FakeInMemoryMediaStore?,
+    customGarmentFront: Pair<MediaRef, ByteArray>?,
+    customGarmentBack: Pair<MediaRef, ByteArray>?,
+    customBottomFront: Pair<MediaRef, ByteArray>?,
+    customBottomBack: Pair<MediaRef, ByteArray>?,
+): Map<String, ImagePair> {
+    if (executionMode == DemoExecutionMode.IN_MEMORY_FAKE) {
+        val updatedGarmentMap = baseGarmentMap.toMutableMap()
+        val primaryPair = updatedGarmentMap[primaryItemId] ?: ImagePair()
+        val effectiveGarmentFront = customGarmentFront?.first ?: primaryPair.front
+        val effectiveGarmentBack = customGarmentBack?.first ?: primaryPair.back
+        customGarmentFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+        customGarmentBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+        updatedGarmentMap[primaryItemId] = ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
+
+        if (secondaryBottomItemId != null) {
+            val bottomPair = updatedGarmentMap[secondaryBottomItemId] ?: ImagePair()
+            val effectiveBottomFront = customBottomFront?.first ?: bottomPair.front
+            val effectiveBottomBack = customBottomBack?.first ?: bottomPair.back
+            customBottomFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            customBottomBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            updatedGarmentMap[secondaryBottomItemId] = ImagePair(front = effectiveBottomFront, back = effectiveBottomBack)
+        }
+        return updatedGarmentMap
+    }
+
+    val discoveredRealInputs = loadRealPrivateInputsFromAppFiles(
+        filesDir = filesDir,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+    )
+    val fallbackDiskSamples by lazy {
+        generateSampleLocalPngInputs(
+            filesDir = filesDir,
+            primaryItemId = primaryItemId,
+            includeBack = allowSampleBacks,
+        )
+    }
+
+    val effectiveGarmentFront =
+        customGarmentFront?.first ?: discoveredRealInputs?.garmentFront?.first ?: fallbackDiskSamples.garmentFront.first
+    val effectiveGarmentBack = if (allowSampleBacks) {
+        customGarmentBack?.first ?: discoveredRealInputs?.garmentBack?.first ?: fallbackDiskSamples.garmentBack?.first
+    } else {
+        customGarmentBack?.first
+    }
+
+    return baseOutfit.items.associate { item ->
+        when (item.itemId) {
+            primaryItemId -> {
+                item.itemId to ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
+            }
+            secondaryBottomItemId -> {
+                val includeSampleBack = allowSampleBacks && outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK
+                val secondaryPair = generateSecondaryGarmentSamplePair(
+                    filesDir = filesDir,
+                    itemId = item.itemId,
+                    label = item.label,
+                    includeBack = includeSampleBack,
+                )
+                val frontRef = customBottomFront?.first
+                    ?: discoveredRealInputs?.bottomFront?.first
+                    ?: secondaryPair.front
+                val backRef = if (!allowSampleBacks) {
+                    customBottomBack?.first
+                } else if (!includeSampleBack && customBottomBack == null && discoveredRealInputs?.bottomBack == null) {
+                    null
+                } else {
+                    customBottomBack?.first
+                        ?: discoveredRealInputs?.bottomBack?.first
+                        ?: secondaryPair.back
+                }
+                item.itemId to ImagePair(front = frontRef, back = backRef)
+            }
+            else -> {
+                val secondaryPair = generateSecondaryGarmentSamplePair(
+                    filesDir = filesDir,
+                    itemId = item.itemId,
+                    label = item.label,
+                    includeBack = allowSampleBacks && outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK,
+                )
+                item.itemId to secondaryPair
+            }
+        }
     }
 }
 
@@ -814,6 +1209,7 @@ private fun buildDemoSessionEnvironment(
     outfitPreset: DemoOutfitPreset,
     scenarioPreset: DemoScenarioPreset,
     delayOverrideMs: Long?,
+    initialAllowSampleBacks: Boolean,
     customPersonFront: Pair<MediaRef, ByteArray>?,
     customPersonBack: Pair<MediaRef, ByteArray>?,
     customGarmentFront: Pair<MediaRef, ByteArray>?,
@@ -904,8 +1300,10 @@ private fun buildDemoSessionEnvironment(
             localAuthToken = localAuthToken,
             outfitPreset = outfitPreset,
             baseOutfit = baseOutfit,
+            baseGarmentMap = baseGarmentMap,
             primaryItemId = primaryItemId,
             secondaryBottomItemId = secondaryBottomItemId,
+            initialAllowSampleBacks = initialAllowSampleBacks,
             customPersonFront = customPersonFront,
             customPersonBack = customPersonBack,
             customGarmentFront = customGarmentFront,
@@ -916,48 +1314,51 @@ private fun buildDemoSessionEnvironment(
     }
 
     val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+    customPersonFront?.let { mediaStore.putMedia(it.first, it.second) }
+    customPersonBack?.let { mediaStore.putMedia(it.first, it.second) }
 
-    val effectivePersonFront = customPersonFront?.first ?: FakeTryOnFixtures.personFrontRef
-    val effectivePersonBack = customPersonBack?.first ?: FakeTryOnFixtures.personBackRef
-    customPersonFront?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-    customPersonBack?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-
-    val updatedGarmentMap = baseGarmentMap.toMutableMap()
-    val primaryPair = updatedGarmentMap[primaryItemId] ?: ImagePair()
-    val effectiveGarmentFront = customGarmentFront?.first ?: primaryPair.front
-    val effectiveGarmentBack = customGarmentBack?.first ?: primaryPair.back
-    customGarmentFront?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-    customGarmentBack?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-    updatedGarmentMap[primaryItemId] = ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
-
-    if (secondaryBottomItemId != null) {
-        val bottomPair = updatedGarmentMap[secondaryBottomItemId] ?: ImagePair()
-        val effectiveBottomFront = customBottomFront?.first ?: bottomPair.front
-        val effectiveBottomBack = customBottomBack?.first ?: bottomPair.back
-        customBottomFront?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-        customBottomBack?.let { pair -> mediaStore.putMedia(pair.first, pair.second) }
-        updatedGarmentMap[secondaryBottomItemId] = ImagePair(front = effectiveBottomFront, back = effectiveBottomBack)
-    }
+    val initialPersonImages = resolveDemoPersonImages(
+        filesDir = filesDir,
+        executionMode = executionMode,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+        allowSampleBacks = true,
+        customPersonFront = customPersonFront,
+        customPersonBack = customPersonBack,
+    )
+    val updatedGarmentMap = resolveDemoGarmentMap(
+        filesDir = filesDir,
+        executionMode = executionMode,
+        outfitPreset = outfitPreset,
+        baseOutfit = baseOutfit,
+        baseGarmentMap = baseGarmentMap,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+        allowSampleBacks = true,
+        inMemoryMediaStore = mediaStore,
+        customGarmentFront = customGarmentFront,
+        customGarmentBack = customGarmentBack,
+        customBottomFront = customBottomFront,
+        customBottomBack = customBottomBack,
+    )
 
     // When custom local files are loaded, generate a real local composite PNG clearly stamped FAKE
-    val usesLocalDiskFiles = customPersonFront != null || customGarmentFront != null || customBottomFront != null
-    if (usesLocalDiskFiles) {
-        val outputDir = File(filesDir, "tryon_demo_outputs").apply { mkdirs() }
-        mediaStore.customOutputPathProvider = { jobId: String, view: ImageView, counter: Int, _: ByteArray ->
-            val outFile = File(outputDir, "fake_demo_${jobId}_${view.name.lowercase()}_$counter.png")
-            renderStampedFakeOutputPng(
-                targetFile = outFile,
-                view = view,
-                outfitLabel = baseOutfit.items.joinToString(" + ") { it.label },
-            )
-            outFile.absolutePath
-        }
-    }
+    attachStampedFakeOutputIfNeeded(
+        filesDir = filesDir,
+        baseOutfit = baseOutfit,
+        mediaStore = mediaStore,
+        hasCustomLocalFiles = customPersonFront != null ||
+            customPersonBack != null ||
+            customGarmentFront != null ||
+            customGarmentBack != null ||
+            customBottomFront != null ||
+            customBottomBack != null,
+    )
 
     val personSnapshot = TryOnPersonProfileSnapshot(
         profileId = "profile-dev-1",
         revision = 2L,
-        bodyImages = ImagePair(front = effectivePersonFront, back = effectivePersonBack),
+        bodyImages = initialPersonImages,
     )
     val profilePort = FakeTryOnProfilePort(initial = personSnapshot)
     val privacyCoordinator = TryOnPrivacyCoordinator(mediaStore = mediaStore)
@@ -984,6 +1385,14 @@ private fun buildDemoSessionEnvironment(
         vmScope = vmScope,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        filesDir = filesDir,
+        executionMode = executionMode,
+        outfitPreset = outfitPreset,
+        baseOutfit = baseOutfit,
+        baseGarmentMap = baseGarmentMap,
+        profilePort = profilePort,
+        inMemoryMediaStore = mediaStore,
+        initialPersonImages = initialPersonImages,
     )
 }
 
@@ -997,8 +1406,10 @@ private fun buildBackendServerEnvironment(
     localAuthToken: String?,
     outfitPreset: DemoOutfitPreset,
     baseOutfit: TryOnOutfitSnapshot,
+    baseGarmentMap: Map<String, ImagePair>,
     primaryItemId: String,
     secondaryBottomItemId: String?,
+    initialAllowSampleBacks: Boolean,
     customPersonFront: Pair<MediaRef, ByteArray>?,
     customPersonBack: Pair<MediaRef, ByteArray>?,
     customGarmentFront: Pair<MediaRef, ByteArray>?,
@@ -1006,55 +1417,30 @@ private fun buildBackendServerEnvironment(
     customBottomFront: Pair<MediaRef, ByteArray>?,
     customBottomBack: Pair<MediaRef, ByteArray>?,
 ): DemoSessionEnvironment {
-    // Auto-discover real private inputs in files/vto_real_inputs, or fall back to valid sample disk PNGs
-    val discoveredRealInputs = loadRealPrivateInputsFromAppFiles(filesDir, primaryItemId, secondaryBottomItemId)
-    val fallbackDiskSamples by lazy { generateSampleLocalPngInputs(filesDir, primaryItemId) }
-
-    val effectivePersonFront =
-        customPersonFront?.first ?: discoveredRealInputs?.personFront?.first ?: fallbackDiskSamples.personFront.first
-    val effectivePersonBack =
-        customPersonBack?.first ?: discoveredRealInputs?.personBack?.first ?: fallbackDiskSamples.personBack.first
-    val effectiveGarmentFront =
-        customGarmentFront?.first ?: discoveredRealInputs?.garmentFront?.first ?: fallbackDiskSamples.garmentFront.first
-    val effectiveGarmentBack =
-        customGarmentBack?.first ?: discoveredRealInputs?.garmentBack?.first ?: fallbackDiskSamples.garmentBack.first
-
-    val updatedGarmentMap = baseOutfit.items.associate { item ->
-        when (item.itemId) {
-            primaryItemId -> {
-                item.itemId to ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
-            }
-            secondaryBottomItemId -> {
-                val includeBack = outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK
-                val secondaryPair = generateSecondaryGarmentSamplePair(
-                    filesDir = filesDir,
-                    itemId = item.itemId,
-                    label = item.label,
-                    includeBack = includeBack,
-                )
-                val frontRef = customBottomFront?.first
-                    ?: discoveredRealInputs?.bottomFront?.first
-                    ?: secondaryPair.front
-                val backRef = if (!includeBack && customBottomBack == null && discoveredRealInputs?.bottomBack == null) {
-                    null
-                } else {
-                    customBottomBack?.first
-                        ?: discoveredRealInputs?.bottomBack?.first
-                        ?: secondaryPair.back
-                }
-                item.itemId to ImagePair(front = frontRef, back = backRef)
-            }
-            else -> {
-                val secondaryPair = generateSecondaryGarmentSamplePair(
-                    filesDir = filesDir,
-                    itemId = item.itemId,
-                    label = item.label,
-                    includeBack = outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK,
-                )
-                item.itemId to secondaryPair
-            }
-        }
-    }
+    val initialPersonImages = resolveDemoPersonImages(
+        filesDir = filesDir,
+        executionMode = executionMode,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+        allowSampleBacks = initialAllowSampleBacks,
+        customPersonFront = customPersonFront,
+        customPersonBack = customPersonBack,
+    )
+    val updatedGarmentMap = resolveDemoGarmentMap(
+        filesDir = filesDir,
+        executionMode = executionMode,
+        outfitPreset = outfitPreset,
+        baseOutfit = baseOutfit,
+        baseGarmentMap = baseGarmentMap,
+        primaryItemId = primaryItemId,
+        secondaryBottomItemId = secondaryBottomItemId,
+        allowSampleBacks = initialAllowSampleBacks,
+        inMemoryMediaStore = null,
+        customGarmentFront = customGarmentFront,
+        customGarmentBack = customGarmentBack,
+        customBottomFront = customBottomFront,
+        customBottomBack = customBottomBack,
+    )
 
     val mediaStore = LocalDiskTryOnMediaStore(
         filesRootDir = filesDir,
@@ -1114,7 +1500,7 @@ private fun buildBackendServerEnvironment(
     val personSnapshot = TryOnPersonProfileSnapshot(
         profileId = "profile-dev-1",
         revision = 2L,
-        bodyImages = ImagePair(front = effectivePersonFront, back = effectivePersonBack),
+        bodyImages = initialPersonImages,
     )
     val profilePort = FakeTryOnProfilePort(initial = personSnapshot)
 
@@ -1132,15 +1518,22 @@ private fun buildBackendServerEnvironment(
         vmScope = vmScope,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        filesDir = filesDir,
+        executionMode = executionMode,
+        outfitPreset = outfitPreset,
+        baseOutfit = baseOutfit,
+        baseGarmentMap = baseGarmentMap,
+        profilePort = profilePort,
         httpClient = httpClient,
+        initialPersonImages = initialPersonImages,
     )
 }
 
 private data class GeneratedLocalPngSet(
     val personFront: Pair<MediaRef, ByteArray>,
-    val personBack: Pair<MediaRef, ByteArray>,
+    val personBack: Pair<MediaRef, ByteArray>?,
     val garmentFront: Pair<MediaRef, ByteArray>,
-    val garmentBack: Pair<MediaRef, ByteArray>,
+    val garmentBack: Pair<MediaRef, ByteArray>?,
 )
 
 private data class RealPrivateInputSet(
@@ -1271,6 +1664,7 @@ private fun generateSecondaryGarmentSamplePair(
 private fun generateSampleLocalPngInputs(
     filesDir: File,
     primaryItemId: String,
+    includeBack: Boolean = true,
 ): GeneratedLocalPngSet {
     val localDir = File(filesDir, "tryon_demo_local_inputs").apply { mkdirs() }
 
@@ -1284,16 +1678,33 @@ private fun generateSampleLocalPngInputs(
         subtitle = "384x512 px • Luu cuc bo tren may ao",
         isGarmentOnly = false,
     )
-    val pbFile = File(localDir, "person_back_sample.png")
-    val pbBytes = renderLabeledSamplePng(
-        targetFile = pbFile,
-        bgColor = AndroidColor.rgb(235, 229, 220),
-        accentColor = AndroidColor.rgb(74, 90, 108),
-        header = "SAMPLE PERSON INPUT (LOCAL)",
-        title = "ANH NGUOI - MAT SAU",
-        subtitle = "384x512 px • Luu cuc bo tren may ao",
-        isGarmentOnly = false,
-    )
+    val personBackPair = if (includeBack) {
+        val pbFile = File(localDir, "person_back_sample.png")
+        val pbBytes = renderLabeledSamplePng(
+            targetFile = pbFile,
+            bgColor = AndroidColor.rgb(235, 229, 220),
+            accentColor = AndroidColor.rgb(74, 90, 108),
+            header = "SAMPLE PERSON INPUT (LOCAL)",
+            title = "ANH NGUOI - MAT SAU",
+            subtitle = "384x512 px • Luu cuc bo tren may ao",
+            isGarmentOnly = false,
+        )
+        MediaRef(
+            id = "local-sample-person-back",
+            ownerEntityId = "profile-dev-1",
+            scope = MediaScope.PERSON,
+            view = ImageView.BACK,
+            localRelativePath = pbFile.absolutePath,
+            mimeType = "image/png",
+            width = 384,
+            height = 512,
+            byteCount = pbBytes.size.toLong(),
+            contentHash = sha256Hex(pbBytes),
+            revision = 2L,
+        ) to pbBytes
+    } else {
+        null
+    }
     val gfFile = File(localDir, "garment_front_sample.png")
     val gfBytes = renderLabeledSamplePng(
         targetFile = gfFile,
@@ -1304,16 +1715,33 @@ private fun generateSampleLocalPngInputs(
         subtitle = "384x512 px • Luu cuc bo tren may ao",
         isGarmentOnly = true,
     )
-    val gbFile = File(localDir, "garment_back_sample.png")
-    val gbBytes = renderLabeledSamplePng(
-        targetFile = gbFile,
-        bgColor = AndroidColor.rgb(242, 238, 231),
-        accentColor = AndroidColor.rgb(140, 78, 54),
-        header = "SAMPLE GARMENT INPUT (LOCAL)",
-        title = "AO MAU - MAT SAU",
-        subtitle = "384x512 px • Luu cuc bo tren may ao",
-        isGarmentOnly = true,
-    )
+    val garmentBackPair = if (includeBack) {
+        val gbFile = File(localDir, "garment_back_sample.png")
+        val gbBytes = renderLabeledSamplePng(
+            targetFile = gbFile,
+            bgColor = AndroidColor.rgb(242, 238, 231),
+            accentColor = AndroidColor.rgb(140, 78, 54),
+            header = "SAMPLE GARMENT INPUT (LOCAL)",
+            title = "AO MAU - MAT SAU",
+            subtitle = "384x512 px • Luu cuc bo tren may ao",
+            isGarmentOnly = true,
+        )
+        MediaRef(
+            id = "local-sample-garment-back",
+            ownerEntityId = primaryItemId,
+            scope = MediaScope.GARMENT,
+            view = ImageView.BACK,
+            localRelativePath = gbFile.absolutePath,
+            mimeType = "image/png",
+            width = 384,
+            height = 512,
+            byteCount = gbBytes.size.toLong(),
+            contentHash = sha256Hex(gbBytes),
+            revision = 1L,
+        ) to gbBytes
+    } else {
+        null
+    }
 
     return GeneratedLocalPngSet(
         personFront = MediaRef(
@@ -1329,19 +1757,7 @@ private fun generateSampleLocalPngInputs(
             contentHash = sha256Hex(pfBytes),
             revision = 2L,
         ) to pfBytes,
-        personBack = MediaRef(
-            id = "local-sample-person-back",
-            ownerEntityId = "profile-dev-1",
-            scope = MediaScope.PERSON,
-            view = ImageView.BACK,
-            localRelativePath = pbFile.absolutePath,
-            mimeType = "image/png",
-            width = 384,
-            height = 512,
-            byteCount = pbBytes.size.toLong(),
-            contentHash = sha256Hex(pbBytes),
-            revision = 2L,
-        ) to pbBytes,
+        personBack = personBackPair,
         garmentFront = MediaRef(
             id = "local-sample-garment-front",
             ownerEntityId = primaryItemId,
@@ -1355,19 +1771,7 @@ private fun generateSampleLocalPngInputs(
             contentHash = sha256Hex(gfBytes),
             revision = 1L,
         ) to gfBytes,
-        garmentBack = MediaRef(
-            id = "local-sample-garment-back",
-            ownerEntityId = primaryItemId,
-            scope = MediaScope.GARMENT,
-            view = ImageView.BACK,
-            localRelativePath = gbFile.absolutePath,
-            mimeType = "image/png",
-            width = 384,
-            height = 512,
-            byteCount = gbBytes.size.toLong(),
-            contentHash = sha256Hex(gbBytes),
-            revision = 1L,
-        ) to gbBytes,
+        garmentBack = garmentBackPair,
     )
 }
 
@@ -1443,6 +1847,8 @@ private fun renderStampedFakeOutputPng(
     )
 }
 
+private val pickedMediaSeq = AtomicLong(0L)
+
 private fun importUriToLocalRef(
     context: android.content.Context,
     uri: Uri,
@@ -1470,11 +1876,14 @@ private fun importUriToLocalRef(
             mime.contains("webp") -> "webp"
             else -> "jpg"
         }
+        listOf("jpg", "png", "webp").filter { it != ext }.forEach { staleExt ->
+            File(localDir, "$slotId.$staleExt").delete()
+        }
         val outFile = File(localDir, "$slotId.$ext")
         FileOutputStream(outFile).use { it.write(rawBytes) }
 
         val ref = MediaRef(
-            id = "$slotId-${System.currentTimeMillis()}",
+            id = "$slotId-${System.currentTimeMillis()}-${pickedMediaSeq.incrementAndGet()}",
             ownerEntityId = ownerId,
             scope = scope,
             view = view,

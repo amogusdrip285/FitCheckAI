@@ -1024,7 +1024,7 @@ class AndroidVirtualTryOnClient(
         val encoder = Base64.getEncoder()
         fun toDto(upload: com.fitcheckai.feature.tryon.privacy.AuthorizedImageUpload): WireImageInputDto =
             WireImageInputDto(
-                mediaId = upload.mediaRef.id,
+                mediaId = upload.mediaRef.derivedFromMediaId ?: upload.mediaRef.id,
                 view = upload.mediaRef.view,
                 mimeType = upload.mediaRef.mimeType,
                 width = upload.mediaRef.width,

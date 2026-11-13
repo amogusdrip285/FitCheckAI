@@ -527,6 +527,24 @@ class TryOnScreenVisualQaTest {
             composeRule.onAllNodesWithTag(TryOnTestTags.FAKE_MODE_BADGE).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(TryOnTestTags.FAKE_MODE_BADGE).assertIsDisplayed()
+
+        // Debug panel must be hidden by default, while inline Gallery picker buttons are visible directly on TryOnScreen
+        assertTrue(
+            "Debug control panel should be collapsed by default",
+            composeRule.onAllNodesWithTag(TryOnDemoTags.DEMO_CONTROL_PANEL).fetchSemanticsNodes().isEmpty(),
+        )
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_PERSON_FRONT_INLINE)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_PERSON_BACK_INLINE)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_TOP_INLINE)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE)
+            .performScrollTo()
+            .assertIsDisplayed()
         saveScreenshot("14b_fosta_default_original_photo")
 
         // Exercise BACK view chip and capture screenshot
@@ -544,7 +562,12 @@ class TryOnScreenVisualQaTest {
             .performClick()
         composeRule.waitForIdle()
 
-        // Exercise garment combo chip: select TOP+BOTTOM and verify EXPERIMENTAL_NOTICE appears
+        // Exercise garment combo chips: BOTTOM then TOP+BOTTOM and verify EXPERIMENTAL_NOTICE appears
+        composeRule.onNodeWithTag(TryOnTestTags.GARMENT_COMBO_BOTTOM)
+            .performScrollTo()
+            .assertHeightIsAtLeast(48.dp)
+            .performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(TryOnTestTags.GARMENT_COMBO_TOP_BOTTOM)
             .performScrollTo()
             .assertHeightIsAtLeast(48.dp)
