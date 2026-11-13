@@ -1,0 +1,381 @@
+{
+  "source": {
+    "dataset": "paramaggarwal/fashion-product-images-small",
+    "version": 1,
+    "url": "https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small",
+    "publisher": "Param Aggarwal",
+    "declaredLicense": "MIT"
+  },
+  "stylesCsvSha256": "cd86bd2d71b4065ed91786a52aa6ccc0eed343949791c663be9af35f105a128c",
+  "catalogRows": 44446,
+  "fields": {
+    "gender": {
+      "distinctValues": 5,
+      "missingRows": 0,
+      "topValues": [
+        {
+          "value": "Men",
+          "count": 22165,
+          "percentOfCatalog": 49.8695
+        },
+        {
+          "value": "Women",
+          "count": 18632,
+          "percentOfCatalog": 41.9205
+        },
+        {
+          "value": "Unisex",
+          "count": 2164,
+          "percentOfCatalog": 4.8688
+        },
+        {
+          "value": "Boys",
+          "count": 830,
+          "percentOfCatalog": 1.8674
+        },
+        {
+          "value": "Girls",
+          "count": 655,
+          "percentOfCatalog": 1.4737
+        }
+      ]
+    },
+    "masterCategory": {
+      "distinctValues": 7,
+      "missingRows": 0,
+      "topValues": [
+        {
+          "value": "Apparel",
+          "count": 21400,
+          "percentOfCatalog": 48.1483
+        },
+        {
+          "value": "Accessories",
+          "count": 11289,
+          "percentOfCatalog": 25.3994
+        },
+        {
+          "value": "Footwear",
+          "count": 9222,
+          "percentOfCatalog": 20.7488
+        },
+        {
+          "value": "Personal Care",
+          "count": 2404,
+          "percentOfCatalog": 5.4088
+        },
+        {
+          "value": "Free Items",
+          "count": 105,
+          "percentOfCatalog": 0.2362
+        },
+        {
+          "value": "Sporting Goods",
+          "count": 25,
+          "percentOfCatalog": 0.0562
+        },
+        {
+          "value": "Home",
+          "count": 1,
+          "percentOfCatalog": 0.0022
+        }
+      ]
+    },
+    "subCategory": {
+      "distinctValues": 45,
+      "missingRows": 0,
+      "topValues": [
+        {
+          "value": "Topwear",
+          "count": 15405,
+          "percentOfCatalog": 34.66
+        },
+        {
+          "value": "Shoes",
+          "count": 7344,
+          "percentOfCatalog": 16.5234
+        },
+        {
+          "value": "Bags",
+          "count": 3055,
+          "percentOfCatalog": 6.8735
+        },
+        {
+          "value": "Bottomwear",
+          "count": 2694,
+          "percentOfCatalog": 6.0613
+        },
+        {
+          "value": "Watches",
+          "count": 2542,
+          "percentOfCatalog": 5.7193
+        },
+        {
+          "value": "Innerwear",
+          "count": 1808,
+          "percentOfCatalog": 4.0679
+        },
+        {
+          "value": "Jewellery",
+          "count": 1080,
+          "percentOfCatalog": 2.4299
+        },
+        {
+          "value": "Eyewear",
+          "count": 1073,
+          "percentOfCatalog": 2.4142
+        },
+        {
+          "value": "Fragrance",
+          "count": 1012,
+          "percentOfCatalog": 2.2769
+        },
+        {
+          "value": "Sandal",
+          "count": 963,
+          "percentOfCatalog": 2.1667
+        }
+      ]
+    },
+    "articleType": {
+      "distinctValues": 143,
+      "missingRows": 0,
+      "topValues": [
+        {
+          "value": "Tshirts",
+          "count": 7070,
+          "percentOfCatalog": 15.9069
+        },
+        {
+          "value": "Shirts",
+          "count": 3217,
+          "percentOfCatalog": 7.238
+        },
+        {
+          "value": "Casual Shoes",
+          "count": 2846,
+          "percentOfCatalog": 6.4033
+        },
+        {
+          "value": "Watches",
+          "count": 2542,
+          "percentOfCatalog": 5.7193
+        },
+        {
+          "value": "Sports Shoes",
+          "count": 2036,
+          "percentOfCatalog": 4.5808
+        },
+        {
+          "value": "Kurtas",
+          "count": 1844,
+          "percentOfCatalog": 4.1489
+        },
+        {
+          "value": "Tops",
+          "count": 1762,
+          "percentOfCatalog": 3.9644
+        },
+        {
+          "value": "Handbags",
+          "count": 1759,
+          "percentOfCatalog": 3.9576
+        },
+        {
+          "value": "Heels",
+          "count": 1323,
+          "percentOfCatalog": 2.9766
+        },
+        {
+          "value": "Sunglasses",
+          "count": 1073,
+          "percentOfCatalog": 2.4142
+        }
+      ]
+    },
+    "baseColour": {
+      "distinctValues": 46,
+      "missingRows": 15,
+      "topValues": [
+        {
+          "value": "Black",
+          "count": 9732,
+          "percentOfCatalog": 21.8962
+        },
+        {
+          "value": "White",
+          "count": 5540,
+          "percentOfCatalog": 12.4646
+        },
+        {
+          "value": "Blue",
+          "count": 4922,
+          "percentOfCatalog": 11.0741
+        },
+        {
+          "value": "Brown",
+          "count": 3494,
+          "percentOfCatalog": 7.8612
+        },
+        {
+          "value": "Grey",
+          "count": 2741,
+          "percentOfCatalog": 6.167
+        },
+        {
+          "value": "Red",
+          "count": 2458,
+          "percentOfCatalog": 5.5303
+        },
+        {
+          "value": "Green",
+          "count": 2116,
+          "percentOfCatalog": 4.7608
+        },
+        {
+          "value": "Pink",
+          "count": 1861,
+          "percentOfCatalog": 4.1871
+        },
+        {
+          "value": "Navy Blue",
+          "count": 1791,
+          "percentOfCatalog": 4.0296
+        },
+        {
+          "value": "Purple",
+          "count": 1643,
+          "percentOfCatalog": 3.6966
+        }
+      ]
+    },
+    "season": {
+      "distinctValues": 4,
+      "missingRows": 21,
+      "topValues": [
+        {
+          "value": "Summer",
+          "count": 21476,
+          "percentOfCatalog": 48.3193
+        },
+        {
+          "value": "Fall",
+          "count": 11445,
+          "percentOfCatalog": 25.7503
+        },
+        {
+          "value": "Winter",
+          "count": 8519,
+          "percentOfCatalog": 19.1671
+        },
+        {
+          "value": "Spring",
+          "count": 2985,
+          "percentOfCatalog": 6.716
+        }
+      ]
+    },
+    "year": {
+      "distinctValues": 13,
+      "missingRows": 1,
+      "topValues": [
+        {
+          "value": "2012",
+          "count": 16290,
+          "percentOfCatalog": 36.6512
+        },
+        {
+          "value": "2011",
+          "count": 13689,
+          "percentOfCatalog": 30.7992
+        },
+        {
+          "value": "2016",
+          "count": 6007,
+          "percentOfCatalog": 13.5153
+        },
+        {
+          "value": "2017",
+          "count": 2917,
+          "percentOfCatalog": 6.563
+        },
+        {
+          "value": "2015",
+          "count": 2780,
+          "percentOfCatalog": 6.2548
+        },
+        {
+          "value": "2013",
+          "count": 1213,
+          "percentOfCatalog": 2.7292
+        },
+        {
+          "value": "2010",
+          "count": 846,
+          "percentOfCatalog": 1.9034
+        },
+        {
+          "value": "2018",
+          "count": 405,
+          "percentOfCatalog": 0.9112
+        },
+        {
+          "value": "2014",
+          "count": 236,
+          "percentOfCatalog": 0.531
+        },
+        {
+          "value": "2019",
+          "count": 33,
+          "percentOfCatalog": 0.0742
+        }
+      ]
+    },
+    "usage": {
+      "distinctValues": 8,
+      "missingRows": 317,
+      "topValues": [
+        {
+          "value": "Casual",
+          "count": 34414,
+          "percentOfCatalog": 77.4288
+        },
+        {
+          "value": "Sports",
+          "count": 4025,
+          "percentOfCatalog": 9.0559
+        },
+        {
+          "value": "Ethnic",
+          "count": 3208,
+          "percentOfCatalog": 7.2177
+        },
+        {
+          "value": "Formal",
+          "count": 2359,
+          "percentOfCatalog": 5.3076
+        },
+        {
+          "value": "Smart Casual",
+          "count": 67,
+          "percentOfCatalog": 0.1507
+        },
+        {
+          "value": "Party",
+          "count": 29,
+          "percentOfCatalog": 0.0652
+        },
+        {
+          "value": "Travel",
+          "count": 26,
+          "percentOfCatalog": 0.0585
+        },
+        {
+          "value": "Home",
+          "count": 1,
+          "percentOfCatalog": 0.0022
+        }
+      ]
+    }
+  }
+}

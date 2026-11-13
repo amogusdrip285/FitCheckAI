@@ -41,6 +41,7 @@ export const ATTRIBUTE_FIELDS = [
   "material",
   "formality",
   "seasonTags",
+  "garmentType",
 ] as const;
 export type AttributeField = (typeof ATTRIBUTE_FIELDS)[number];
 

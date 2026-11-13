@@ -8,40 +8,43 @@ Từ thư mục gốc repo, với Python 3.10 trở lên:
 
 ```powershell
 python -m pip install -r tools/data/requirements.txt
-python tools/data/prepare_kaggle_fashion.py --download --sample-per-category 2
+python tools/data/prepare_kaggle_fashion.py --download --sample-per-type 10
 ```
 
-Lệnh tải bản v1 vào `data/raw/kaggle/fashion-product-images-small-v1.zip` (khoảng 565 MiB), kiểm SHA-256 của `styles.csv`, rồi nối mỗi sản phẩm với JPEG theo `id`. Để dùng ZIP v1 đã tải từ trình duyệt, truyền `--archive "đường-dẫn-tới-file.zip"` thay cho `--download`. Bỏ `--sample-per-category 2` nếu chỉ cần tạo chỉ mục đầy đủ.
+Lệnh tải bản v1 vào `data/raw/kaggle/fashion-product-images-small-v1.zip` (khoảng 565 MiB), kiểm SHA-256 của `styles.csv`, rồi nối mỗi sản phẩm với JPEG theo `id`. Để dùng ZIP v1 có sẵn, truyền `--archive "đường-dẫn-tới-file.zip"`. Bỏ `--sample-per-type 10` nếu chỉ cần tạo chỉ mục đầy đủ.
 
 | Đầu ra trong `data/processed/kaggle-fashion-small/` | Cách dùng |
 |---|---|
-| `items.jsonl` | 24.856 dòng ảnh hợp lệ. `archiveMember` là tên file ảnh bên trong ZIP. `sourceId` nối lại với catalog. |
+| `catalog.csv` | Đủ 44.446 dòng và 10 cột gốc, kèm `wardrobeCategory`, `garmentType`, `garmentTypeBasis` để lọc trong Excel. Ba cột bổ sung để trống với dòng chưa có ảnh hợp lệ trong chỉ mục. [Bản CSV trong Git](reports/kaggle-fashion-small-catalog.csv). |
+| `items.jsonl` | 36.997 dòng ảnh hợp lệ. `archiveMember` trỏ tới ảnh trong ZIP. `sourceId` nối lại với catalog. |
 | `excluded.json` | ID và lý do loại từng dòng. `duplicateOf` trỏ đến ID được giữ khi ảnh và nhãn tham chiếu trùng. |
-| `audit.json` | Thống kê lọc, phân bố nhóm, kích thước, nguồn và SHA-256. [Báo cáo đã chạy trên bản v1](reports/kaggle-fashion-small-audit.json). |
-| `sample-2-per-category/` | 12 ảnh đã giải nén để thử chọn ảnh trong app. Mỗi mục trong `manifest.json` có `file` tương đối tới JPEG và nhãn để đối chiếu. |
+| `audit.json` | Thống kê lọc, số ảnh từng tag, kích thước, nguồn và SHA-256. [Báo cáo đã chạy trên bản v1](reports/kaggle-fashion-small-audit.json). |
+| `metadata-top10.json` | Tối đa 10 giá trị phổ biến cho từng cột nhãn. [Bảng xếp hạng đã tạo](reports/kaggle-fashion-small-top10.json). |
+| `sample-10-per-type/` | 480 ảnh đối chiếu, tối đa 10 ảnh/tag. Manifest ghi đường dẫn, SHA-256, đủ nhãn gốc, tag quy đổi và số mẫu từng tag. |
 
-Để thử trên Android, đưa một ảnh từ thư mục mẫu vào thư viện trên máy hoặc emulator. Vào **Tủ đồ → Thêm đồ**, rồi chọn **Chọn ảnh** trong ô **Mặt trước**. Dùng `category` và `colors` trong manifest để điền và kiểm lại sau khi lưu. ZIP, ảnh xuất và chỉ mục đầy đủ nằm trong các thư mục local được `.gitignore` quản lý.
+Để thử trên Android, đưa một JPEG mẫu vào thư viện máy hoặc emulator. Vào **Tủ đồ → Thêm đồ → Chọn ảnh** trong ô **Mặt trước**. Dùng `category`, `garmentType` và `colors` trong manifest để đối chiếu sau khi chọn hoặc nhận diện. JPEG catalog, ZIP và chỉ mục JSONL nằm trong thư mục local. Để cập nhật CSV và hai báo cáo trong Git sau khi chạy audit, thêm `--publish-metadata` vào lệnh chuẩn bị.
 
 ### Quy tắc nhãn và phạm vi
 
-- `sourceLabels` giữ 9 cột metadata của Kaggle, gồm `gender`, `masterCategory`, `subCategory`, `articleType`, `baseColour`, `season`, `year`, `usage`, `productDisplayName`. `sourceId` giữ cột `id`. Trường `articleType` chứa loại chi tiết như `Tshirts`, `Skirts` hoặc `Formal Shoes`.
-- `category` lấy theo bộ ba `masterCategory`, `subCategory`, `articleType` trong danh sách của script. Danh sách ưu tiên áo, quần/chân váy, đầm, áo khoác, giày/dép và đồ đội đầu. Đồng hồ, túi, mỹ phẩm, trang sức, đồ lót, đồ ngủ, saree và bộ nhiều món nằm ngoài phạm vi catalog Track A này.
-- `colors` quy đổi một màu chính sang enum của app, ví dụ `Navy Blue` thành `BLUE`. `Multi`, `NA` và giá trị chưa map có `colors=[]`. `seasonTags` giữ mùa catalog sau quy đổi, ví dụ `Fall` thành `AUTUMN`. Cột `usage` vẫn nằm trong `sourceLabels` để tham chiếu.
-- `referenceFields` ghi loại và màu chính có dữ liệu. `pattern=UNKNOWN`, `material=null`, `formality=null`, `styleTags=[]`, `view=UNKNOWN` và `back=null` phản ánh các thuộc tính chưa xác định. `groundTruthFields=[]` và `independentReviewStatus=PENDING` ghi trạng thái review khi Track B dùng nhãn.
+- `sourceLabels` giữ nguyên `gender`, `masterCategory`, `subCategory`, `articleType`, `baseColour`, `season`, `year`, `usage`, `productDisplayName`. `sourceId` giữ cột `id`.
+- Bảng top 10 tính trên toàn bộ 44.446 dòng catalog, xếp theo số lần xuất hiện giảm dần rồi theo tên khi bằng nhau. Mẫu số của phần trăm gồm cả dòng thiếu giá trị. Giá trị rỗng và `NA` được đếm riêng. Cột có ít hơn 10 giá trị có danh sách ngắn hơn. `id` và tên sản phẩm được giữ theo từng dòng để tra cứu.
+- `category` là sáu nhóm của app. [Từ điển 51 tag](sources/garment-types.json) giữ mã, tên tiếng Việt, nhóm và dấu hiệu nhận diện. Bộ ba `masterCategory/subCategory/articleType` cho biết loại gốc. `garmentTypeBasis` ghi khi script dùng thêm tên hoặc `usage` để tách polo, quần âu, giày da và các kiểu khác. Tên hãng có chữ Polo đứng riêng không đủ để gán tag polo. Giày tây chỉ được gán giày da khi tên catalog có ghi leather.
+- `colors` quy đổi một màu chính sang bảng màu của app, ví dụ `Navy Blue` thành `BLUE`. `Multi`, `NA` và giá trị chưa map có `colors=[]`. `seasonTags` giữ mùa catalog sau quy đổi, ví dụ `Fall` thành `AUTUMN`. Mùa, năm, đối tượng bán, dịp sử dụng và tên catalog thuộc metadata nguồn.
+- `referenceFields` ghi nhóm, loại chi tiết và màu chính khi có. `pattern=UNKNOWN`, `material=null`, `formality=null`, `styleTags=[]`, `view=UNKNOWN` và `back=null` giữ các thuộc tính chưa xác định. `groundTruthFields=[]` và `independentReviewStatus=PENDING` ghi trạng thái review.
 
 | Nhóm app | Số ảnh |
 |---|---:|
-| Áo (`TOP`) | 12.227 |
-| Quần và chân váy (`BOTTOM`) | 2.383 |
-| Đầm (`DRESS`) | 438 |
+| Áo (`TOP`) | 14.301 |
+| Quần và chân váy (`BOTTOM`) | 2.382 |
+| Đầm và đồ liền quần (`DRESS`) | 454 |
 | Áo khoác (`OUTERWEAR`) | 302 |
-| Giày và dép (`SHOES`) | 9.214 |
-| Mũ và băng đô (`ACCESSORY`) | 292 |
-| **Tổng** | **24.856** |
+| Giày và dép (`SHOES`) | 9.213 |
+| Phụ kiện (`ACCESSORY`) | 10.345 |
+| **Tổng** | **36.997** |
 
-Audit có 44.446 dòng catalog và 44.441 ảnh ở `images/`. Thư mục `myntradataset/` trong ZIP chứa thêm bản sao của bộ ảnh và CSV. Script dùng thư mục gốc, nối lại tên ở 22 dòng có dấu phẩy thừa sau cột metadata, và giải mã JPEG trong phạm vi đã chọn. Có 18.818 dòng ngoài phạm vi, 5 dòng thiếu ảnh, 709 bản trùng byte cùng nhãn nhóm/màu và 58 dòng trùng byte có xung đột nhãn. Với bản trùng cùng nhãn, giữ ID số nhỏ nhất. Trong tập đã lọc, 24.731 ảnh có màu đã map và 24.835 ảnh có mùa catalog.
+Audit có 44.446 dòng catalog và 44.441 ảnh ở `images/`. Thư mục `myntradataset/` trong ZIP chứa bản sao. Script nối lại tên ở 22 dòng có dấu phẩy thừa và giải mã từng JPEG trong phạm vi đã chọn. Có 6.639 dòng ngoài phạm vi, 5 dòng thiếu ảnh, 724 bản trùng byte cùng nhãn loại/màu và 81 dòng trùng byte có xung đột nhãn. Bản trùng cùng nhãn giữ ID nhỏ nhất. Mỹ phẩm, đồ lót, đồ ngủ, bộ nhiều món và các loại chưa quy đổi vẫn có metadata trong CSV.
 
-Phần lớn ảnh là 60 × 80 px và một số món được chụp trên người mẫu. Các sản phẩm được giữ có năm catalog từ 2007 đến 2018. Bộ này phù hợp cho kiểm thử nhập ảnh, tra nhãn và thử pipeline phân loại. Đánh giá recognition cần review nhãn độc lập và tập kiểm thử riêng. Kiểm thử ảnh hai mặt dùng fixtures bên dưới.
+Phần lớn ảnh là 60 × 80 px và một số món được chụp trên người mẫu. Bộ mẫu có đủ 10 ảnh cho 46 tag, bao gồm cả 12 tag được yêu cầu. Năm tag ít ảnh hơn là cardigan (2), blazer (8), áo khoác dài (0), mũ (3), băng đô (7). Nhãn catalog phù hợp để tra cứu và kiểm thử. Đo chất lượng AI cần review ảnh độc lập trên một tập riêng. Kiểm thử ảnh hai mặt dùng fixtures bên dưới.
 
 Hai kiểm tra dữ liệu chạy được sau khi clone, dùng fixtures trong repo và ZIP giả lập nhỏ cho các ca CSV lệch cột, ảnh thiếu/hỏng và ảnh trùng:
 
@@ -52,7 +55,7 @@ python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 
 ## Fixtures Android
 
-Bộ [manifest](fixtures/modern-clothing/manifest.json) gồm **21 món, 24 ảnh thật, 3 cặp trước/sau**, đủ 6 nhóm, kèm [ca lỗi](fixtures/modern-clothing/cases.json). Các nhãn màu/họa tiết và tên hiển thị đã được trợ lý rà từ ảnh. `fieldProvenance` ghi nguồn từng trường, `referenceFields` liệt kê nhãn tham chiếu và `groundTruthFields` để rỗng trong khi chờ review độc lập.
+Bộ [manifest](fixtures/modern-clothing/manifest.json) gồm **21 món, 24 ảnh thật, 3 cặp trước/sau**, đủ 6 nhóm, kèm [ca lỗi](fixtures/modern-clothing/cases.json). Nhãn loại chi tiết, màu và họa tiết dùng để đối chiếu trên Android. `fieldProvenance` ghi nguồn từng trường, `referenceFields` liệt kê nhãn tham chiếu và `groundTruthFields` để rỗng trong khi chờ review độc lập.
 
 Ngày 12/11/2026, người dùng xác nhận đầm `a06aab12` màu đen. Track A đối chiếu tám trường còn lại từ review của B với ảnh gốc và sửa bảy trường. Quần `4d0ffc98` giữ `BLUE,WHITE` do thấy sắc navy ở vùng sáng, đồng thời cập nhật họa tiết `STRIPED`. Manifest ghi lý do theo từng trường. [Review nhãn của B](../eval/ai/recognition/label-review.track-a.json).
 

@@ -4,6 +4,12 @@ plugins {
     `java-test-fixtures`
 }
 
+tasks.processResources {
+    from(rootProject.file("data/sources/garment-types.json")) {
+        into("com/fitcheckai/core/model/wardrobe")
+    }
+}
+
 dependencies {
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.serialization.json)

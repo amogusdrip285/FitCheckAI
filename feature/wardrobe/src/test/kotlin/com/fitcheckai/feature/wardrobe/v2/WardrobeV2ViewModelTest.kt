@@ -49,11 +49,35 @@ class WardrobeV2ViewModelTest {
         assertEquals(request.requestId, request.consentGrant.requestId)
         vm.editAttributes(vm.state.value.item.attributes.copy(category = Category.DRESS), AttributeField.CATEGORY)
         response.complete(Result.success(RecognitionResult(request.requestId, request.itemId, request.inputRevision,
-            ClothingAttributes(Category.TOP, listOf(GarmentColor.RED)), source = ResultSource.AI_LIVE)))
+            ClothingAttributes(Category.TOP, listOf(GarmentColor.RED), garmentType = "SHIRT"), source = ResultSource.AI_LIVE)))
         runCurrent()
         assertEquals(Category.DRESS, vm.state.value.item.attributes.category)
         assertEquals(listOf(GarmentColor.RED), vm.state.value.item.attributes.colors)
         assertEquals(AttributeSource.MANUAL, vm.state.value.item.attributes.attributeSources[AttributeField.CATEGORY])
+        assertNull(vm.state.value.item.attributes.garmentType)
+        assertTrue(AttributeField.GARMENT_TYPE in vm.state.value.item.attributes.needsReviewFields)
+    }
+    @Test fun `manual type stays searchable after a late AI response and clears when group changes`() = runTest(dispatcher) {
+        val vm = editor()
+        prepare(vm)
+        runCurrent()
+        vm.editAttributes(vm.state.value.item.attributes.copy(category = Category.TOP), AttributeField.CATEGORY)
+        vm.editAttributes(vm.state.value.item.attributes.copy(garmentType = "SHIRT"), AttributeField.GARMENT_TYPE)
+        recognition.respond = { request ->
+            Result.success(RecognitionResult(request.requestId, request.itemId, request.inputRevision,
+                ClothingAttributes(Category.TOP, garmentType = "POLO"), source = ResultSource.AI_LIVE))
+        }
+        vm.recognize()
+        runCurrent()
+        val shirt = vm.state.value.item
+        assertEquals("SHIRT", shirt.attributes.garmentType)
+        assertEquals(AttributeSource.MANUAL, shirt.attributes.attributeSources[AttributeField.GARMENT_TYPE])
+        assertTrue(Filter(query = "ao so mi", garmentType = "SHIRT").matches(shirt))
+        assertFalse(Filter(garmentType = "POLO").matches(shirt))
+
+        vm.editAttributes(shirt.attributes.copy(category = Category.BOTTOM), AttributeField.CATEGORY)
+        assertNull(vm.state.value.item.attributes.garmentType)
+        assertFalse(AttributeField.GARMENT_TYPE in vm.state.value.item.attributes.attributeSources)
     }
     @Test fun `replacement invalidates in flight response and keeps opposite view`() = runTest(dispatcher) {
         recognition.respond = { request ->

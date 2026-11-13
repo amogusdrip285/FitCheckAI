@@ -10,6 +10,9 @@ BASE = ROOT / "data/fixtures/modern-clothing"
 
 def main():
     data = json.loads((BASE / "manifest.json").read_text(encoding="utf-8"))
+    types = json.loads((ROOT / "data/sources/garment-types.json").read_text(encoding="utf-8"))
+    type_categories = {row["id"]: row["category"] for row in types}
+    assert len(type_categories) == len(types)
     ids, hashes, categories, pair_count, photos = set(), set(), set(), 0, 0
     for item in data["items"]:
         assert str(uuid.UUID(item["id"])) == item["id"] and item["id"] not in ids
@@ -19,7 +22,9 @@ def main():
         assert 0 < len(item["colors"]) <= 3
         assert item["front"] is not None
         assert item["groundTruthFields"] == [] and item["independentReviewStatus"] == "PENDING"
-        assert {"category", "colors", "pattern"}.issubset(item["referenceFields"])
+        assert {"category", "colors", "pattern", "garmentType"}.issubset(item["referenceFields"])
+        assert type_categories[item["garmentType"]] == item["category"]
+        assert item["fieldProvenance"]["garmentType"]["method"] == "assistant_visual_review"
         assert item["fieldProvenance"]["colors"]["method"] in {
             "assistant_visual_review", "user_visual_confirmation", "track_a_visual_review",
         }

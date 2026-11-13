@@ -1,6 +1,11 @@
 // OWNER: Track B. Wire schema POST /v2/recognition — CONTRACTS.md v2 CT-05.
 import { z } from "zod";
 import { ATTRIBUTE_FIELDS, CATEGORIES, COLORS, PATTERNS, SEASONS, VIEWS, idSchema } from "../shared/domain";
+import garmentTypes from "../../../data/sources/garment-types.json";
+
+export const GARMENT_TYPE_CONTRACT_VERSION = 1;
+export const garmentTypesById = new Map(garmentTypes.map((type) => [type.id, type]));
+export const GarmentTypeSchema = z.enum(garmentTypes.map((type) => type.id));
 
 export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
@@ -40,6 +45,7 @@ export const RecognitionRequestSchema = z
     front: GarmentImageInputSchema,
     back: GarmentImageInputSchema.nullable().default(null),
     consentGrant: ConsentGrantSchema.nullable(),
+    garmentTypeVersion: z.literal(GARMENT_TYPE_CONTRACT_VERSION).optional(),
   })
   .strict();
 
@@ -63,4 +69,8 @@ export const ModelRecognitionSchema = z.object({
   uncertainFields: z.array(z.enum(ATTRIBUTE_FIELDS)),
 });
 
-export type ModelRecognition = z.infer<typeof ModelRecognitionSchema>;
+export const DetailedModelRecognitionSchema = ModelRecognitionSchema.extend({
+  attributes: ModelRecognitionSchema.shape.attributes.extend({ garmentType: GarmentTypeSchema.nullable() }),
+});
+
+export type ModelRecognition = z.infer<typeof ModelRecognitionSchema> | z.infer<typeof DetailedModelRecognitionSchema>;

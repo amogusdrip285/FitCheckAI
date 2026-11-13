@@ -16,8 +16,16 @@ internal fun WardrobeFields(item: ClothingItem, enabled: Boolean, name: (String)
     val a = item.attributes
     OutlinedTextField(item.name, name, Modifier.fillMaxWidth(), enabled = enabled, singleLine = true,
         label = { Text("Tên món đồ *") }, placeholder = { Text("Ví dụ: Áo sơ mi trắng") })
-    SelectField(a.title("Loại đồ", AttributeField.CATEGORY), a.category.label, Category.entries.map { it.label }, enabled) { index ->
+    SelectField(a.title("Nhóm đồ", AttributeField.CATEGORY), a.category.label, Category.entries.map { it.label }, enabled) { index ->
         update(a.copy(category = Category.entries[index]), AttributeField.CATEGORY)
+    }
+    if (a.category != Category.UNKNOWN) {
+        val types = remember(a.category) { GarmentType.entries.filter { it.category == a.category } }
+        val none = "Chưa xác định"
+        SelectField(a.title("Loại chi tiết", AttributeField.GARMENT_TYPE),
+            GarmentType.find(a.garmentType)?.label ?: none, listOf(none) + types.map { it.label }, enabled) { index ->
+            update(a.copy(garmentType = types.getOrNull(index - 1)?.id), AttributeField.GARMENT_TYPE)
+        }
     }
     Text(a.title("Màu sắc · tối đa 3", AttributeField.COLORS), style = MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -61,7 +69,7 @@ internal fun WardrobeFields(item: ClothingItem, enabled: Boolean, name: (String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SelectField(label: String, value: String, options: List<String>, enabled: Boolean, select: (Int) -> Unit) {
+internal fun SelectField(label: String, value: String, options: List<String>, enabled: Boolean, select: (Int) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded, { if (enabled) expanded = it }) {
         OutlinedTextField(value, {}, Modifier.fillMaxWidth().menuAnchor(),
@@ -78,7 +86,8 @@ internal fun AttributeSummary(a: ClothingAttributes) {
     WardrobePanel {
         SectionHeading("Thông tin món đồ")
         listOf(
-            Triple("Loại đồ", a.category.label, AttributeField.CATEGORY),
+            Triple("Nhóm đồ", a.category.label, AttributeField.CATEGORY),
+            Triple("Loại chi tiết", GarmentType.find(a.garmentType)?.label ?: "Chưa xác định", AttributeField.GARMENT_TYPE),
             Triple("Màu sắc", a.colors.joinToString { it.label }.ifBlank { "Chưa xác định" }, AttributeField.COLORS),
             Triple("Họa tiết", a.pattern.label, AttributeField.PATTERN),
             Triple("Chất liệu", a.material ?: "Chưa xác định", AttributeField.MATERIAL),

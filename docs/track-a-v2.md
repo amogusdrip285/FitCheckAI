@@ -88,6 +88,14 @@ Thay đổi capability hoặc version proxy giữa lúc xác nhận và gửi l�
 Field đã sửa tay thắng kết quả trả chậm; thay ảnh/hủy/lưu làm request cũ vô hiệu. FAKE hiện nhãn rõ trong test, không thành AI_LIVE.
 Các trường UNKNOWN/null không bị đổi thành nhãn đoán chắc chắn. Kết quả chưa biết không giữ provenance AI cũ.
 
+### Tag loại chi tiết
+
+Trong **Tủ đồ → Thêm đồ**, chọn **Nhóm đồ** rồi chọn **Loại chi tiết**, ví dụ **Áo sơ mi**, **Áo polo** hoặc **Áo thun**. Tủ đồ hiển thị tag trên thẻ, tìm theo tên tag có hoặc không dấu, và có bộ lọc chính xác theo tag kết hợp với màu. Đổi nhóm trong lúc chỉnh sửa sẽ bỏ tag thuộc nhóm cũ. Món đã lưu từ phiên bản trước có thể được bổ sung tag khi chỉnh sửa.
+
+Khi Worker công bố `recognitionGarmentTypeVersion: 1` tại `/health`, **Gợi ý bằng AI** yêu cầu thêm `garmentType`. Server chỉ giữ đề xuất cùng nhóm khi có bằng chứng từ ảnh gửi và kết quả không đánh dấu nhãn mâu thuẫn hoặc chưa chắc. Nhãn chỉnh tay được ưu tiên. Nếu proxy chưa hỗ trợ, app vẫn nhận diện nhóm và các trường cũ, còn loại chi tiết có thể chọn tay. [Wire contract](contracts/proxy-api.md#post-v2recognition--nhận-diện-thuộc-tính-ct-05).
+
+Từ điển tiếng Việt dùng chung cho Android, pipeline dữ liệu và prompt nhận diện. Tần suất Kaggle dùng để chọn loại phổ biến và chuẩn bị ảnh đối chiếu. Các trường metadata catalog được giữ để tra cứu theo ID sản phẩm. [Hướng dẫn dữ liệu](../data/README.md#catalog-kaggle).
+
 CameraX bind theo lifecycle, xin quyền khi dùng; từ chối vẫn chọn Photo Picker được. Chọn một route CameraX, không bổ sung camera intent trùng chức năng.
 Chụp mới đi qua cùng pipeline MediaStore. Cold-model/offline segmentation có đường bỏ qua. Readiness dựa trên ModuleInstallClient;
 preview chỉ hiện thành công khi có foreground thực, không trả ảnh gốc giả làm kết quả tách nền.
@@ -105,7 +113,7 @@ Với cấu hình mặc định, mở **Hôm nay** sau khi nhập bộ ảnh th�
 
 ## Kiểm thử và bàn giao
 
-Catalog Kaggle dùng cho thử nhập ảnh và đối chiếu nhãn trên PC. Chạy lệnh trong hướng dẫn để tải v1, chuẩn hóa 6 nhóm của app và xuất JPEG kèm manifest. [Hướng dẫn catalog](../data/README.md#catalog-kaggle).
+Catalog Kaggle dùng cho thử nhập ảnh và đối chiếu nhãn trên PC. Chạy lệnh trong hướng dẫn để tải v1, lấy đủ metadata, tạo top 10 từng cột nhãn và xuất ảnh theo loại chi tiết. [Hướng dẫn catalog](../data/README.md#catalog-kaggle).
 
 ```powershell
 python tools/data/validate_fixtures.py
@@ -120,6 +128,8 @@ Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encod
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
 Báo cáo [hồi quy CORE trên Samsung](qa/track-a-core-regression.md) ghi từng ca và SHA-256 của APK đã cài. Các lần trước có [QA tích hợp A–B](qa/track-a-b-handoff.md), [QA trên máy thật](qa/track-a-physical-device.md), [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
 Trạng thái card ở [board](execution/TASK_BOARD.md).
+
+Kiểm thử và triển khai tag chi tiết theo [báo cáo Samsung](qa/track-a-garment-tags.md).
 [Điểm demo nội bộ](../Scorings.MD) và [điểm reviewer A cho B-004](../eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a) có thang chấm riêng.
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.
 
