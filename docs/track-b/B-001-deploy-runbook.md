@@ -6,6 +6,8 @@
 
 ## Trạng thái deploy
 
+**13/11/2026 (bản 3, version `91d53b85`): deploy từ bản đã merge `garmentType` của A** — `/health` báo `recognitionGarmentTypeVersion: 1`; smoke 8/8 PASS; ảnh sơ mi flannel có `garmentTypeVersion` ⇒ `garmentType: SHIRT` + tag `áo sơ mi` (14,5s), không có ⇒ `áo sơ mi` (11,7s); tủ UUID 20 món 200, 5 bộ (13,7s).
+
 **13/11/2026 (bản 2, version `915bac2c`): deploy lại với `outfits-v2.2` + `recognition-v2.2`** — smoke 8/8 PASS; tủ UUID 6/20 món 200, 5 bộ (12,8s/16,0s); ảnh sơ mi flannel thật ⇒ `áo sơ mi`, CHECKED, RED/BLACK (11,3s).
 
 **13/11/2026: đã deploy lần đầu** `https://fitcheck-proxy.long06hehe.workers.dev` (giai đoạn FOSTA, `gpt-6-luna`, cả hai service bật, deadline proxy 60s/65s).
