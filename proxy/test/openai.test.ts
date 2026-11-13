@@ -185,7 +185,7 @@ describe("provider riêng từng service", () => {
     AI_PROVIDER: "openai",
     AI_MODEL: "gpt-6.1-sol",
     AI_PROVIDER_RECOGNITION: "gemini",
-    OPENAI_API_KEY: "sk-x",
+    OPENAI_COMPAT_API_KEY: "sk-x",
     OPENAI_BASE_URL: BASE,
     GEMINI_API_KEY: "gm-x",
   };
@@ -248,11 +248,20 @@ describe("cấu hình provider openai", () => {
 
   it("modelFor chọn adapter openai khi có key + base URL hợp lệ", () => {
     const modelFor = defaultDeps().modelFor;
-    const env = { APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_API_KEY: "sk-x", OPENAI_BASE_URL: BASE };
+    const env = { APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_COMPAT_API_KEY: "sk-x", OPENAI_BASE_URL: BASE };
     expect(modelFor(env)).toBeInstanceOf(OpenAICompatibleModelClient);
     expect(modelFor(env)?.model).toBe("gpt-6-luna"); // mặc định openai khi không đặt AI_MODEL
-    expect(modelFor({ ...env, OPENAI_API_KEY: "" })).toBeNull();
+    expect(modelFor({ ...env, OPENAI_COMPAT_API_KEY: "" })).toBeNull();
     expect(modelFor({ ...env, OPENAI_BASE_URL: "http://insecure.test/v1" })).toBeNull();
+  });
+
+  it("key không bị dùng chéo: gateway chỉ dùng OPENAI_COMPAT_API_KEY, OpenAI chính chủ chỉ dùng OPENAI_API_KEY", () => {
+    const modelFor = defaultDeps().modelFor;
+    // Key OpenAI thật (của C) không được gửi tới gateway bên thứ ba.
+    expect(modelFor({ APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_API_KEY: "sk-official", OPENAI_BASE_URL: BASE })).toBeNull();
+    // Key gateway không được gửi tới api.openai.com.
+    expect(modelFor({ APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_COMPAT_API_KEY: "sk-gw" })).toBeNull();
+    expect(modelFor({ APP_VERSION: "t", AI_PROVIDER: "openai", OPENAI_API_KEY: "sk-official" })).toBeInstanceOf(OpenAICompatibleModelClient);
   });
 
   it("/health ghi rõ host gateway để consent không gọi nhầm là OpenAI", () => {

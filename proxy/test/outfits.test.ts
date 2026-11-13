@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OUTFITS_SYSTEM_PROMPT } from "../src/outfits/prompt";
+import { OUTFITS_PROMPT_VERSION, OUTFITS_SYSTEM_PROMPT } from "../src/outfits/prompt";
 import { type OutfitRequest, OutfitRequestSchema, type RecommendationResultDto } from "../src/outfits/schema";
 import {
   hasAvailableOutfit,
@@ -233,6 +233,12 @@ describe("POST /v2/outfits", () => {
     const res = await t.post("/v2/outfits", fullRequest(overrides));
     expect(res.status).toBe(400);
     expect(t.model.calls).toHaveLength(0);
+  });
+
+  it("prompt v2.1 cấm lộ số/tên trường nội bộ trong giải thích", () => {
+    expect(OUTFITS_PROMPT_VERSION).toBe("outfits-v2.1");
+    expect(OUTFITS_SYSTEM_PROMPT).toContain('KHÔNG ghi số hay tên trường nội bộ');
+    expect(OUTFITS_SYSTEM_PROMPT).toContain("độ trang trọng bằng lời");
   });
 
   it("freeText chỉ nằm trong user_note, không chạm system prompt", async () => {

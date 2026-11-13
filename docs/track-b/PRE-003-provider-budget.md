@@ -52,6 +52,7 @@ Nhóm muốn demo/pitching bằng model GPT nên proxy có thêm adapter **`open
   - FOSTA rất thất thường cùng buổi: "Xin chao" luna 10.5s, sol 46.6s; outfits tủ 6 món luna 2/2 lần timeout ở 60s, gọi thẳng luna >180s và sol 115s → 502; ~30 phút sau lại chạy tốt ⇒ độ trễ do gateway, không suy ra được từ model.
   - Lần chạy tốt qua proxy local (limit 120s): outfits tủ 6 món xin 5 bộ — **2/2 lần 200, 5 bộ hợp lệ, không shortfall, 23.4–24.8s**, giải thích tiếng Việt cụ thể theo màu/hoạ tiết/dịp; recognition luna — FRONT 17.8s, cặp khớp 21.6s, cặp chéo 24.5s, cả 3 nhận đúng `TOP / BLACK,WHITE,RED / PRINTED`; cặp chéo có `VIEWS_LOOK_LIKE_DIFFERENT_ITEMS` + mọi field cần review ✔.
   - Đây là smoke test (n nhỏ), chưa phải eval B-004/B-006 có reviewer chấm.
+- **Prompt `outfits-v2.1` (13/11/2026):** thêm luật không ghi số/tên trường nội bộ ("độ trang trọng 3") trong giải thích — lỗi A và B cùng thấy ở eval luna. **Chưa chạy eval lại trên v2.1**; điểm B-004 hiện có thuộc bản `outfits-v2.0`.
 - Chất lượng/latency đo trên FOSTA không chứng minh cho OpenAI trực tiếp hay provider khác; đổi provider ⇒ chạy lại B-004/B-006.
 
 ## 3. Ước lượng chi phí mỗi call (THÔ — phải thay bằng số đo usage thật ở B-004/B-006)

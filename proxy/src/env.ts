@@ -23,7 +23,13 @@ export interface Env {
   /** Secret. Thiếu key của provider đang chọn ⇒ route gọi AI trả 503, không bao giờ nhúng vào APK. */
   ANTHROPIC_API_KEY?: string;
   GEMINI_API_KEY?: string;
+  /** Key OpenAI CHÍNH CHỦ (api.openai.com) — dùng chung với Track C (`TRYON_PROVIDER=openai`). */
   OPENAI_API_KEY?: string;
+  /**
+   * Key cho gateway OpenAI-compatible bên thứ ba (OPENAI_BASE_URL khác api.openai.com, vd. FOSTA).
+   * Tách riêng để key gateway không bao giờ bị gửi tới api.openai.com (C dùng OPENAI_API_KEY cho OpenAI thật) và ngược lại.
+   */
+  OPENAI_COMPAT_API_KEY?: string;
   /** Không bí mật. HTTPS; trống ⇒ https://api.openai.com/v1. Đổi gateway = dữ liệu đi tới bên thứ ba khác. */
   OPENAI_BASE_URL?: string;
   /** Model cho recognition/recommendation; mặc định theo provider. PRE-003 chốt lựa chọn. */
@@ -93,6 +99,19 @@ export function aiModel(env: Env, service?: AiService): string {
  * Nhãn provider cho /health và consent: với "openai" ghi kèm host thật để người dùng biết ảnh đi đâu
  * (vd. "openai@codex.fosta.app" — gateway bên thứ ba, không phải OpenAI trực tiếp).
  */
+export const OPENAI_OFFICIAL_HOST = "api.openai.com";
+
+/** Key đúng cho base URL đang dùng: chính chủ ⇒ OPENAI_API_KEY; gateway ⇒ OPENAI_COMPAT_API_KEY (không fallback chéo). */
+export function openAiKeyFor(env: Env, baseUrl: string): string | undefined {
+  let host = "";
+  try {
+    host = new URL(baseUrl).host;
+  } catch {
+    return undefined;
+  }
+  return host === OPENAI_OFFICIAL_HOST ? env.OPENAI_API_KEY : env.OPENAI_COMPAT_API_KEY;
+}
+
 export function providerLabel(env: Env, service?: AiService): string {
   const provider = aiProvider(env, service);
   if (provider !== "openai") return provider;

@@ -35,7 +35,8 @@ SESSION_TTL_SECONDS = "43200"
 # Secrets (KHÔNG ghi vào file này, KHÔNG commit):
 #   npx wrangler secret put ANTHROPIC_API_KEY   # khi AI_PROVIDER = "anthropic"
 #   npx wrangler secret put GEMINI_API_KEY      # khi AI_PROVIDER = "gemini" (key lấy ở Google AI Studio)
-#   npx wrangler secret put OPENAI_API_KEY      # khi AI_PROVIDER = "openai" (OpenAI hoặc gateway như FOSTA)
+#   npx wrangler secret put OPENAI_API_KEY        # OpenAI chính chủ (api.openai.com) — dùng chung với Track C try-on
+#   npx wrangler secret put OPENAI_COMPAT_API_KEY # gateway OpenAI-compatible (OPENAI_BASE_URL khác api.openai.com, vd. FOSTA)
 #   npx wrangler secret put SESSION_SECRET      # chuỗi ngẫu nhiên ≥32 ký tự
 #   npx wrangler secret put DEMO_ACCESS_CODE    # mã demo đổi lấy session token
 # Dev local: copy .dev.vars.example thành proxy/.dev.vars (đã gitignore) rồi điền giá trị.

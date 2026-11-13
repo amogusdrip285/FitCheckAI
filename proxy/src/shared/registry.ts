@@ -8,6 +8,9 @@ import type { ModelClient } from "./model";
 
 export type HttpMethod = "GET" | "POST" | "DELETE";
 
+/** Trần deadline riêng của route; job dài hơn phải trả 202 + poll thay vì giữ request mở. */
+export const MAX_ROUTE_DEADLINE_MS = 300_000;
+
 export interface AppDeps {
   guard: UsageGuard;
   /** null khi chưa cấu hình provider (thiếu key) ⇒ route trả 503, không gọi upstream. */
@@ -24,7 +27,7 @@ export interface RouteContext {
   requestId: string;
   session: Session;
   params: Record<string, string>;
-  /** Deadline tổng của request (proxy ≤18s). Chuyển xuống provider. */
+  /** Deadline tổng của request: `RouteDef.deadlineMs` nếu route khai báo, không thì proxyDeadlineMs(env) (mặc định 18s). */
   signal: AbortSignal;
   /**
    * Giữ chỗ một call upstream trong daily cap của service. Gọi SAU validate, NGAY TRƯỚC khi gọi provider;
@@ -42,6 +45,11 @@ export interface RouteDef {
   service: ServiceName;
   /** Giới hạn byte của body (chỉ áp dụng khi có body). */
   maxBodyBytes: number;
+  /**
+   * Deadline riêng của route (ms), vd. try-on 120s/180s (CT-07). Bỏ trống = deadline chung (recognition/outfits 18s).
+   * Do B duyệt khi mount; bị kẹp trong [1s, MAX_ROUTE_DEADLINE_MS].
+   */
+  deadlineMs?: number;
   handle(body: unknown, ctx: RouteContext): Promise<Response>;
 }
 
