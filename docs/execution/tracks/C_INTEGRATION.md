@@ -1,7 +1,7 @@
 # Track C — Hướng dẫn Nối Tích hợp Virtual Try-On (VTO)
 
 - **Đối tượng đọc:** Track D (`:app`, `:feature:today`, `:core:ui`), Track B (`proxy`), Track A (`:core:imaging`, `:core:database`)
-- **Đối chiếu code thật trên `origin/main`:** `3488654` (`348865475e40b40f3c10b63fdc3e6c3c8340b30f`)
+- **Đối chiếu code thật trên `origin/main`:** `fdf75e6` (`fdf75e630c14cfdc2feceb31f72f5bbb3554ff37`)
 - **Tài liệu liên quan:** [Cảnh báo (`C_WARNINGS.md`)](C_WARNINGS.md) · [Bàn giao (`C_HANDOFF.md`)](C_HANDOFF.md) · [Review B (`C-207`)](../../track-b/C-207-mount-review.md)
 - **Cập nhật:** `2026-11-13`
 
@@ -41,9 +41,53 @@
 | `TryOnWardrobeRevisionPort` | `feature/tryon/.../contract/TryOnContracts.kt:331-333` | Kiểm tra `revision` mới nhất của món đồ trước khi gửi VTO. Nguồn thuộc `WardrobeRepository` (`RoomWardrobeRepository`, `DatabaseModule.kt:42` — Track A). |
 | `TryOnViewModel` | `feature/tryon/.../ui/TryOnViewModel.kt:241-250` | Quản lý state VTO, consent theo từng lượt, đổi ảnh và giữ job khi xoay màn hình; gọi `updateGarmentImages(Map<String, ImagePair>)` nếu cập nhật ảnh từ ngoài. |
 | `TryOnRoute` & `tryOnGraph` | `feature/tryon/.../ui/TryOnNavigation.kt:19-43` | Đăng ký route `Routes.TRYON_PATTERN` trong `NavGraphBuilder`. |
-| `TryOnPrivacyCoordinator` | `feature/tryon/.../privacy/TryOnPrivacyCoordinator.kt:79-85,515-555` | Khóa consent theo generation/id và xóa kết quả khi gọi `onPersonPhotoChangedOrDeleted`, `onGarmentChangedOrDeleted`, `onProfileCleared`. |
+| `TryOnPrivacyCoordinator` | `feature/tryon/.../privacy/TryOnPrivacyCoordinator.kt:79-85,515-555` | Khóa consent theo generation/id và xóa kết quả khi gọi `onPersonPhotoChangedOrDeleted`, `onGarmentChangedOrDeleted`, `onProfileCleared`. Áp giới hạn adaptive tổng `<= 8 MiB` tối đa `10` ảnh. |
 | `TryOnSelectionHandoff` | `core/model/.../tryon/TryOnSelection.kt:24-37` | Trao bộ đồ từ `TodayViewModel` sang `TryOnDestination` (Track D, bind `@Singleton` tại `TryOnDestination.kt:33-34`). |
 | `createTryOnRouter` | `proxy/src/tryon/handler.ts:403` | Router HTTP xử lý `/v2/tryon/capabilities`, `/v2/tryon/preflight`, `/v2/tryon/jobs*`, `/v2/tryon/outputs/*` (cần adapter sang `RouteDef[]` tại `proxy/src/shared/registry.ts:41-54` khi Track B mount ở `proxy/src/index.ts:14`). |
+
+### 2.1. Hợp đồng 4 ô (`Áo`, `Quần`, `Mũ`, `Giày`) tương thích ngược 100%
+
+- **`TryOnGarmentSlot` (`TryOnContracts.kt:194-203`):** Bổ sung enum `TOP`, `BOTTOM`, `HAT`, `SHOES` với thứ tự chuẩn `CANONICAL_ORDER = listOf(TOP, BOTTOM, HAT, SHOES)`.
+- **`TryOnItemSummary.slot` + `resolvedGarmentSlot()` (`TryOnContracts.kt:206-222`):** Tham số mới `val slot: TryOnGarmentSlot? = null` có giá trị mặc định `null`; khi để trống, `resolvedGarmentSlot()` tự ánh xạ `Category.TOP`/`OUTERWEAR -> TOP`, `Category.BOTTOM -> BOTTOM`, `Category.ACCESSORY -> HAT`, `Category.SHOES -> SHOES`.
+- **`TryOnRoute` (`TryOnScreen.kt:156-166`):** Tham số mới `onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = viewModel::removeGarmentSlot` có giá trị mặc định nên caller hiện tại trên `:app` không cần sửa.
+- **Bằng chứng `:app` trên `origin/main` giữ nguyên không cần sửa (`app/src/main/kotlin/com/fitcheckai/app/tryon/TryOnBridge.kt:34-43,53-71`):**
+  ```kotlin
+  // TryOnBridge.kt:34-43
+          view = TryOnImageView.valueOf(view.name),
+          localRelativePath = path,
+          mimeType = mimeType,
+          width = width,
+          height = height,
+          byteCount = byteCount,
+          contentHash = contentHash,
+          revision = revision,
+          derivedFromMediaId = derivedFromMediaId,
+      )
+
+  // TryOnBridge.kt:53-71
+  private fun Category.toTryOn(): TryOnCategory =
+      TryOnCategory.entries.firstOrNull { it.name == name } ?: TryOnCategory.ACCESSORY
+
+  internal fun TryOnSelection.toSnapshot(): TryOnOutfitSnapshot {
+      val itemsById = items.associateBy { it.id }
+      return TryOnOutfitSnapshot(
+          outfitId = outfit.id,
+          wardrobeSnapshotId = outfit.wardrobeSnapshotId,
+          explanation = outfit.explanation,
+          items = outfit.items.mapNotNull { ref ->
+              val item = itemsById[ref.itemId] ?: return@mapNotNull null
+              TryOnItemSummary(
+                  itemId = item.id,
+                  label = item.name,
+                  category = item.attributes.category.toTryOn(),
+                  colors = item.attributes.colors.map { it.name.lowercase() },
+                  revision = ref.revision,
+              )
+          },
+      )
+  }
+  ```
+- **Ghi chú nối Mũ/Giày cho Track D khi lấy đồ từ Room:** `:app` biên dịch và chạy nguyên trạng ngay cả khi không truyền `slot`. Khi Track D muốn phân biệt rõ **Mũ** với các phụ kiện `Category.ACCESSORY` khác (ví dụ túi xách/kính không ghép), chỉ cần truyền tường minh `slot = TryOnGarmentSlot.HAT` cho mũ và giữ `Category.SHOES` (hoặc `slot = TryOnGarmentSlot.SHOES`) cho giày.
 
 ---
 
@@ -95,7 +139,7 @@
           )
       }
   ```
-- **Lưu ý tích hợp:** Khi món đồ có ảnh mặt sau trong Room + `MediaStore`, `garmentImages()` tự map cả `front` lẫn `back`. Nếu ở `:app` người dùng chưa chụp ảnh trong tủ đồ khi mở thẳng không có selection, cần chắc chắn `TodayScreen` đã tải đủ item trước khi bấm `"Thử đồ với bộ này"`.
+- **Lưu ý tích hợp:** Khi món đồ có ảnh mặt sau trong Room + `MediaStore`, `garmentImages()` tự map cả `front` lẫn `back`. Từ bản 4 ô (`Áo`, `Quần`, `Mũ`, `Giày`), `TryOnViewModel` áp dụng cơ chế *"có ảnh thì ghép"* theo mọi tập con khác rỗng (`15` tổ hợp theo thứ tự chuẩn `[TOP, BOTTOM, HAT, SHOES]`); ô nào chưa có ảnh không bị ghép. Nếu truyền `slot = TryOnGarmentSlot.HAT`/`SHOES` từ Room, các món tương ứng sẽ lên đúng thẻ **Mũ** / **Giày**. Nếu ở `:app` người dùng chưa chụp ảnh trong tủ đồ khi mở thẳng không có selection, cần chắc chắn `TodayScreen` đã tải đủ item trước khi bấm `"Thử đồ với bộ này"`.
 - **Cách kiểm & Kết quả:** `ANDROID_HOME=/home/lamb/Android/Sdk ./gradlew :feature:today:testDebugUnitTest` → tất cả test `TodayViewModelTest` PASS (`CORE` mode). Luồng bấm từ `TodayScreen` sang backend VTO thật: **chưa kiểm chứng**.
 
 ### Bước 3 — Thay `CoreModeVirtualTryOn` bằng `AndroidVirtualTryOnClient` + `LocalDiskTryOnMediaStore` & nối đầy đủ Port *(chưa kiểm chứng trong `:app`)*
@@ -223,11 +267,11 @@ chmod 600 ~/.fitcheckai_private/tryon.env
 ## 4. Checklist Nghiệm thu bằng Backend Mock (`$0.00`)
 
 - [ ] Khởi động mock backend (`./proxy/scripts/demo_start_mock_backend.sh --daemon`) và xác nhận `GET http://127.0.0.1:8788/v2/tryon/preflight` trả `liveEnabled: false`.
-- [ ] `npm --prefix proxy run typecheck && npm --prefix proxy test` PASS toàn bộ test proxy.
-- [ ] `ANDROID_HOME=/home/lamb/Android/Sdk ./gradlew :app:assembleDebug testDebugUnitTest :feature:tryon:lintDebug` PASS, `0` lỗi lint.
+- [ ] `npm --prefix proxy run typecheck && npm --prefix proxy test` PASS toàn bộ test proxy (`182/182`).
+- [ ] `ANDROID_HOME=/home/lamb/Android/Sdk ./gradlew :app:assembleDebug testDebugUnitTest :core:model:test :feature:tryon:lintDebug :app:lintDebug` PASS (`32/32` unit `:feature:tryon`), `0` lỗi lint.
 - [ ] Kiểm tra `aapt2 dump badging` & `xmltree` trên `app/build/outputs/apk/debug/app-debug.apk`: chỉ `MainActivity` là `LAUNCHER`, không có icon/label/cleartext của demo.
-- [ ] Trên `Pixel_6` với bản mock: mở màn Thử đồ → kiểm tra badge giả lập, chọn ảnh Trước/Sau, tick đồng ý quyền riêng tư, bấm `"Tạo ảnh thử đồ"` → nhận ảnh kết quả, thử `"So sánh ảnh gốc"`, bấm `"Xóa kết quả thử đồ"` xác nhận xóa sạch khung kết quả và `consentConfirmed` tự reset khi thay ảnh người.
-- [ ] (Nếu nối `:feature:tryon` hoàn chỉnh) Chạy thêm `connectedDebugAndroidTest`: 13/13 PASS với cờ `requireBackendFostaE2e=true` & `requireStep3eLargeImageE2e=true`.
+- [ ] Trên `Pixel_6` với bản mock: mở màn Thử đồ → kiểm tra badge giả lập, chọn ảnh Trước/Sau (tối đa 4 ô Áo/Quần/Mũ/Giày), tick đồng ý quyền riêng tư, bấm `"Tạo ảnh thử đồ"` → nhận ảnh kết quả, thử `"So sánh ảnh gốc"`, bấm `"Xóa kết quả thử đồ"` xác nhận xóa sạch khung kết quả và `consentConfirmed` tự reset khi thay/bỏ ảnh.
+- [ ] (Nếu nối `:feature:tryon` hoàn chỉnh) Chạy thêm `connectedDebugAndroidTest`: `17/17` PASS với cờ `requireBackendFostaE2e=true` & `requireStep3eLargeImageE2e=true` (và `1/1` `endToEndBackendOpenAiOfflineMockLoop` với `requireBackendOpenAiE2e=true`).
 
 ---
 
@@ -236,7 +280,7 @@ chmod 600 ~/.fitcheckai_private/tryon.env
 | Mã / Hiện tượng | Nguyên nhân chính | Cách xử lý |
 |---|---|---|
 | **`403 CONSENT_REQUIRED`** | `consent.consentedPersonMediaId` không khớp `personImages.*.mediaId` do bước nén/chuẩn hóa tạo ID tạm mới. | Giữ `derivedFromMediaId ?: id` khi gửi lên server (`AndroidVirtualTryOnClient.kt`) và dùng `LocalDiskTryOnMediaStore.prepareUploadDerivative`. |
-| **FOSTA `status='incomplete'` / timeout** | Prompt quá dài hoặc timeout proxy < 120s/180s. | Dùng đúng `fosta_prompt.ts` v2.1 (~420–620 ký tự), giữ `RouteDef.deadlineMs: 180_000`, `FOSTA_TIMEOUT_MS=240000`, `OkHttp readTimeout >= 260s`. |
+| **FOSTA `status='incomplete'` / timeout** | Prompt quá dài hoặc timeout proxy < 120s/180s. | Dùng đúng `fosta_prompt.ts` `v2.2` (`<= 620` ký tự cho cả 60 tổ hợp 4 ô) / `openai_prompt.ts` `openai-vto-edit-v1.1`, giữ `RouteDef.deadlineMs: 180_000`, `FOSTA_TIMEOUT_MS=240000`, `OkHttp readTimeout >= 260s`. |
 | **`UNKNOWN_SUBMISSION` / `409 CONFLICT`** | Mất mạng ngay sau `POST /v2/tryon/jobs` khiến client khóa tự retry để tránh trừ lượt kép. | Không auto-retry POST; bấm **Hủy yêu cầu** hoặc **Xóa kết quả thử đồ** (hoặc chờ hết deadline phiên) rồi tạo lượt mới. |
 | **`BUDGET_EXCEEDED` / hết quota** | Vượt `TRYON_LIVE_MAX_REQUESTS`, `TRYON_LIVE_MAX_ESTIMATED_USD` hoặc chưa bật `TRYON_LIVE_ENABLED` / `FOSTA_APPROVE_QUOTA`. | Kiểm tra `/v2/tryon/preflight` xem `usedLiveRequests` và `blockers`; chuyển về mock (`TRYON_LIVE_ENABLED=false`) khi phát triển/QA. |
 | **Lỗi Manifest Merger / 2 icon launcher** | Gộp nhầm `src/standaloneDemo` vào `:app` hoặc đụng thuộc tính `<application>`. | Khi build `:app`, tuyệt đối **không** truyền `-I feature/tryon/standalone_demo.init.gradle.kts`; chỉ dùng init script này cho APK demo độc lập và instrumentation test của `:feature:tryon`. |
