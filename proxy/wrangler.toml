@@ -6,7 +6,8 @@ compatibility_date = "2025-04-01"
 APP_VERSION = "dev"
 # Provider: "anthropic", "gemini" hoặc "openai" (OpenAI-compatible, vd. FOSTA). Gemini free tier CHỈ để test: Google được dùng dữ liệu gửi lên
 # để cải thiện sản phẩm ⇒ không gửi ảnh người dùng thật.
-AI_PROVIDER = "anthropic"
+# Quyết định 13/11/2026: pitching/demo dùng OpenAI chính chủ (OPENAI_API_KEY, OPENAI_BASE_URL trống) — xem docs/track-b/PRE-003.
+AI_PROVIDER = "openai"
 # Bỏ trống = mặc định theo provider (anthropic: claude-opus-5-5, gemini: gemini-3.5-flash-lite, openai: gpt-6-luna).
 # Đổi model = chạy lại eval B-004/B-006.
 AI_MODEL = ""

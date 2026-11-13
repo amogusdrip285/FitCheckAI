@@ -48,7 +48,7 @@ Provider, ngân sách và lý do chọn: [PRE-003](docs/track-b/PRE-003-provider
 | `core:ui` | D | Theme, component dùng chung |
 | `core:database` | A | Room schema 2, revision/tombstone/cleanup journal, bridge đọc v1 |
 | `core:imaging` | A | MediaStore dùng chung, CameraX, ML Kit tùy chọn |
-| `core:ai` | B | Client v2 gọi proxy: `ProxyOutfitRecommendation` (+ `rerollAfter`), `ProxyRecognitionClient` (A viết, B review), fallback `BasicOutfitFallback`; stub v1 cho consumer cũ |
+| `core:ai` | B | Client v2 gọi proxy: `ProxyOutfitRecommendation` (+ `rerollAfter`), `ProxyRecognitionClient` (A viết, B review), fallback `BasicOutfitFallback`, thời tiết theo thành phố `CityWeatherResolver` (Open-Meteo); stub v1 cho consumer cũ |
 | `core:weather` | C | `WeatherProvider` (Open-Meteo) |
 | `core:stylist` | C | `OutfitService` (AI + fallback rule-based) |
 | `core:datastore` | D | `ProfileRepository`, `WearLogRepository` |

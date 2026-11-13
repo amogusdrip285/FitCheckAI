@@ -5,6 +5,8 @@ import com.fitcheckai.core.ai.proxy.ProxyConfig
 import com.fitcheckai.core.ai.proxy.ProxyOutfitRecommendation
 import com.fitcheckai.core.ai.proxy.ProxyTransport
 import com.fitcheckai.core.ai.proxy.createProxyTransport
+import com.fitcheckai.core.ai.weather.CityWeatherResolver
+import com.fitcheckai.core.ai.weather.createCityWeatherResolver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,4 +29,8 @@ object ProxyModule {
 
     @Provides @Singleton
     fun outfitRecommendation(transport: ProxyTransport): ProxyOutfitRecommendation = ProxyOutfitRecommendation(transport)
+
+    /** C-101: thời tiết theo thành phố đã chọn, gọi thẳng Open-Meteo (không key, không dữ liệu người dùng ngoài toạ độ thành phố). */
+    @Provides @Singleton
+    fun cityWeatherResolver(): CityWeatherResolver = createCityWeatherResolver(OkHttp.create())
 }
