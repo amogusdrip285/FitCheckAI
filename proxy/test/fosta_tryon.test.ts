@@ -145,64 +145,65 @@ describe("FOSTA Luna Prompt Matrix — All 12 (Mode x View x Garment) Combinatio
   for (const mode of modes) {
     for (const view of views) {
       for (const combo of combos) {
-        it(`builds tailored prompt for ${mode} + ${view} + ${combo.label} with untouched-clothing protection`, () => {
+        it(`builds concise tailored prompt for ${mode} + ${view} + ${combo.label} within length budget`, () => {
           const prompt = buildFostaTryOnPrompt({
             mode,
             view,
             garmentKinds: combo.kinds,
           });
 
-          expect(prompt).toContain(`FITCHECK_VTO_PROMPT_VERSION=${FOSTA_VTO_PROMPT_VERSION}`);
-          expect(prompt).toContain("REFERENCE IMAGE 1 is the base PERSON photograph.");
-          expect(prompt).toContain(`MODE=${mode}.`);
-          expect(prompt).toContain(`VIEW=${view}.`);
+          expect(FOSTA_VTO_PROMPT_VERSION).toBe("v2.1");
+          expect(prompt).not.toContain("FITCHECK_VTO_PROMPT_VERSION");
+          if (combo.label === "TOP+BOTTOM") {
+            expect(prompt.length).toBeLessThanOrEqual(750);
+          } else {
+            expect(prompt.length).toBeLessThanOrEqual(600);
+          }
+
+          expect(prompt).toContain("Create exactly one photorealistic");
+          expect(prompt).toContain("shoes");
+          expect(prompt).toContain("accessories");
 
           if (combo.label === "TOP") {
-            expect(prompt).toContain("REFERENCE IMAGE 2 is the TOP garment.");
+            expect(prompt).toContain("image 2 is the reference top");
             expect(prompt).toContain(
-              "Leave the existing lower garment completely unchanged",
+              "wear only the reference top, keeping their existing bottom unchanged.",
             );
-            expect(prompt).not.toContain("Apply BOTH referenced garments");
+            expect(prompt).not.toContain("image 3");
           } else if (combo.label === "BOTTOM") {
-            expect(prompt).toContain("REFERENCE IMAGE 2 is the BOTTOM garment.");
+            expect(prompt).toContain("image 2 is the reference bottom");
             expect(prompt).toContain(
-              "Leave the existing top completely unchanged",
+              "wear only the reference bottom, keeping their existing top unchanged.",
             );
-            expect(prompt).not.toContain("Apply BOTH referenced garments");
+            expect(prompt).not.toContain("image 3");
           } else {
-            expect(prompt).toContain("REFERENCE IMAGE 2 is the TOP garment.");
-            expect(prompt).toContain("REFERENCE IMAGE 3 is the BOTTOM garment.");
+            expect(prompt).toContain("image 2 is the reference top");
+            expect(prompt).toContain("image 3 is the reference bottom");
             expect(prompt).toContain(
-              "Apply BOTH referenced garments together in the SAME generated output image.",
+              "wear both the reference top and reference bottom with natural waist layering.",
             );
-            expect(prompt).toContain("Ensure realistic layering at the waist.");
           }
 
           if (view === "BACK") {
-            expect(prompt).toContain("Show the same person from BEHIND");
-            expect(prompt).toContain("back-specific prints");
-            expect(prompt).toContain("Do not rotate the person to face the camera");
-            expect(prompt).toContain("copy a front logo onto the back");
+            expect(prompt).toContain("back-view virtual try-on image");
+            expect(prompt).toContain("Image 1 is the person from behind (back view)");
+            expect(prompt).toContain(
+              "Keep the person facing away, preserving their identity, face when visible, hairstyle, skin tone, body proportions, pose",
+            );
           } else {
-            expect(prompt).toContain("Show the person from the front");
-            expect(prompt).toContain("Do not invent a rear view.");
+            expect(prompt).toContain("front-view virtual try-on image");
+            expect(prompt).toContain("Image 1 is the person (front view)");
+            expect(prompt).toContain(
+              "Preserve the person's face, hairstyle, skin tone, body proportions, pose",
+            );
           }
 
           if (mode === "STUDIO_WHITE") {
-            expect(prompt).toContain("upright full-body standing pose");
-            expect(prompt).toContain("clean seamless white/ivory backdrop");
-            expect(prompt).toContain(
-              "not a body measurement or reliable physical fit prediction",
-            );
-            if (view === "BACK") {
-              expect(prompt).toContain(
-                "For this studio REAR view, the subject must face AWAY from the camera",
-              );
-            }
+            expect(prompt).toContain("clean white studio background with soft even lighting.");
+            expect(prompt).not.toContain("original background");
           } else {
-            expect(prompt).toContain(
-              "Keep the original person photograph as the base composition",
-            );
+            expect(prompt).toContain("lighting and original background.");
+            expect(prompt).not.toContain("white studio background");
           }
         });
       }
@@ -225,6 +226,12 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
     expect(frontTop.model).toBe(DEFAULT_FOSTA_MODEL);
     expect(frontTop.tools).toEqual([{ type: "image_generation" }]);
     expect(frontTop.tool_choice).toEqual({ type: "image_generation" });
+    expect(Object.keys(frontTop).sort()).toEqual([
+      "input",
+      "model",
+      "tool_choice",
+      "tools",
+    ]);
     expect(frontTop.input[0]?.content).toHaveLength(3);
     expect(frontTop.input[0]?.content[1]).toMatchObject({
       type: "input_image",
@@ -242,12 +249,18 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
       topBytes: sampleTopWebp,
       bottomBytes: sampleBottomPng,
     });
+    expect(Object.keys(studioBackCombo).sort()).toEqual([
+      "input",
+      "model",
+      "tool_choice",
+      "tools",
+    ]);
     expect(studioBackCombo.input[0]?.content).toHaveLength(4);
     expect((studioBackCombo.input[0]?.content[0] as { text: string }).text).toContain(
-      "MODE=STUDIO_WHITE",
+      "clean white studio background",
     );
     expect((studioBackCombo.input[0]?.content[0] as { text: string }).text).toContain(
-      "VIEW=BACK",
+      "back-view virtual try-on image",
     );
     expect(studioBackCombo.input[0]?.content[2]).toMatchObject({
       type: "input_image",
@@ -309,10 +322,10 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
     expect(mock.lastCapturedRequest?.imageCount).toBe(3);
     expect(mock.lastCapturedRequest?.detectedMode).toBe("STUDIO_WHITE");
     expect(mock.lastCapturedRequest?.prompt).toContain(
-      "REFERENCE IMAGE 2 is the TOP garment.",
+      "image 2 is the reference top",
     );
     expect(mock.lastCapturedRequest?.prompt).toContain(
-      "REFERENCE IMAGE 3 is the BOTTOM garment.",
+      "image 3 is the reference bottom",
     );
 
     // Duplicate TOP + TOP must be rejected before network call
@@ -411,6 +424,474 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
     expect(FOSTA_EXPERIMENTAL_CAPABILITIES.back).toBe("UNVALIDATED_EXPERIMENTAL");
     expect(FOSTA_EXPERIMENTAL_CAPABILITIES.bottomOnly).toBe("UNVALIDATED_EXPERIMENTAL");
     expect(FOSTA_EXPERIMENTAL_CAPABILITIES.topBottom).toBe("UNVALIDATED_EXPERIMENTAL");
+  });
+
+  it("times out cleanly without retry when FOSTA mock returns headers then hangs while streaming body", async () => {
+    let networkCalls = 0;
+    const provider = new FostaTryOnProvider({
+      apiKey: "super-secret-fosta-key-hang",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      timeoutMs: 1_000,
+      fetchImpl: async () => {
+        networkCalls += 1;
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                '{"id":"resp_hang","status":"completed","output":[{"type":"image_generation_call","result":"',
+              ),
+            );
+            // Deliberately keep body stream open forever without closing
+          },
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+
+    const startedAt = Date.now();
+    await expect(
+      provider.submitView({
+        jobId: "job_body_hang",
+        requestId: "req_body_hang",
+        view: "FRONT",
+        personImage: makePngWireImage("pf", "FRONT"),
+        garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+      }),
+    ).rejects.toMatchObject({
+      name: "UpstreamAmbiguousTimeoutError",
+      retryable: false,
+    });
+    const elapsedMs = Date.now() - startedAt;
+
+    expect(elapsedMs).toBeGreaterThanOrEqual(950);
+    expect(elapsedMs).toBeLessThan(3_000);
+    expect(networkCalls).toBe(1);
+    expect(provider.submitCallCount).toBe(1);
+  });
+
+  it("maps HTTP 401, 402, 403, 500 with retryable=false, 0 retries, and secret redaction", async () => {
+    const cases: Array<{ status: number; expectedCode: string }> = [
+      { status: 401, expectedCode: "UNAUTHORIZED" },
+      { status: 402, expectedCode: "INSUFFICIENT_QUOTA" },
+      { status: 403, expectedCode: "FORBIDDEN" },
+      { status: 500, expectedCode: "UPSTREAM_ERROR" },
+    ];
+
+    for (const testCase of cases) {
+      let calls = 0;
+      const secretKey = "super-secret-fosta-key-http";
+      const provider = new FostaTryOnProvider({
+        apiKey: secretKey,
+        approvedLive: true,
+        approvedQuotaUse: true,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: "http_error",
+                message: `Echo ${secretKey} Bearer tok_leak_999 data:image/png;base64,iVBORw0KGgoAAAANS`,
+              },
+            }),
+            {
+              status: testCase.status,
+              headers: { "content-type": "application/json" },
+            },
+          );
+        },
+      });
+
+      try {
+        await provider.submitView({
+          jobId: `job_http_${testCase.status}`,
+          requestId: `req_http_${testCase.status}`,
+          view: "FRONT",
+          personImage: makePngWireImage("pf", "FRONT"),
+          garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+        });
+        expect.unreachable(`Expected HTTP ${testCase.status} to throw`);
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpstreamDeterministicError);
+        const typed = err as UpstreamDeterministicError;
+        expect(typed.code).toBe(testCase.expectedCode);
+        expect(typed.retryable).toBe(false);
+        expect(typed.message).not.toContain(secretKey);
+        expect(typed.message).not.toContain("tok_leak_999");
+        expect(typed.message).not.toContain("iVBORw0KGgoAAAANS");
+      }
+      expect(calls).toBe(1);
+      expect(provider.submitCallCount).toBe(1);
+    }
+  });
+
+  it("rejects empty output[], safety content_filter, refusal items, and 4xx moderation codes cleanly with redaction", async () => {
+    const secretKey = "super-secret-fosta-key-mod";
+
+    // 1. Empty output[]
+    {
+      let calls = 0;
+      const provider = new FostaTryOnProvider({
+        apiKey: secretKey,
+        approvedLive: true,
+        approvedQuotaUse: true,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              id: "resp_empty_out",
+              status: "completed",
+              error: null,
+              output: [],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        },
+      });
+      await expect(
+        provider.submitView({
+          jobId: "job_empty_output",
+          requestId: "req_empty_output",
+          view: "FRONT",
+          personImage: makePngWireImage("pf", "FRONT"),
+          garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+        }),
+      ).rejects.toMatchObject({ code: "INVALID_AI_OUTPUT", retryable: false });
+      expect(calls).toBe(1);
+    }
+
+    // 2. incomplete_details.reason === "content_filter"
+    {
+      let calls = 0;
+      const provider = new FostaTryOnProvider({
+        apiKey: secretKey,
+        approvedLive: true,
+        approvedQuotaUse: true,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              id: "resp_cf",
+              status: "incomplete",
+              incomplete_details: { reason: "content_filter" },
+              output: [],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        },
+      });
+      try {
+        await provider.submitView({
+          jobId: "job_content_filter",
+          requestId: "req_content_filter",
+          view: "FRONT",
+          personImage: makePngWireImage("pf", "FRONT"),
+          garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+        });
+        expect.unreachable("Expected content_filter to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpstreamDeterministicError);
+        const typed = err as UpstreamDeterministicError;
+        expect(typed.code).toBe("FORBIDDEN");
+        expect(typed.retryable).toBe(false);
+        expect(typed.message).toContain("content_filter");
+      }
+      expect(calls).toBe(1);
+    }
+
+    // 3. Refusal item inside output[] (direct refusal & message content refusal) with secret leakage attempt
+    for (const outputPayload of [
+      [{ type: "refusal", refusal: `Refused with key ${secretKey} Bearer secret_abc` }],
+      [
+        {
+          type: "message",
+          content: [
+            {
+              type: "refusal",
+              refusal: `Safety refusal echoing sk-secret1234567890 ${secretKey}`,
+            },
+          ],
+        },
+      ],
+    ]) {
+      let calls = 0;
+      const provider = new FostaTryOnProvider({
+        apiKey: secretKey,
+        approvedLive: true,
+        approvedQuotaUse: true,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              id: "resp_refusal",
+              status: "completed",
+              error: null,
+              output: outputPayload,
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        },
+      });
+      try {
+        await provider.submitView({
+          jobId: "job_refusal",
+          requestId: "req_refusal",
+          view: "FRONT",
+          personImage: makePngWireImage("pf", "FRONT"),
+          garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+        });
+        expect.unreachable("Expected refusal to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpstreamDeterministicError);
+        const typed = err as UpstreamDeterministicError;
+        expect(typed.code).toBe("FORBIDDEN");
+        expect(typed.retryable).toBe(false);
+        expect(typed.message).toContain("refusal");
+        expect(typed.message).not.toContain(secretKey);
+        expect(typed.message).not.toContain("secret_abc");
+        expect(typed.message).not.toContain("sk-secret1234567890");
+      }
+      expect(calls).toBe(1);
+    }
+
+    // 4. HTTP 4xx moderation code in JSON error body with redaction
+    {
+      let calls = 0;
+      const provider = new FostaTryOnProvider({
+        apiKey: secretKey,
+        approvedLive: true,
+        approvedQuotaUse: true,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: "moderation_blocked",
+                type: "image_generation_user_error",
+                message: `Prompt blocked Bearer leak_tok_456 ${secretKey}`,
+              },
+            }),
+            { status: 400, headers: { "content-type": "application/json" } },
+          );
+        },
+      });
+      try {
+        await provider.submitView({
+          jobId: "job_mod_400",
+          requestId: "req_mod_400",
+          view: "FRONT",
+          personImage: makePngWireImage("pf", "FRONT"),
+          garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+        });
+        expect.unreachable("Expected 400 moderation_blocked to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpstreamDeterministicError);
+        const typed = err as UpstreamDeterministicError;
+        expect(typed.code).toBe("FORBIDDEN");
+        expect(typed.retryable).toBe(false);
+        expect(typed.message).toContain("moderation_blocked");
+        expect(typed.message).not.toContain(secretKey);
+        expect(typed.message).not.toContain("leak_tok_456");
+      }
+      expect(calls).toBe(1);
+    }
+  });
+
+  it("parses large chunked FOSTA response with >= 1.5 MB base64 synthetic PNG completely without truncation", async () => {
+    const largePngBytes = buildLookbookMockPngBytes({
+      width: 680,
+      height: 680,
+      garmentRgb: [42, 88, 138],
+    });
+    const largeBase64 = encodeBase64(largePngBytes);
+    expect(largeBase64.length).toBeGreaterThanOrEqual(Math.ceil(1.5 * 1024 * 1024));
+
+    const wireBytes = new TextEncoder().encode(
+      JSON.stringify({
+        id: "resp_large_synthetic_png",
+        object: "response",
+        status: "completed",
+        error: null,
+        output: [
+          {
+            id: "ig_large_1",
+            type: "image_generation_call",
+            status: "completed",
+            output_format: "png",
+            result: largeBase64,
+          },
+        ],
+      }),
+    );
+
+    const provider = new FostaTryOnProvider({
+      apiKey: "mock-large-key",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      offlineMockMode: true,
+      fetchImpl: async () => {
+        const chunkSize = 32_768;
+        let offset = 0;
+        const stream = new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            if (offset >= wireBytes.byteLength) {
+              controller.close();
+              return;
+            }
+            const end = Math.min(offset + chunkSize, wireBytes.byteLength);
+            controller.enqueue(wireBytes.subarray(offset, end));
+            offset = end;
+            await Promise.resolve();
+          },
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+
+    const out = await provider.submitView({
+      jobId: "job_large_1",
+      requestId: "req_large_1",
+      view: "FRONT",
+      personImage: makePngWireImage("pf", "FRONT"),
+      garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+    });
+
+    expect(out.initialState).toBe("SUCCEEDED");
+    expect(out.immediateOutput?.mimeType).toBe("image/png");
+    expect(out.immediateOutput?.width).toBe(680);
+    expect(out.immediateOutput?.height).toBe(680);
+    expect(out.immediateOutput?.base64Data.length).toBe(largeBase64.length);
+    expect(out.immediateOutput?.base64Data).toBe(largeBase64);
+    expect(provider.submitCallCount).toBe(1);
+  });
+
+  it("logs sanitized incompleteDiagnostic (reason redacted & bounded, outputItemTypes, errorCode=null) with 0 retries when status='incomplete'", async () => {
+    const logs: SafeTryOnLogEntry[] = [];
+    const secretKey = "super-secret-fosta-key-diag";
+    const fakeResultB64 = "A".repeat(128);
+    let calls = 0;
+
+    const provider = new FostaTryOnProvider({
+      apiKey: secretKey,
+      approvedLive: true,
+      approvedQuotaUse: true,
+      logger: (entry) => logs.push(entry),
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(
+          JSON.stringify({
+            id: "resp_incomplete_max_tokens",
+            status: "incomplete",
+            incomplete_details: {
+              reason: `max_output_tokens Bearer ${secretKey} sk-secret1234567890 ${"X".repeat(80)}`,
+            },
+            output: [
+              { type: "reasoning" },
+              { type: "image_generation_call", status: "in_progress", result: fakeResultB64 },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      },
+    });
+
+    await expect(
+      provider.submitView({
+        jobId: "job_inc_diag_1",
+        requestId: "req_inc_diag_1",
+        view: "FRONT",
+        personImage: makePngWireImage("pf", "FRONT"),
+        garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_AI_OUTPUT",
+      retryable: false,
+    });
+
+    expect(calls).toBe(1);
+    expect(provider.submitCallCount).toBe(1);
+    expect(logs).toHaveLength(1);
+    const diagLog = logs[0]!;
+    expect(diagLog.event).toBe("tryon.upstream.incomplete");
+    expect(diagLog.errorCode).toBe("INVALID_AI_OUTPUT");
+    expect(diagLog.incompleteDiagnostic?.status).toBe("incomplete");
+    expect(diagLog.incompleteDiagnostic?.errorCode).toBeNull();
+    expect(diagLog.incompleteDiagnostic?.outputItemTypes).toEqual([
+      "reasoning",
+      "image_generation_call",
+    ]);
+    const loggedReason = diagLog.incompleteDiagnostic?.incompleteReason ?? "";
+    expect(loggedReason.length).toBeGreaterThan(0);
+    expect(loggedReason.length).toBeLessThanOrEqual(64);
+    expect(loggedReason).toContain("max_output_tokens");
+
+    const serializedLogs = JSON.stringify(logs);
+    expect(serializedLogs).not.toContain(secretKey);
+    expect(serializedLogs).not.toContain("sk-secret1234567890");
+    expect(serializedLogs).not.toContain(fakeResultB64);
+  });
+
+  it("logs safe errorCode and outputItemTypes without leaking raw error.message or secrets when non-completed response includes error object", async () => {
+    const logs: SafeTryOnLogEntry[] = [];
+    const secretKey = "super-secret-fosta-key-errdiag";
+    let calls = 0;
+
+    const provider = new FostaTryOnProvider({
+      apiKey: secretKey,
+      approvedLive: true,
+      approvedQuotaUse: true,
+      logger: (entry) => logs.push(entry),
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(
+          JSON.stringify({
+            id: "resp_incomplete_err",
+            status: "incomplete",
+            incomplete_details: null,
+            error: {
+              code: "max_tokens_exceeded",
+              message: `raw upstream error body containing ${secretKey} and ${"B".repeat(96)}`,
+            },
+            output: [{ type: "message", content: [{ type: "output_text", text: "truncated" }] }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      },
+    });
+
+    await expect(
+      provider.submitView({
+        jobId: "job_inc_diag_2",
+        requestId: "req_inc_diag_2",
+        view: "FRONT",
+        personImage: makePngWireImage("pf", "FRONT"),
+        garments: [{ itemId: "t1", category: "TOP", image: makePngWireImage("tf", "FRONT") }],
+      }),
+    ).rejects.toMatchObject({
+      code: "UPSTREAM_ERROR",
+      retryable: false,
+    });
+
+    expect(calls).toBe(1);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]!.event).toBe("tryon.upstream.incomplete");
+    expect(logs[0]!.errorCode).toBe("UPSTREAM_ERROR");
+    expect(logs[0]!.incompleteDiagnostic).toEqual({
+      status: "incomplete",
+      incompleteReason: null,
+      errorCode: "max_tokens_exceeded",
+      outputItemTypes: ["message"],
+    });
+    const serialized = JSON.stringify(logs);
+    expect(serialized).not.toContain(secretKey);
+    expect(serialized).not.toContain("raw upstream error body");
+    expect(serialized).not.toContain("B".repeat(64));
   });
 });
 
@@ -665,5 +1146,365 @@ describe("/v2/tryon Router — FOSTA Dual-Provider Isolation, Consent, Rear Phot
     expect(secondRes.status).toBe(503);
     expect(((await secondRes.json()) as TryOnErrorEnvelope).error.code).toBe("BUDGET_EXCEEDED");
     expect(mockUpstream.callCount).toBe(1);
+  });
+
+  it("rejects invalid local images (<256px dimension, MIME mismatch, oversized bytes) BEFORE reserveLiveSpendAtomically with 0 quota spent and 0 upstream calls", async () => {
+    const durableStore = makeMemoryBackedDurableStore();
+    const mockUpstream = createFostaResponsesMock("success");
+    const liveFostaProvider = new FostaTryOnProvider({
+      apiKey: "simulated-live-fosta-key",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      offlineMockMode: false,
+      minInputDimensionPx: 256,
+      fetchImpl: mockUpstream.fetchImpl,
+    });
+    const router = createTryOnRouter({
+      store: durableStore,
+      provider: liveFostaProvider,
+    });
+
+    const liveEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "true",
+      FOSTA_API_KEY: "simulated-live-fosta-key",
+      FOSTA_APPROVE_QUOTA: "true",
+      TRYON_LIVE_MAX_REQUESTS: "1",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const valid256PngBytes = buildLookbookMockPngBytes({
+      width: 256,
+      height: 320,
+      garmentRgb: [36, 62, 108],
+    });
+    const validPerson256: WireImageInput = {
+      mediaId: "person_front_256",
+      view: "FRONT",
+      mimeType: "image/png",
+      width: 256,
+      height: 320,
+      revision: 1,
+      contentHash: "sha256:person_front_256",
+      base64Data: encodeBase64(valid256PngBytes),
+    };
+    const validGarment256: WireImageInput = {
+      mediaId: "top_front_256",
+      view: "FRONT",
+      mimeType: "image/png",
+      width: 256,
+      height: 320,
+      revision: 1,
+      contentHash: "sha256:top_front_256",
+      base64Data: encodeBase64(valid256PngBytes),
+    };
+
+    // Case A: Small image (128x160 < 256px) -> rejected BEFORE quota reservation
+    const smallImgRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(
+          makeFostaSubmitRequest({
+            requestId: "req_small_dim",
+            idempotencyKey: "idem_small_dim",
+          }),
+        ),
+      }),
+      liveEnv,
+      { sessionId: "sess_bad_dim" },
+    );
+    expect(smallImgRes.status).toBe(400);
+    expect(((await smallImgRes.json()) as TryOnErrorEnvelope).error.code).toBe("INVALID_REQUEST");
+    expect(mockUpstream.callCount).toBe(0);
+
+    // Case B: Declared MIME mismatch (image/png wrapping JPEG bytes) -> rejected BEFORE quota reservation
+    const jpegSpoof = buildSyntheticJpegHeaderBytes(512, 768, 1);
+    const mimeMismatchRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(
+          makeFostaSubmitRequest({
+            requestId: "req_mime_mismatch",
+            idempotencyKey: "idem_mime_mismatch",
+            personImages: {
+              front: {
+                ...validPerson256,
+                mediaId: "person_front_256",
+                mimeType: "image/png",
+                base64Data: encodeBase64(jpegSpoof),
+              },
+            },
+            garmentImages: {
+              item_top_1: { front: validGarment256 },
+            },
+            consentGrant: {
+              ...makeFostaSubmitRequest().consentGrant,
+              selectedMediaIds: ["person_front_256", "top_front_256"],
+            },
+          }),
+        ),
+      }),
+      liveEnv,
+      { sessionId: "sess_bad_mime" },
+    );
+    expect(mimeMismatchRes.status).toBe(400);
+    expect(((await mimeMismatchRes.json()) as TryOnErrorEnvelope).error.code).toBe(
+      "INVALID_REQUEST",
+    );
+    expect(mockUpstream.callCount).toBe(0);
+
+    // Case C: Oversized decoded image (> 2 MiB person cap) -> rejected BEFORE quota reservation
+    const oversizedBytes = new Uint8Array(2 * 1024 * 1024 + 64);
+    oversizedBytes.set(valid256PngBytes.subarray(0, Math.min(valid256PngBytes.length, 64)), 0);
+    const oversizedRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(
+          makeFostaSubmitRequest({
+            requestId: "req_oversized",
+            idempotencyKey: "idem_oversized",
+            personImages: {
+              front: {
+                ...validPerson256,
+                base64Data: encodeBase64(oversizedBytes),
+              },
+            },
+            garmentImages: {
+              item_top_1: { front: validGarment256 },
+            },
+            consentGrant: {
+              ...makeFostaSubmitRequest().consentGrant,
+              selectedMediaIds: ["person_front_256", "top_front_256"],
+            },
+          }),
+        ),
+      }),
+      liveEnv,
+      { sessionId: "sess_bad_size" },
+    );
+    expect(oversizedRes.status).toBe(413);
+    expect(((await oversizedRes.json()) as TryOnErrorEnvelope).error.code).toBe(
+      "PAYLOAD_TOO_LARGE",
+    );
+    expect(mockUpstream.callCount).toBe(0);
+
+    // Confirm usedLiveRequests is still 0 via preflight, and a valid 256x320 submit consumes the 1 quota unit
+    const preflightBeforeValid = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_preflight_check" },
+    );
+    const preflightJson = (await preflightBeforeValid.json()) as {
+      usedLiveRequests: number;
+      remainingLiveRequests: number;
+      quotaExhausted: boolean;
+    };
+    expect(preflightJson.usedLiveRequests).toBe(0);
+    expect(preflightJson.remainingLiveRequests).toBe(1);
+    expect(preflightJson.quotaExhausted).toBe(false);
+
+    const validRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(
+          makeFostaSubmitRequest({
+            requestId: "req_valid_256",
+            idempotencyKey: "idem_valid_256",
+            personImages: { front: validPerson256 },
+            garmentImages: { item_top_1: { front: validGarment256 } },
+            consentGrant: {
+              ...makeFostaSubmitRequest().consentGrant,
+              selectedMediaIds: ["person_front_256", "top_front_256"],
+            },
+          }),
+        ),
+      }),
+      liveEnv,
+      { sessionId: "sess_valid_after_invalid" },
+    );
+    expect(validRes.status).toBe(202);
+    expect(mockUpstream.callCount).toBe(1);
+  });
+
+  it("reports accurate quota remaining vs exhausted on GET /v2/tryon/preflight without calling upstream or leaking secrets", async () => {
+    const durableStore = makeMemoryBackedDurableStore();
+    const mockUpstream = createFostaResponsesMock("success");
+    const secretKey = "secret-preflight-fosta-key-never-leak";
+    const liveFostaProvider = new FostaTryOnProvider({
+      apiKey: secretKey,
+      endpoint: "https://mock.fosta.local/v1/responses",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      offlineMockMode: false,
+      fetchImpl: mockUpstream.fetchImpl,
+    });
+    const router = createTryOnRouter({
+      store: durableStore,
+      provider: liveFostaProvider,
+    });
+
+    const liveEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "true",
+      FOSTA_API_KEY: secretKey,
+      FOSTA_APPROVE_QUOTA: "true",
+      TRYON_LIVE_MAX_REQUESTS: "1",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const preflightBeforeRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_preflight_1" },
+    );
+    expect(preflightBeforeRes.status).toBe(200);
+    const preflightBeforeText = await preflightBeforeRes.text();
+    expect(preflightBeforeText).not.toContain(secretKey);
+    expect(mockUpstream.callCount).toBe(0);
+
+    const preflightBefore = JSON.parse(preflightBeforeText) as {
+      provider: string;
+      liveEnabled: boolean;
+      offlineMockEnabled: boolean;
+      readyForLivePocCall: boolean;
+      usedLiveRequests: number;
+      maxRequests: number;
+      remainingLiveRequests: number;
+      quotaExhausted: boolean;
+      checks: {
+        maxLiveRequests: number;
+        usedLiveRequests: number;
+        remainingLiveRequests: number;
+        quotaExhausted: boolean;
+      };
+      blockers: string[];
+    };
+    expect(preflightBefore.provider).toBe("fosta");
+    expect(preflightBefore.liveEnabled).toBe(true);
+    expect(preflightBefore.offlineMockEnabled).toBe(false);
+    expect(preflightBefore.readyForLivePocCall).toBe(true);
+    expect(preflightBefore.blockers).toEqual([]);
+    expect(preflightBefore.usedLiveRequests).toBe(0);
+    expect(preflightBefore.maxRequests).toBe(1);
+    expect(preflightBefore.remainingLiveRequests).toBe(1);
+    expect(preflightBefore.quotaExhausted).toBe(false);
+    expect(preflightBefore.checks.usedLiveRequests).toBe(0);
+    expect(preflightBefore.checks.remainingLiveRequests).toBe(1);
+    expect(preflightBefore.checks.quotaExhausted).toBe(false);
+
+    // Consume the single live request
+    const submitRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(
+          makeFostaSubmitRequest({
+            requestId: "req_preflight_consume",
+            idempotencyKey: "idem_preflight_consume",
+          }),
+        ),
+      }),
+      liveEnv,
+      { sessionId: "sess_consume_1" },
+    );
+    expect(submitRes.status).toBe(202);
+    expect(mockUpstream.callCount).toBe(1);
+
+    const preflightAfterRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_preflight_2" },
+    );
+    expect(preflightAfterRes.status).toBe(200);
+    const preflightAfterText = await preflightAfterRes.text();
+    expect(preflightAfterText).not.toContain(secretKey);
+    expect(mockUpstream.callCount).toBe(1);
+
+    const preflightAfter = JSON.parse(preflightAfterText) as typeof preflightBefore;
+    expect(preflightAfter.usedLiveRequests).toBe(1);
+    expect(preflightAfter.maxRequests).toBe(1);
+    expect(preflightAfter.remainingLiveRequests).toBe(0);
+    expect(preflightAfter.quotaExhausted).toBe(true);
+    expect(preflightAfter.checks.usedLiveRequests).toBe(1);
+    expect(preflightAfter.checks.remainingLiveRequests).toBe(0);
+    expect(preflightAfter.checks.quotaExhausted).toBe(true);
+  });
+
+  it("serializes concurrent Promise.all requests from two different sessionIds when TRYON_LIVE_MAX_REQUESTS=1 so exactly 1 hits upstream and the other gets 503 BUDGET_EXCEEDED", async () => {
+    const durableStore = makeMemoryBackedDurableStore();
+    const baseMock = createFostaResponsesMock("success");
+    let asyncUpstreamCalls = 0;
+    const delayedProvider = new FostaTryOnProvider({
+      apiKey: "simulated-live-fosta-key",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      offlineMockMode: false,
+      fetchImpl: async (url, init) => {
+        asyncUpstreamCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return baseMock.fetchImpl(url, init);
+      },
+    });
+    const router = createTryOnRouter({
+      store: durableStore,
+      provider: delayedProvider,
+    });
+
+    const liveEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "true",
+      FOSTA_API_KEY: "simulated-live-fosta-key",
+      FOSTA_APPROVE_QUOTA: "true",
+      TRYON_LIVE_MAX_REQUESTS: "1",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const reqA = new Request("https://fitcheck.local/v2/tryon/jobs", {
+      method: "POST",
+      body: JSON.stringify(
+        makeFostaSubmitRequest({
+          requestId: "req_race_a",
+          idempotencyKey: "idem_race_a",
+        }),
+      ),
+    });
+    const reqB = new Request("https://fitcheck.local/v2/tryon/jobs", {
+      method: "POST",
+      body: JSON.stringify(
+        makeFostaSubmitRequest({
+          requestId: "req_race_b",
+          idempotencyKey: "idem_race_b",
+        }),
+      ),
+    });
+
+    const [resA, resB] = await Promise.all([
+      router.handle(reqA, liveEnv, { sessionId: "sess_race_a" }),
+      router.handle(reqB, liveEnv, { sessionId: "sess_race_b" }),
+    ]);
+
+    const sortedStatuses = [resA.status, resB.status].sort((a, b) => a - b);
+    expect(sortedStatuses).toEqual([202, 503]);
+
+    const rejectedRes = resA.status === 503 ? resA : resB;
+    const rejectedJson = (await rejectedRes.json()) as TryOnErrorEnvelope;
+    expect(rejectedJson.error.code).toBe("BUDGET_EXCEEDED");
+    expect(asyncUpstreamCalls).toBe(1);
+    expect(delayedProvider.submitCallCount).toBe(1);
+
+    const preflightRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_preflight_after_race" },
+    );
+    const preflight = (await preflightRes.json()) as {
+      usedLiveRequests: number;
+      remainingLiveRequests: number;
+      quotaExhausted: boolean;
+    };
+    expect(preflight.usedLiveRequests).toBe(1);
+    expect(preflight.remainingLiveRequests).toBe(0);
+    expect(preflight.quotaExhausted).toBe(true);
   });
 });

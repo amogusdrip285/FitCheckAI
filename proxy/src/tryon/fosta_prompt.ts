@@ -10,7 +10,7 @@ import type {
   TryOnPresentationMode,
 } from "./types";
 
-export const FOSTA_VTO_PROMPT_VERSION = "v2.0";
+export const FOSTA_VTO_PROMPT_VERSION = "v2.1";
 
 export type FostaValidationStatus =
   | "POC_VALIDATED_SINGLE_EXAMPLE"
@@ -100,68 +100,70 @@ export function buildFostaTryOnPrompt({
   const hasBottom = uniqueKinds.includes("BOTTOM");
   const combined = hasTop && hasBottom;
 
-  const instructions: string[] = [
-    `FITCHECK_VTO_PROMPT_VERSION=${FOSTA_VTO_PROMPT_VERSION}.`,
-    "Produce exactly ONE photorealistic virtual try-on image, not text, a product photo, a collage, or a before/after grid.",
-    "REFERENCE IMAGE 1 is the base PERSON photograph.",
-    "Preserve the same identifiable person as closely as possible: identity, face when visible, hairstyle, skin tone, body proportions and natural anatomy.",
-    "Preserve garment colors, silhouettes, neckline/waistline, fabric textures, logos, labels and printed text faithfully; do not invent or alter lettering.",
-    "Create believable fit, folds, shadows, occlusion and lighting. Do not add or remove accessories without instruction.",
+  const totalImages = 1 + (hasTop ? 1 : 0) + (hasBottom ? 1 : 0);
+  const viewTag = view === "FRONT" ? "front-view" : "back-view";
+
+  const parts: string[] = [
+    `Create exactly one photorealistic ${viewTag} virtual try-on image using these ${totalImages} images.`,
   ];
 
-  let garmentImageIndex = 2;
-  if (hasTop) {
-    instructions.push(
-      `REFERENCE IMAGE ${garmentImageIndex} is the TOP garment. Replace the person's existing top with that exact item.`,
-    );
-    garmentImageIndex += 1;
+  if (view === "FRONT") {
+    const imageRefs: string[] = ["Image 1 is the person (front view)"];
+    let idx = 2;
+    if (hasTop) {
+      imageRefs.push(`image ${idx} is the reference top`);
+      idx += 1;
+    }
+    if (hasBottom) {
+      imageRefs.push(`image ${idx} is the reference bottom`);
+    }
+    parts.push(`${imageRefs.join("; ")}.`);
   } else {
-    instructions.push(
-      "Leave the existing top completely unchanged, including all logos, sleeves, straps, colors and layering.",
-    );
-  }
-
-  if (hasBottom) {
-    instructions.push(
-      `REFERENCE IMAGE ${garmentImageIndex} is the BOTTOM garment. Replace the person's existing lower garment with that exact item, preserving waistline, silhouette, length and material.`,
-    );
-    garmentImageIndex += 1;
-  } else {
-    instructions.push(
-      "Leave the existing lower garment completely unchanged, including its shape, texture and color.",
-    );
+    const imageRefs: string[] = ["Image 1 is the person from behind (back view)"];
+    let idx = 2;
+    if (hasTop) {
+      imageRefs.push(`image ${idx} is the reference top (back view)`);
+      idx += 1;
+    }
+    if (hasBottom) {
+      imageRefs.push(`image ${idx} is the reference bottom (back view)`);
+    }
+    parts.push(`${imageRefs.join("; ")}.`);
   }
 
   if (combined) {
-    instructions.push(
-      "Apply BOTH referenced garments together in the SAME generated output image. Preserve their individual identities and details. Do not keep the original top or bottom where they must be replaced. Ensure realistic layering at the waist.",
+    parts.push(
+      "Edit the person to wear both the reference top and reference bottom with natural waist layering.",
+    );
+  } else if (hasTop) {
+    parts.push(
+      "Edit the person to wear only the reference top, keeping their existing bottom unchanged.",
+    );
+  } else {
+    parts.push(
+      "Edit the person to wear only the reference bottom, keeping their existing top unchanged.",
     );
   }
 
-  if (view === "BACK") {
-    instructions.push(
-      "VIEW=BACK. The PERSON image is a genuine rear-view reference, and all GARMENT images are rear-view references. Show the same person from BEHIND, preserving rear hairstyle, shoulders, silhouette, body orientation and back-specific prints. Do not rotate the person to face the camera, fabricate a visible front face, or copy a front logo onto the back.",
-    );
-  } else {
-    instructions.push(
-      "VIEW=FRONT. Show the person from the front, preserving face and front-specific garment details. Do not invent a rear view.",
-    );
-  }
+  const personPreservation =
+    view === "FRONT"
+      ? "Preserve the person's face, hairstyle, skin tone, body proportions, pose"
+      : "Keep the person facing away, preserving their identity, face when visible, hairstyle, skin tone, body proportions, pose";
 
   if (mode === "ORIGINAL_PHOTO") {
-    instructions.push(
-      "MODE=ORIGINAL_PHOTO. Keep the original person photograph as the base composition: camera angle, posture, framing, surrounding clothing, background and ambient lighting. Only change the selected garment regions.",
+    parts.push(
+      `${personPreservation}, shoes, accessories, lighting and original background.`,
     );
   } else {
-    instructions.push(
-      "MODE=STUDIO_WHITE. Re-stage the SAME person in an upright full-body standing pose, head and feet visible, arms relaxed naturally along the body and not covering the garments, level camera, clean seamless white/ivory backdrop, soft even professional studio lighting. You may alter the pose/background to achieve studio consistency, but keep the same person and clothing details. This is a fashion visualization, not a body measurement or reliable physical fit prediction.",
+    parts.push(
+      `${personPreservation}, shoes and accessories on a clean white studio background with soft even lighting.`,
     );
-    if (view === "BACK") {
-      instructions.push(
-        "For this studio REAR view, the subject must face AWAY from the camera and the full back of the clothing must be visible.",
-      );
-    }
   }
 
-  return instructions.join(" ");
+  const garmentNoun = combined ? "garments'" : hasTop ? "top's" : "bottom's";
+  parts.push(
+    `Preserve the ${garmentNoun} color, cut, fabric, logo, printed text and patterns faithfully.`,
+  );
+
+  return parts.join(" ");
 }

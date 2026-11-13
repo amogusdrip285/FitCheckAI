@@ -504,7 +504,7 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
     });
   }
 
-  async submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput> {
+  private validateAndInspectInputs(input: UpstreamViewSubmitInput) {
     if (input.garments.length !== 1) {
       throw new UpstreamDeterministicError(
         "UNSUPPORTED_CAPABILITY",
@@ -546,6 +546,17 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
     if (!garmentValidated.ok) {
       throw new UpstreamDeterministicError(garmentValidated.code, garmentValidated.message, false);
     }
+
+    return { primaryGarment, personValidated, garmentValidated };
+  }
+
+  public validateViewInput(input: UpstreamViewSubmitInput): void {
+    this.validateAndInspectInputs(input);
+  }
+
+  async submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput> {
+    const { primaryGarment, personValidated, garmentValidated } =
+      this.validateAndInspectInputs(input);
 
     // 2. Build versioned VTO prompt with zero PII
     const builtPrompt = buildOpenAiTryOnPrompt({
@@ -599,46 +610,71 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
     }
 
     // 4. Execute single HTTP POST with NO automatic retry (prevents double billing on timeout/drop)
+    // Keep timer + AbortSignal active until full response body read completes.
     this.submitCallCount += 1;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error("OpenAI timeout"));
+      }, this.timeoutMs);
+    });
 
     let response: Response;
+    let parsedBody: OpenAiImageEditResponseWire | null = null;
+    let errorRawText = "";
     try {
-      response = await this.fetchFn(`${this.baseUrl}/images/edits`, {
-        method: "POST",
-        headers,
-        body: formData,
-        signal: controller.signal,
-      });
-    } catch {
+      response = await Promise.race([
+        this.fetchFn(`${this.baseUrl}/images/edits`, {
+          method: "POST",
+          headers,
+          body: formData,
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ]);
+      if (response.ok) {
+        const jsonPromise = response.json() as Promise<OpenAiImageEditResponseWire>;
+        jsonPromise.catch(() => {});
+        parsedBody = await Promise.race([jsonPromise, timeoutPromise]);
+      } else {
+        const textPromise = response.text();
+        textPromise.catch(() => {});
+        errorRawText = await Promise.race([textPromise, timeoutPromise]);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted && err instanceof SyntaxError) {
+        throw new UpstreamDeterministicError(
+          "INVALID_AI_OUTPUT",
+          "Phản hồi từ OpenAI Images API không phải JSON hợp lệ.",
+          false,
+        );
+      }
       throw new UpstreamAmbiguousTimeoutError(
         "Mất kết nối hoặc quá thời gian chờ sau khi gửi yêu cầu tới OpenAI Images API; trạng thái xử lý chưa xác định nên hệ thống KHÔNG tự gửi lại để tránh tính phí hai lần.",
       );
     } finally {
-      clearTimeout(timer);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
     }
 
     const responseRequestId =
       response.headers.get("x-request-id")?.trim() ||
       `openai_${input.jobId}_${input.view.toLowerCase()}`;
 
-    const rawText = await response.text();
-
     if (!response.ok) {
       let parsedError: OpenAiErrorEnvelopeWire | null = null;
       try {
-        parsedError = JSON.parse(rawText) as OpenAiErrorEnvelopeWire;
+        parsedError = JSON.parse(errorRawText) as OpenAiErrorEnvelopeWire;
       } catch {
         parsedError = null;
       }
       throw mapOpenAiHttpError(response.status, parsedError);
     }
 
-    let parsedBody: OpenAiImageEditResponseWire;
-    try {
-      parsedBody = JSON.parse(rawText) as OpenAiImageEditResponseWire;
-    } catch {
+    if (!parsedBody || typeof parsedBody !== "object") {
       throw new UpstreamDeterministicError(
         "INVALID_AI_OUTPUT",
         "Phản hồi từ OpenAI Images API không phải JSON hợp lệ.",

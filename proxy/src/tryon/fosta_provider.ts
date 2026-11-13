@@ -24,8 +24,11 @@ import {
 import type {
   Category,
   FostaGarmentKind,
+  FostaIncompleteDiagnostic,
   ImageView,
   RemoteDeletionState,
+  SafeTryOnLogEntry,
+  SafeTryOnLogger,
   SupportedTryOnMime,
   TryOnErrorCode,
   TryOnPresentationMode,
@@ -70,17 +73,30 @@ export interface FostaResponsesRequestWire {
   tool_choice: { type: "image_generation" };
 }
 
+export interface FostaResponsesOutputContentPartWire {
+  type?: string;
+  text?: string;
+  refusal?: string;
+}
+
 export interface FostaResponsesOutputItemWire {
   type?: string;
   id?: string;
   status?: string;
   result?: string;
+  refusal?: string;
+  content?: FostaResponsesOutputContentPartWire[];
+}
+
+export interface FostaResponsesIncompleteDetailsWire {
+  reason?: string;
 }
 
 export interface FostaResponsesWire {
   id?: string;
   status?: string;
   error?: unknown;
+  incomplete_details?: FostaResponsesIncompleteDetailsWire | null;
   output?: FostaResponsesOutputItemWire[];
 }
 
@@ -245,8 +261,144 @@ export function buildFostaResponsesPayload({
   };
 }
 
-function mapFostaHttpStatusToError(status: number): UpstreamDeterministicError {
-  // Never interpolate upstream response body text so third-party errors cannot leak keys or echoed inputs.
+const MODERATION_CODE_REGEX =
+  /(?:moderation|content_filter|content_policy|safety_system|safety_violation|policy_violation)/i;
+
+/**
+ * Redacts API keys, Bearer tokens, and base64 blobs from upstream diagnostics.
+ */
+export function redactFostaDiagnostic(raw: string, apiKey?: string): string {
+  let out = raw;
+  const trimmedKey = apiKey?.trim() ?? "";
+  if (trimmedKey.length >= 4) {
+    out = out.split(trimmedKey).join("[REDACTED_API_KEY]");
+  }
+  return out
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, "[REDACTED_KEY]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
+    .replace(/data:image\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/gi, "[REDACTED_BASE64]")
+    .replace(/[A-Za-z0-9+/]{64,}={0,2}/g, "[REDACTED_BASE64]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+}
+
+function sanitizeShortFostaToken(
+  raw: unknown,
+  apiKey?: string,
+  maxLen = 64,
+): string | null {
+  if (typeof raw !== "string") {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const redacted = redactFostaDiagnostic(trimmed, apiKey)
+    .replace(/https?:\/\/\S+/gi, "[REDACTED_URL]")
+    .trim()
+    .slice(0, maxLen);
+  return redacted.length > 0 ? redacted : null;
+}
+
+function extractSafeFostaIncompleteDiagnostic(
+  data: FostaResponsesWire,
+  apiKey?: string,
+): FostaIncompleteDiagnostic {
+  const status = sanitizeShortFostaToken(data.status, apiKey, 32) ?? "unknown";
+  const incompleteReason = sanitizeShortFostaToken(
+    data.incomplete_details?.reason,
+    apiKey,
+    64,
+  );
+  const errorObj =
+    data.error && typeof data.error === "object"
+      ? (data.error as { code?: unknown })
+      : null;
+  const errorCode = errorObj
+    ? sanitizeShortFostaToken(errorObj.code, apiKey, 64)
+    : null;
+  const outputItemTypes = Array.isArray(data.output)
+    ? data.output
+        .slice(0, 16)
+        .map((item) => sanitizeShortFostaToken(item?.type, apiKey, 48) ?? "unknown")
+    : [];
+  return {
+    status,
+    incompleteReason,
+    errorCode,
+    outputItemTypes,
+  };
+}
+
+function extractFostaModerationCode(
+  payload: unknown,
+): { matched: boolean; code: string; type: string; message: string } {
+  if (!payload || typeof payload !== "object") {
+    return { matched: false, code: "", type: "", message: "" };
+  }
+  const maybeEnvelope = payload as { error?: unknown; code?: unknown; type?: unknown; message?: unknown };
+  const errObj =
+    maybeEnvelope.error && typeof maybeEnvelope.error === "object"
+      ? (maybeEnvelope.error as { code?: unknown; type?: unknown; message?: unknown })
+      : maybeEnvelope;
+  const code = typeof errObj.code === "string" ? errObj.code.trim() : "";
+  const type = typeof errObj.type === "string" ? errObj.type.trim() : "";
+  const message = typeof errObj.message === "string" ? errObj.message.trim() : "";
+  const matched = MODERATION_CODE_REGEX.test(code) || MODERATION_CODE_REGEX.test(type);
+  return { matched, code, type, message };
+}
+
+function extractFostaRefusal(
+  outputList: FostaResponsesOutputItemWire[],
+): { matched: boolean; reason: string } {
+  for (const item of outputList) {
+    if (!item || typeof item !== "object") continue;
+    if (item.type === "refusal") {
+      return {
+        matched: true,
+        reason: typeof item.refusal === "string" ? item.refusal : "",
+      };
+    }
+    if (typeof item.refusal === "string" && item.refusal.trim().length > 0) {
+      return {
+        matched: true,
+        reason: item.refusal,
+      };
+    }
+    if (Array.isArray(item.content)) {
+      for (const part of item.content) {
+        if (!part || typeof part !== "object") continue;
+        if (part.type === "refusal") {
+          return {
+            matched: true,
+            reason:
+              typeof part.refusal === "string"
+                ? part.refusal
+                : typeof part.text === "string"
+                  ? part.text
+                  : "",
+          };
+        }
+        if (typeof part.refusal === "string" && part.refusal.trim().length > 0) {
+          return {
+            matched: true,
+            reason: part.refusal,
+          };
+        }
+      }
+    }
+  }
+  return { matched: false, reason: "" };
+}
+
+function mapFostaHttpStatusToError(
+  status: number,
+  parsedBody?: unknown,
+  apiKey?: string,
+): UpstreamDeterministicError {
+  // Never interpolate unredacted upstream response body text so third-party errors cannot leak keys or echoed inputs.
   if (status === 401) {
     return new UpstreamDeterministicError(
       "UNAUTHORIZED",
@@ -261,17 +413,31 @@ function mapFostaHttpStatusToError(status: number): UpstreamDeterministicError {
       false,
     );
   }
-  if (status === 403) {
-    return new UpstreamDeterministicError(
-      "FORBIDDEN",
-      "Yêu cầu tới FOSTA bị từ chối quyền truy cập (HTTP 403 FORBIDDEN). Hệ thống KHÔNG tự chuyển sang OpenAI.",
-      false,
-    );
-  }
   if (status === 429) {
     return new UpstreamDeterministicError(
       "RATE_LIMITED",
       "FOSTA giới hạn tần suất yêu cầu (HTTP 429 RATE_LIMITED). Không tự động gửi lại để bảo vệ quota.",
+      false,
+    );
+  }
+  if (status >= 400 && status < 500) {
+    const mod = extractFostaModerationCode(parsedBody);
+    if (mod.matched) {
+      const codeLabel = redactFostaDiagnostic(mod.code || mod.type || "moderation_blocked", apiKey);
+      const detail = mod.message ? redactFostaDiagnostic(mod.message, apiKey) : "";
+      return new UpstreamDeterministicError(
+        "FORBIDDEN",
+        detail
+          ? `Yêu cầu tạo ảnh bị FOSTA chặn bởi bộ lọc kiểm duyệt nội dung (${codeLabel}): ${detail}`
+          : `Yêu cầu tạo ảnh bị FOSTA chặn bởi bộ lọc kiểm duyệt nội dung (${codeLabel}).`,
+        false,
+      );
+    }
+  }
+  if (status === 403) {
+    return new UpstreamDeterministicError(
+      "FORBIDDEN",
+      "Yêu cầu tới FOSTA bị từ chối quyền truy cập (HTTP 403 FORBIDDEN). Hệ thống KHÔNG tự chuyển sang OpenAI.",
       false,
     );
   }
@@ -305,6 +471,7 @@ export interface FostaTryOnProviderConfig {
    */
   offlineMockMode?: boolean;
   fetchImpl?: typeof fetch;
+  logger?: SafeTryOnLogger;
 }
 
 export class FostaTryOnProvider implements UpstreamVtoProvider {
@@ -326,6 +493,7 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
   private readonly offlineMockMode: boolean;
   private readonly remoteDeletionState: RemoteDeletionState;
   private readonly fetchFn: typeof fetch;
+  private readonly logFn: SafeTryOnLogger;
 
   constructor(config: FostaTryOnProviderConfig) {
     const offlineMock = config.offlineMockMode === true;
@@ -379,9 +547,14 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
     // Third-party proxy retention is unverified and has no remote delete API
     this.remoteDeletionState = offlineMock ? "NOT_UPLOADED" : "UNSUPPORTED";
     this.fetchFn = config.fetchImpl ?? fetch;
+    this.logFn =
+      config.logger ??
+      ((entry: SafeTryOnLogEntry) => {
+        console.info(JSON.stringify(entry));
+      });
   }
 
-  async submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput> {
+  private prepareValidatedPayload(input: UpstreamViewSubmitInput): ReturnType<typeof buildFostaResponsesPayload> {
     if (!this.offlineMockMode && (!this.approvedLive || !this.approvedQuotaUse)) {
       throw new UpstreamDeterministicError(
         "FORBIDDEN",
@@ -498,7 +671,7 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       }
     }
 
-    const payload = buildFostaResponsesPayload({
+    return buildFostaResponsesPayload({
       mode,
       view: input.view,
       model: this.modelId,
@@ -506,39 +679,83 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       topBytes,
       bottomBytes,
     });
+  }
+
+  public validateViewInput(input: UpstreamViewSubmitInput): void {
+    this.prepareValidatedPayload(input);
+  }
+
+  async submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput> {
+    const payload = this.prepareValidatedPayload(input);
 
     // Execute exactly ONE POST request — zero retries, zero fallback to OpenAI!
+    // Keep timer + AbortSignal active until full response body read completes.
     this.submitCallCount += 1;
+    const startedAtMs = Date.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error("FOSTA timeout"));
+      }, this.timeoutMs);
+    });
 
     let response: Response;
+    let data: FostaResponsesWire | null = null;
+    let errorBodyText = "";
     try {
-      response = await this.fetchFn(this.endpoint, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${this.apiKey}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } catch {
+      response = await Promise.race([
+        this.fetchFn(this.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${this.apiKey}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        }),
+        timeoutPromise,
+      ]);
+      if (response.ok) {
+        const jsonPromise = response.json() as Promise<FostaResponsesWire>;
+        jsonPromise.catch(() => {});
+        data = await Promise.race([jsonPromise, timeoutPromise]);
+      } else {
+        const textPromise = response.text();
+        textPromise.catch(() => {});
+        errorBodyText = await Promise.race([textPromise, timeoutPromise]);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted && err instanceof SyntaxError) {
+        throw new UpstreamDeterministicError(
+          "INVALID_AI_OUTPUT",
+          "FOSTA trả về dữ liệu không phải JSON hợp lệ.",
+          false,
+        );
+      }
       throw new UpstreamAmbiguousTimeoutError(
-        "Mất kết nối hoặc quá thời gian chờ khi gọi FOSTA Responses API; yêu cầu có thể đã tới máy chủ nên hệ thống KHÔNG tự động gửi lại để bảo vệ quota.",
+        "Mất kết nối hoặc quá thời gian chờ khi gọi hoặc đọc phản hồi từ FOSTA Responses API; yêu cầu có thể đã tới máy chủ nên hệ thống KHÔNG tự động gửi lại để bảo vệ quota.",
       );
     } finally {
-      clearTimeout(timer);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
     }
 
     if (!response.ok) {
-      throw mapFostaHttpStatusToError(response.status);
+      let parsedErrorBody: unknown = null;
+      if (errorBodyText.trim().length > 0) {
+        try {
+          parsedErrorBody = JSON.parse(errorBodyText) as unknown;
+        } catch {
+          parsedErrorBody = null;
+        }
+      }
+      throw mapFostaHttpStatusToError(response.status, parsedErrorBody, this.apiKey);
     }
 
-    let data: FostaResponsesWire;
-    try {
-      data = (await response.json()) as FostaResponsesWire;
-    } catch {
+    if (!data || typeof data !== "object") {
       throw new UpstreamDeterministicError(
         "INVALID_AI_OUTPUT",
         "FOSTA trả về dữ liệu không phải JSON hợp lệ.",
@@ -546,7 +763,43 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       );
     }
 
+    const incompleteDiagnostic =
+      typeof data.status === "string" && data.status !== "completed"
+        ? extractSafeFostaIncompleteDiagnostic(data, this.apiKey)
+        : null;
+    if (incompleteDiagnostic) {
+      this.logFn({
+        event: "tryon.upstream.incomplete",
+        service: "tryon-v2",
+        requestId: input.requestId,
+        jobId: input.jobId,
+        providerId: this.providerId,
+        modelId: this.modelId,
+        mode: this.offlineMockMode ? "OFFLINE_MOCK_FOSTA" : "AI_LIVE",
+        errorCode:
+          incompleteDiagnostic.incompleteReason === "content_filter"
+            ? "FORBIDDEN"
+            : data.error
+              ? "UPSTREAM_ERROR"
+              : "INVALID_AI_OUTPUT",
+        incompleteDiagnostic,
+        latencyMs: Math.max(0, Date.now() - startedAtMs),
+      });
+    }
+
     if (data?.error) {
+      const modInOk = extractFostaModerationCode(data);
+      if (modInOk.matched) {
+        const codeLabel = redactFostaDiagnostic(modInOk.code || modInOk.type || "moderation_blocked", this.apiKey);
+        const detail = modInOk.message ? redactFostaDiagnostic(modInOk.message, this.apiKey) : "";
+        throw new UpstreamDeterministicError(
+          "FORBIDDEN",
+          detail
+            ? `Yêu cầu tạo ảnh bị FOSTA chặn bởi bộ lọc kiểm duyệt nội dung (${codeLabel}): ${detail}`
+            : `Yêu cầu tạo ảnh bị FOSTA chặn bởi bộ lọc kiểm duyệt nội dung (${codeLabel}).`,
+          false,
+        );
+      }
       throw new UpstreamDeterministicError(
         "UPSTREAM_ERROR",
         "FOSTA trả về lỗi API trong phản hồi Responses.",
@@ -554,10 +807,27 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       );
     }
 
+    if (data?.incomplete_details?.reason === "content_filter") {
+      throw new UpstreamDeterministicError(
+        "FORBIDDEN",
+        "FOSTA đã dừng tạo ảnh do bộ lọc kiểm duyệt nội dung an toàn (content_filter). Hệ thống KHÔNG tự động gửi lại.",
+        false,
+      );
+    }
+
     if (data?.status && data.status !== "completed") {
+      const diag = incompleteDiagnostic ?? extractSafeFostaIncompleteDiagnostic(data, this.apiKey);
+      const parts: string[] = [`status='${diag.status}'`];
+      if (diag.incompleteReason) {
+        parts.push(`reason='${diag.incompleteReason}'`);
+      }
+      if (diag.errorCode) {
+        parts.push(`errorCode='${diag.errorCode}'`);
+      }
+      parts.push(`outputTypes=[${diag.outputItemTypes.join(",")}]`);
       throw new UpstreamDeterministicError(
         "INVALID_AI_OUTPUT",
-        `Phản hồi FOSTA chưa hoàn tất (status='${String(data.status)}').`,
+        `Phản hồi FOSTA chưa hoàn tất (${parts.join(", ")}).`,
         false,
       );
     }
@@ -568,6 +838,17 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
         item?.type === "image_generation_call" && typeof item.result === "string",
     );
     if (!imageCall || typeof imageCall.result !== "string") {
+      const refusal = extractFostaRefusal(outputList);
+      if (refusal.matched) {
+        const redactedReason = refusal.reason ? redactFostaDiagnostic(refusal.reason, this.apiKey) : "";
+        throw new UpstreamDeterministicError(
+          "FORBIDDEN",
+          redactedReason
+            ? `Mô hình FOSTA từ chối tạo ảnh (refusal): ${redactedReason}`
+            : "Mô hình FOSTA từ chối tạo ảnh theo chính sách an toàn (refusal).",
+          false,
+        );
+      }
       throw new UpstreamDeterministicError(
         "INVALID_AI_OUTPUT",
         "FOSTA không trả về kết quả image_generation_call hợp lệ.",
