@@ -10,16 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.Instant
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
- * SPRINT 0 STUB — in-memory, khởi tạo từ [SeedData]. Mất dữ liệu khi đóng app.
- * TODO(Track A): thay bằng RoomWardrobeRepository dùng [com.fitcheckai.core.database.dao.ClothingItemDao],
- * rồi đổi binding trong [com.fitcheckai.core.database.di.WardrobeModule].
+ * In-memory fixture kept for existing cross-track unit tests (including Track D).
+ * Not bound in Hilt: the app always uses [WardrobeRepositoryImpl].
  */
-@Singleton
-class StubWardrobeRepository @Inject constructor() : WardrobeRepository {
+class StubWardrobeRepository : WardrobeRepository {
     private val items = MutableStateFlow(SeedData.items)
 
     override fun observeItems(): Flow<List<ClothingItem>> = items.asStateFlow()

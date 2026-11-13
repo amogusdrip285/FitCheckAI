@@ -8,7 +8,6 @@ import androidx.navigation.navArgument
 import com.fitcheckai.core.model.nav.Routes
 
 /** Điểm vào duy nhất của feature — `app` gọi đúng 1 lần. */
-@Suppress("UNUSED_PARAMETER")
 fun NavGraphBuilder.todayGraph(navController: NavController) {
     composable(
         route = Routes.TODAY_PATTERN,
@@ -20,6 +19,9 @@ fun NavGraphBuilder.todayGraph(navController: NavController) {
             },
         ),
     ) {
-        TodayScreen()
+        TodayScreen(
+            onOpenItem = { navController.navigate(Routes.wardrobeItem(it)) },
+            onTryOn = { route -> navController.navigate(route) { launchSingleTop = true } },
+        )
     }
 }

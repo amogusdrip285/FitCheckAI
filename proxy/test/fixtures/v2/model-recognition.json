@@ -1,0 +1,48 @@
+{
+  "_comment": "Output giả lập của model (đúng ModelRecognitionSchema). Dùng cho test; KHÔNG phải evidence live.",
+  "frontOnly": {
+    "sameItem": null,
+    "attributes": { "category": "TOP", "colors": ["WHITE"], "pattern": "SOLID", "styleTags": ["Tối giản", "cơ bản"], "material": null, "formality": 2, "seasonTags": ["SUMMER"] },
+    "evidence": [
+      { "field": "category", "views": ["FRONT"] },
+      { "field": "colors", "views": ["FRONT", "BACK"] }
+    ],
+    "conflictFields": [],
+    "uncertainFields": ["material"]
+  },
+  "matchedPair": {
+    "sameItem": true,
+    "attributes": { "category": "OUTERWEAR", "colors": ["BLUE"], "pattern": "SOLID", "styleTags": ["năng động"], "material": "denim", "formality": 2, "seasonTags": ["AUTUMN", "WINTER"] },
+    "evidence": [
+      { "field": "category", "views": ["FRONT", "BACK"] },
+      { "field": "colors", "views": ["FRONT", "BACK"] },
+      { "field": "material", "views": ["FRONT"] }
+    ],
+    "conflictFields": [],
+    "uncertainFields": []
+  },
+  "conflictingPair": {
+    "sameItem": true,
+    "attributes": { "category": "TOP", "colors": ["BLACK", "WHITE"], "pattern": "PRINTED", "styleTags": ["đường phố"], "material": null, "formality": 1, "seasonTags": [] },
+    "evidence": [
+      { "field": "category", "views": ["FRONT", "BACK"] },
+      { "field": "pattern", "views": ["BACK"] }
+    ],
+    "conflictFields": ["pattern"],
+    "uncertainFields": []
+  },
+  "differentItems": {
+    "sameItem": false,
+    "attributes": { "category": "TOP", "colors": ["RED"], "pattern": "SOLID", "styleTags": [], "material": null, "formality": null, "seasonTags": [] },
+    "evidence": [{ "field": "category", "views": ["FRONT"] }],
+    "conflictFields": ["colors"],
+    "uncertainFields": []
+  },
+  "messy": {
+    "sameItem": null,
+    "attributes": { "category": "UNKNOWN", "colors": ["RED", "RED", "BLUE", "GREEN", "BLACK"], "pattern": "UNKNOWN", "styleTags": ["a", "b", "c", "d", "e", "f", "một tag rất rất rất dài vượt quá ba mươi hai ký tự"], "material": "  ", "formality": 9, "seasonTags": [] },
+    "evidence": [],
+    "conflictFields": [],
+    "uncertainFields": []
+  }
+}

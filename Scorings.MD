@@ -35,3 +35,16 @@
 
 
 Nếu hòa điểm: ưu tiên lần lượt tiêu chí 1, tiêu chí 2 rồi tiêu chí 3.
+
+## Tự chấm nội bộ ngày 12/11/2026
+
+| Tiêu chí | Điểm | Bằng chứng |
+|---|---:|---|
+| Demo AI trên điện thoại thật | 20/40 | Samsung API 36 mở lại app sau force-stop và chạy tách nền ML Kit trực tiếp trong form Tủ đồ. Today đang dùng phối cơ bản. Nhận diện và phối đồ live còn chờ proxy HTTPS. [QA tích hợp trên Samsung](docs/qa/track-a-b-handoff.md) · [Eval B](eval/ai/results/2026-11-12-luna-summary.md). |
+| Vấn đề thật của người dùng | 18/35 | Đề bài mô tả khó khăn khi chọn và tận dụng quần áo đang có. Luồng thử nghiệm thể hiện cách tạo tủ và phối đồ. Nghiên cứu người dùng hiện có n=0. [Đề bài](Requirements.MD) · [Kế hoạch nghiên cứu](docs/research/track-a-study-plan.md). |
+| Khả năng mở rộng thị trường | 13/25 | Kế hoạch chọn sinh viên HUST làm nhóm đầu tiên rồi mở rộng sang Việt Nam và Đông Nam Á. Kênh tiếp cận và chuyển đổi còn ở mức giả thuyết, số người tham gia pilot là 0. [Kế hoạch Track D](docs/plans/40-track-d-insights.md) · [Kế hoạch pilot](docs/research/track-a-study-plan.md). |
+| **Tổng** | **51/100** | Tự chấm theo rubric trong repo. |
+
+Điểm 51/100 đánh giá mức sẵn sàng của demo toàn dự án. Phần chấm giải thích recommendation theo nhiệm vụ B-004 dùng thang 1–5. [Điểm reviewer A](eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a).
+
+Ngày 13/11/2026 giữ **51/100**. Bản CORE mới mở lại được trên Samsung, ML Kit chạy 6/6 mẫu và Today phối cơ bản khi mất mạng. Hai luồng AI qua proxy chưa được nghiệm thu trên điện thoại. Nghiên cứu người dùng và pilot vẫn có n=0. [Hồi quy CORE](docs/qa/track-a-core-regression.md).

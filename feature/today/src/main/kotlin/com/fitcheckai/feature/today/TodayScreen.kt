@@ -1,57 +1,75 @@
 package com.fitcheckai.feature.today
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.fitcheckai.core.model.ClothingItem
-import com.fitcheckai.core.model.Occasion
-import com.fitcheckai.core.model.Outfit
-import com.fitcheckai.core.model.OutfitSource
-import com.fitcheckai.core.model.WeatherSnapshot
+import com.fitcheckai.core.model.profile.STYLE_OPTIONS
+import com.fitcheckai.core.model.recommendation.MAX_FREE_TEXT
+import com.fitcheckai.core.model.recommendation.MAX_OUTFITS
+import com.fitcheckai.core.model.recommendation.Occasion
 import com.fitcheckai.core.ui.component.EmptyState
-import com.fitcheckai.core.ui.component.ItemThumbnail
+import com.fitcheckai.core.ui.component.OutfitVisual
 import com.fitcheckai.core.ui.component.ScreenHeader
 import com.fitcheckai.core.ui.theme.Spacing
-import kotlin.math.roundToInt
-
-private val THUMB_SIZE = 96.dp
+import kotlinx.coroutines.launch
 
 @Composable
-fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
+fun TodayScreen(
+    onOpenItem: (String) -> Unit,
+    onTryOn: (route: String) -> Unit,
+    viewModel: TodayViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var sharing by remember { mutableStateOf(false) }
+    var openingTryOn by remember { mutableStateOf(false) }
+    var shareError by remember { mutableStateOf<String?>(null) }
+
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(eyebrow = weatherLine(state.suggestions?.weather), title = "Hôm nay mặc gì?")
-        OccasionChips(state.occasion, viewModel::onOccasionSelected)
-        val suggestions = state.suggestions
+        ScreenHeader(eyebrow = "Phối từ tủ đồ của bạn", title = "Hôm nay mặc gì?")
+        OccasionChips(state.occasion) {
+            shareError = null
+            viewModel.onOccasionSelected(it)
+        }
+        RequestOptions(
+            state = state,
+            enabled = !state.isLoading,
+            onStyleToggled = viewModel::onStyleToggled,
+            onFreeTextChanged = viewModel::onFreeTextChanged,
+            onCountSelected = viewModel::onCountSelected,
+            onApply = {
+                shareError = null
+                viewModel.applyPreferences()
+            },
+        )
+        shareError?.let {
+            Text(it, Modifier.padding(horizontal = Spacing.md), color = MaterialTheme.colorScheme.error)
+        }
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-            suggestions == null || suggestions.outfits.isEmpty() -> EmptyState(
+            state.outfits.isEmpty() -> EmptyState(
                 title = "Chưa phối được",
-                message = suggestions?.emptyReason ?: "Hãy thêm vài món đồ vào tủ.",
+                message = state.message ?: "Hãy thêm vài món đồ vào tủ.",
                 actionLabel = "Thử lại",
                 onAction = viewModel::suggest,
             )
@@ -59,16 +77,108 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
                 contentPadding = PaddingValues(Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                items(suggestions.outfits, key = { it.id }) { outfit ->
-                    OutfitCard(
-                        outfit = outfit,
-                        items = outfit.itemIds.mapNotNull(state.itemsById::get),
-                        isWorn = outfit.id == state.wornOutfitId,
-                        onWear = { viewModel.onWear(outfit) },
+                items(state.outfits, key = { it.outfitId }) { outfit ->
+                    val worn = outfit.outfitId == state.wornOutfitId
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        OutfitVisual(
+                            outfit = outfit,
+                            onSelect = viewModel::onWear,
+                            onOpenItem = onOpenItem,
+                            selectionLabel = if (worn) "Đã ghi nhận ✓" else "Mặc bộ này",
+                            selectionEnabled = !worn,
+                            shareEnabled = !sharing && outfit.items.all { it.imagePath != null },
+                            onShare = { id ->
+                                if (!sharing) {
+                                    sharing = true
+                                    shareError = null
+                                    scope.launch {
+                                        try {
+                                            viewModel.prepareShare(id).fold(
+                                                onSuccess = { intent ->
+                                                    try { context.startActivity(Intent.createChooser(intent, "Chia sẻ ảnh bộ đồ")) }
+                                                    catch (_: ActivityNotFoundException) {
+                                                        shareError = "Thiết bị chưa có ứng dụng nhận ảnh."
+                                                    }
+                                                },
+                                                onFailure = { shareError = it.message ?: "Chưa chuẩn bị được ảnh để chia sẻ." },
+                                            )
+                                        } finally { sharing = false }
+                                    }
+                                }
+                            },
+                        )
+                        TextButton(
+                            enabled = !sharing && !openingTryOn,
+                            onClick = {
+                                if (!openingTryOn) {
+                                    openingTryOn = true
+                                    shareError = null
+                                    scope.launch {
+                                        try {
+                                            viewModel.prepareTryOn(outfit.outfitId).fold(
+                                                onSuccess = onTryOn,
+                                                onFailure = { shareError = it.message ?: "Chưa mở được thử đồ." },
+                                            )
+                                        } finally { openingTryOn = false }
+                                    }
+                                }
+                            },
+                        ) { Text("Thử đồ với bộ này") }
+                    }
+                }
+                state.message?.let { note -> item { Text(note, style = MaterialTheme.typography.bodySmall) } }
+                item { OutlinedButton(onClick = viewModel::reroll) { Text("Phối lại") } }
+            }
+        }
+    }
+}
+
+/** C-001: optional style/free-text/count. Collapsed by default; editing never triggers a request. */
+@Composable
+private fun RequestOptions(
+    state: TodayUiState,
+    enabled: Boolean,
+    onStyleToggled: (String) -> Unit,
+    onFreeTextChanged: (String) -> Unit,
+    onCountSelected: (Int) -> Unit,
+    onApply: () -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = Spacing.md)) {
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(if (expanded) "Ẩn tùy chỉnh" else "Tùy chỉnh yêu cầu")
+        }
+        if (!expanded) return@Column
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text("Phong cách (để trống = theo hồ sơ)", style = MaterialTheme.typography.labelMedium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                STYLE_OPTIONS.forEach { style ->
+                    FilterChip(
+                        selected = style in state.styleOverrides,
+                        onClick = { onStyleToggled(style) },
+                        label = { Text(style) },
                     )
                 }
-                item { OutlinedButton(onClick = viewModel::suggest) { Text("Phối lại") } }
             }
+            OutlinedTextField(
+                value = state.freeText,
+                onValueChange = onFreeTextChanged,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Yêu cầu thêm (không bắt buộc)") },
+                supportingText = { Text("${state.freeText.length}/$MAX_FREE_TEXT") },
+                maxLines = 3,
+            )
+            Text("Số bộ muốn xem", style = MaterialTheme.typography.labelMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                (1..MAX_OUTFITS).forEach { count ->
+                    FilterChip(
+                        selected = count == state.requestedCount,
+                        onClick = { onCountSelected(count) },
+                        label = { Text("$count") },
+                    )
+                }
+            }
+            Button(onClick = onApply, enabled = enabled) { Text("Gợi ý theo yêu cầu") }
         }
     }
 }
@@ -88,32 +198,6 @@ private fun OccasionChips(selected: Occasion, onSelect: (Occasion) -> Unit) {
         }
     }
 }
-
-@Composable
-private fun OutfitCard(outfit: Outfit, items: List<ClothingItem>, isWorn: Boolean, onWear: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                items.forEach { ItemThumbnail(it, Modifier.width(THUMB_SIZE)) }
-            }
-            Text(outfit.explanation, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                if (outfit.source == OutfitSource.AI) "Gợi ý bởi AI" else "Chế độ offline",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Button(onClick = onWear, enabled = !isWorn) {
-                Text(if (isWorn) "Đã ghi nhận ✓" else "Mặc bộ này")
-            }
-        }
-    }
-}
-
-private fun weatherLine(weather: WeatherSnapshot?): String =
-    weather?.let { "${it.city} · ${it.tempC.roundToInt()}°C · ${it.condition}" } ?: "Đang lấy thời tiết…"
 
 private fun Occasion.label(): String = when (this) {
     Occasion.SCHOOL -> "Đi học"

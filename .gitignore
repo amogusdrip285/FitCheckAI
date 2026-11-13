@@ -21,6 +21,11 @@ tryon.env
 !tryon.env.example
 .dev.vars
 
+# Eval AI — ảnh và nhãn thật không commit (PRE-004)
+eval/ai/images/
+eval/ai/recognition/labels.json
+eval/ai/recognition/labels.*.json
+
 # IDE
 .idea/
 *.iml
@@ -35,3 +40,12 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Dataset archives and generated indexes stay local; licensed Android fixtures are tracked.
+data/raw/
+data/processed/
+__pycache__/
+*.pyc
+
+# INT-004 packaged artifacts (tools/release/package_apk.py)
+dist/

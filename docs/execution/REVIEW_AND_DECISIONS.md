@@ -99,7 +99,55 @@ Hybrid tiếp tục là cách làm đã chọn: ownership xuyên suốt + contra
 
 23 task mới: **A-005/A-006/A-201** (fake, visual, sync boundary); **B-005/B-006/B-007** (fake, recognition eval/client); **C-201…213** (VTO feasibility→privacy/runtime→advanced); **D-004…007** (profile storage/photo/fake/E2E). Tổng 45 giữ active + 23 mới = **68 active**, cộng 5 archive = **73 card**. PREPARATION chỉ giữ redirect anchors, không nhân đôi task card. Không đổi ID khi chuyển owner.
 
-## Decision log hiện hành
+## Cập nhật implementation Track A độc lập — 11/11/2026
+
+Người dùng xác nhận chưa có máy Android thật hoặc code B/D riêng và yêu cầu làm phần độc lập trước,
+cập nhật documentation, commit/push lên repo. Đây không phải xác nhận nghiệm thu của owner D/B/C.
+Đã fast-forward nhánh A tới `origin/main` `7d995a5`, đọc alignment mới rồi giữ Gradle multi-module/Hilt hiện hữu.
+Không dựng skeleton/manual DI khác hoặc thay version toolchain đã chốt.
+
+- Shared v2 candidate đặt một nơi tại `core:model/.../wardrobe`; API/media ownership cần D/B/C review trước S-002/PRE-007 DONE.
+- V1 giữ ở compatibility bridge chỉ đọc, không có kho wardrobe thứ hai được ghi đồng thời. Profile/Today v2 còn thuộc D.
+- Checkout thực tế có 30 item v1 trên emulator (wearCount tổng 9), nên migration Room 1→2 có ý nghĩa và đã kiểm bảo toàn dữ liệu.
+  Nhận định “chưa có dữ liệu” trong audit planning cũ không được dùng để reset database này.
+- PRE-004 đã có bộ 21 món/24 ảnh thật, 3 cặp front/back và manifest quyền; nhãn do trợ lý rà soát, chưa có B adjudication.
+  Catalog Kaggle v1 có 24.856 ảnh có nhãn sau audit. Nguồn CC0 phục vụ tái tạo các fixture ảnh đơn. [Hướng dẫn dữ liệu Track A](../../data/README.md).
+- Chọn CameraX đang có làm camera route duy nhất; không làm thêm camera intent A-101. Photo Picker vẫn là đường nhập ảnh chính.
+- `UnavailableRecognition` là binding mặc định v2; fake chỉ phục vụ tests. Không gọi fake là AI live hoặc tự gửi ảnh để “đủ demo”.
+- Share/sync chỉ tới local API/metadata prototype; chưa bật live cloud, thanh toán, beta, VTO hay luồng share từ Today.
+
+Nguồn trạng thái hiện tại: [board](TASK_BOARD.md), [hướng dẫn A v2](../track-a-v2.md),
+[báo cáo QA](../qa/track-a-acceptance.md), [dataset](../../data/README.md).
+Phần audit tài liệu bên dưới giữ như lịch sử của lần revise kế hoạch; câu “tất cả TODO/không code” không mô tả bản A hiện tại.
+
+## Cập nhật Track B — 11–13/11/2026
+
+Owner B (`proxy/`, `core:ai`, `eval/ai`). Quyết định do người dùng B chốt trong phiên làm việc; mục nào cần nhóm xác nhận ghi rõ. Trạng thái chi tiết: [board](TASK_BOARD.md), [PRE-003](../track-b/PRE-003-provider-budget.md), [proxy-api](../contracts/proxy-api.md).
+
+| Ngày | Quyết định | Ghi chú / bằng chứng |
+|---|---|---|
+| 11/11 | Gemini `gemini-3.5-flash-lite` free tier để **test** | Free tier dùng dữ liệu để cải thiện sản phẩm ⇒ chỉ ảnh test. Eval B-004/B-006 lần 1 |
+| 12/11 | Thêm adapter OpenAI-compatible; thử GPT qua gateway FOSTA | `response_format` bị gateway bỏ qua ⇒ function calling strict; FOSTA chỉ để thử khi chưa có key |
+| 12/11 | Provider/model riêng từng service (`AI_PROVIDER_<SERVICE>`, `AI_MODEL_<SERVICE>`); `/health.providers` | Consent nhận diện nêu đúng nơi ảnh được gửi; đổi provider ⇒ consent cũ hết hiệu lực |
+| 12/11 | Model mặc định `gpt-6-luna` cho cả hai service | Đo qua FOSTA: luna nhanh ngang sol (độ trễ do gateway), rẻ nhất |
+| 12/11 | Deadline chỉnh được bằng env, mặc định giữ CT-07 15s/18s | Chỉ nới trong `.dev.vars` để test provider chậm; app Android vẫn cắt ở 20s |
+| 12/11 | Giữ client nhận diện `ProxyRecognitionClient` của A, bỏ bản trùng của B | A đã nối UI và kiểm trên máy thật; B review, sửa parse `/health` (field mới làm client luôn Unavailable) và đọc `providers.recognition` |
+| 12/11 | C-002 fallback RULES, C-102 `rerollAfter`, LATER-006 focus | Server chặn trước AI khi hết tổ hợp; D/A đã nối UI và QA trên Samsung |
+| 13/11 | **Pitching/demo dùng OpenAI chính chủ, không qua FOSTA** | DEC-03/04 đề xuất ở PRE-003: `gpt-6-luna`, spend limit $10; chờ account/key/Cloudflare ⇒ còn BLOCKED |
+| 13/11 | Tách `OPENAI_COMPAT_API_KEY` (gateway) khỏi `OPENAI_API_KEY` (OpenAI chính chủ, dùng chung với C) | Không để key gateway bị gửi tới `api.openai.com` và ngược lại |
+| 13/11 | `RouteDef.deadlineMs` riêng từng route; chưa mount try-on của C | C-205 BLOCKED; điểm cần sửa ở [review C-207](../track-b/C-207-mount-review.md) |
+| 13/11 | Prompt `outfits-v2.1`: không lộ số/tên trường nội bộ | Hai reviewer cùng trừ điểm lỗi này ở `outfits-v2.0`; chưa eval lại |
+| 13/11 | B-004 chấm văn phong đạt | A và B chấm độc lập 17/17 bộ ≥3/5 cả hai tiêu chí trên lượt luna `outfits-v2.0` |
+
+## Decision log kế hoạch (giữ lịch sử, đọc cùng cập nhật trên)
+
+Tiếp tục Track A sau merge `114d3cf`: ưu tiên recovery file/cleanup, preview cancellation và Room native tests không cần B/D.
+Không đổi schema hoặc shared contract. Dataset làm rõ per-field provenance, reference chưa adjudicate không còn nằm trong `groundTruthFields`.
+[Evidence bổ sung](../qa/track-a-independent-followup.md) ghi riêng model ML Kit UNAVAILABLE trên AVD và gate chất lượng chưa chạy.
+Người dùng yêu cầu commit mới bằng `NQKhaixyz` và push main; GitHub authentication đã xác minh đúng account và quyền push.
+Theo yêu cầu cập nhật nguồn dữ liệu, gỡ 100 ảnh bulk CC0 và manifest mẫu khỏi cây repo, chuyển phần catalog sang Kaggle Fashion Product Images (Small) v1.
+Script đối chiếu ID sản phẩm, giữ metadata nguồn, quy đổi loại/màu và ghi lý do loại từng dòng. ZIP, chỉ mục và ảnh xuất được tạo local.
+Các ca Android cần ảnh trước/sau dùng bộ fixtures có xác minh cặp. [Audit catalog](../../data/reports/kaggle-fashion-small-audit.json).
 
 Chốt theo dependency/điểm sử dụng, không hạn ngày. “Theo yêu cầu mới” là quyết định sản phẩm đã có; “đề xuất” hoặc “chưa xác nhận” không được giả thành đã triển khai.
 

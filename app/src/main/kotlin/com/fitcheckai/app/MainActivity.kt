@@ -6,7 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fitcheckai.core.model.ProfileRepository
+import com.fitcheckai.core.model.profile.ProfileStorage
+import com.fitcheckai.core.model.wardrobe.LoadState
 import com.fitcheckai.core.model.nav.Routes
 import com.fitcheckai.core.ui.theme.FitCheckTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,13 +33,19 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Chọn màn hình bắt đầu MỘT LẦN khi mở app: chưa có profile → onboarding. null = đang tải.
- * Không theo dõi tiếp, để NavHost không bị dựng lại khi onboarding lưu profile.
+ * Chooses the start destination ONCE: no profile / onboarding not completed → onboarding.
+ * An unreadable profile never blocks the app: go to Today, the Profile tab offers reset. null = loading.
  */
 @HiltViewModel
-class MainViewModel @Inject constructor(profiles: ProfileRepository) : ViewModel() {
+class MainViewModel @Inject constructor(profiles: ProfileStorage) : ViewModel() {
     val startDestination: StateFlow<String?> = flow {
-        val profile = profiles.observe().first()
-        emit(if (profile == null) Routes.ONBOARDING else Routes.TODAY_PATTERN)
+        val state = profiles.observeProfile().first { it !is LoadState.Loading }
+        emit(startDestinationFor(state))
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+}
+
+internal fun startDestinationFor(state: LoadState<com.fitcheckai.core.model.profile.UserProfile?>): String = when (state) {
+    is LoadState.Ready -> if (state.value?.onboardingCompleted == true) Routes.TODAY_PATTERN else Routes.ONBOARDING
+    is LoadState.Failed -> Routes.TODAY_PATTERN
+    LoadState.Loading -> Routes.ONBOARDING
 }

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "dataset": "paramaggarwal/fashion-product-images-small",
+    "version": 1,
+    "url": "https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small",
+    "publisher": "Param Aggarwal",
+    "declaredLicense": "MIT"
+  },
+  "stylesCsvSha256": "cd86bd2d71b4065ed91786a52aa6ccc0eed343949791c663be9af35f105a128c",
+  "catalogRows": 44446,
+  "rootPhotoFiles": 44441,
+  "mirroredPhotoFiles": 44441,
+  "photosWithoutCatalogRow": 0,
+  "csvTitlesRepaired": 22,
+  "usableUniquePhotos": 24856,
+  "categories": {
+    "ACCESSORY": 292,
+    "BOTTOM": 2383,
+    "DRESS": 438,
+    "OUTERWEAR": 302,
+    "SHOES": 9214,
+    "TOP": 12227
+  },
+  "articleTypes": {
+    "Blazers": 8,
+    "Capris": 149,
+    "Caps": 282,
+    "Casual Shoes": 2845,
+    "Dresses": 438,
+    "Flats": 500,
+    "Flip Flops": 916,
+    "Formal Shoes": 636,
+    "Hat": 3,
+    "Headband": 7,
+    "Heels": 1320,
+    "Jackets": 255,
+    "Jeans": 587,
+    "Jeggings": 34,
+    "Leggings": 167,
+    "Rain Jacket": 18,
+    "Rain Trousers": 2,
+    "Sandals": 896,
+    "Shirts": 2906,
+    "Shorts": 498,
+    "Shrug": 6,
+    "Skirts": 114,
+    "Sports Sandals": 67,
+    "Sports Shoes": 2034,
+    "Sweaters": 277,
+    "Sweatshirts": 282,
+    "Tops": 1666,
+    "Track Pants": 304,
+    "Trousers": 528,
+    "Tshirts": 6867,
+    "Tunics": 229,
+    "Waistcoat": 15
+  },
+  "exclusions": {
+    "conflicting_exact_duplicate_labels": 58,
+    "exact_duplicate": 709,
+    "missing_image": 5,
+    "out_of_scope": 18818
+  },
+  "imageSizes": {
+    "53x80": 1,
+    "60x60": 3,
+    "60x76": 1,
+    "60x80": 24851
+  },
+  "catalogYearRange": [
+    2007,
+    2018
+  ],
+  "rowsWithMappedColor": 24731,
+  "rowsWithCatalogSeason": 24835,
+  "archiveSha256": "e223d09ba5fb5829892e507989dba11b2549a31fabed994ad5353e4b6ef87b7a",
+  "archiveBytes": 592614936
+}

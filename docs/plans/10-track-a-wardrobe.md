@@ -1,5 +1,9 @@
 # Track A — Wardrobe & Imaging
 
+> Đây là plan v1 được giữ để tham khảo. Phạm vi hiện hành ở [card v2](../execution/tracks/A.md),
+> [hướng dẫn triển khai](../track-a-v2.md) và [nghiệm thu](../qa/track-a-acceptance.md).
+> Mục tiêu thời gian/AI bên dưới không phải kết quả đã đo; wear tracking và seed minh họa không thuộc luồng v2 đang dùng.
+
 **Sở hữu:** `core:database`, `core:imaging`, `feature:wardrobe`
 **Implement:** `WardrobeRepository`, `ImageSegmenter`
 **Dùng của người khác:** `ClothingTagger` (B — stub trước), `MetricsTracker` (D)
@@ -43,10 +47,12 @@ Phối đồ (C), thống kê (D), prompt/AI (B).
 
 ## Definition of Done
 - [ ] Thêm 10 món liên tiếp không crash, trên máy thật
-- [ ] Force-stop → mở lại: đủ 10 món, ảnh hiển thị
+- [x] Force-stop → mở lại: đủ 10 món, ảnh hiển thị (đã kiểm tra trên trình giả lập API 35; máy thật chưa nghiệm thu)
 - [ ] Tắt mạng: vẫn thêm được (tách nền vẫn chạy, form thủ công)
-- [ ] Unit test repo/DAO, coverage ≥ 80% cho `core:database`
-- [ ] Không quyền thừa (chỉ CAMERA; picker không cần storage permission)
+- [x] Unit test repo/DAO, coverage ≥ 80% cho `core:database` (92,19%)
+- [x] Không quyền thừa (chỉ CAMERA là quyền runtime; picker không cần storage permission)
+
+Code A1–A3 đã triển khai. Lưu ảnh gốc khi offline đã chạy thành công trên trình giả lập; tách nền offline sau khi tải model và 10 lần thêm trên máy thật còn cần nghiệm thu. Xem [báo cáo kiểm thử](../track-a-verification.md) để biết kết quả và giới hạn; tagger thật phụ thuộc Track B.
 
 ## Rủi ro
 - Segmentation kém với ảnh treo móc/nền rối ⇒ hướng dẫn chụp trên nền phẳng; cho phép "giữ ảnh gốc".

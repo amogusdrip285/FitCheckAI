@@ -2,97 +2,99 @@
 
 [Workflow](../../TEAM_WORKFLOW.md) · [Trang chủ](README.md) · [Contracts](CONTRACTS.md) · [Milestones](DEPENDENCIES_AND_INTEGRATION.md)
 
-Mọi task dưới đây **TODO**, không có code/POC đã hoàn thành trong lần revise này. Chọn P0 có dependency/gate đã đạt; P0 feasibility có thể kết luận NO_GO nhưng không làm M4 PASS. C-208/C-209 được làm với fake trước GO; C-207 và upload live phải qua gate/account/budget/privacy tương ứng. P2 chưa được cam kết; 5 card archive không nằm trong bảng/tổng.
+Cập nhật ngày 13/11/2026 trên nền main `199983d`. Android đã nối module và route Today → Try-On, đang chạy chế độ CORE. Gate C-205 vẫn BLOCKED và proxy chưa gắn route `/v2/tryon`. [Hồi quy CORE trên Samsung](../qa/track-a-core-regression.md) ghi các ca đã chạy và phần AI live còn chờ. Các ca trước ở [QA A bản đầu](../qa/track-a-acceptance.md) và [QA tích hợp A–B](../qa/track-a-b-handoff.md). C-208/C-209 có thể kiểm với fake trước GO. C-207 và upload live cần gate, account, ngân sách và privacy tương ứng. P2 chưa được cam kết. 5 card archive nằm ngoài bảng và tổng.
 
 Bảng xếp priority rồi thứ tự topo trong mỗi priority; vẫn phải kiểm dependency liên track trước nhận việc. Cards là nguồn dependency cứng. Gate có điều kiện (GO_FRONT_ONLY/GO_DUAL, C-211 khi release DUAL) ở [tài liệu tích hợp](DEPENDENCIES_AND_INTEGRATION.md), không suy là đã đạt từ trạng thái TODO.
+
+**Trạng thái bổ sung:** `REVIEW` = deliverable cục bộ đã có, chờ người phụ trách nhận/review; `PARTIAL` = có implementation/evidence nhưng chưa đủ DoD; `BLOCKED` = gate cần máy thật, consumer hoặc người tham gia; `DEFERRED` = chủ động hoãn theo phạm vi. Ngày 12/11/2026 nhóm quyết định chuyển mọi task `REVIEW` (deliverable + evidence đã có) sang `DONE` và tick để tăng tốc trước deadline; review chéo còn lại làm trong INT-003. Task PARTIAL/BLOCKED/TODO vẫn chưa tick.
 
 ## A — Wardrobe & Imaging
 
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | [PRE-002](tracks/A.md#pre-002) — Kiểm tra toolchain và máy Android | P0 | readiness | M0 | 40–70 | — | TODO | — |
-| [ ] | [PRE-004](tracks/A.md#pre-004) — Chuẩn bị ảnh và fixture có quyền dùng | P0 | readiness | M0 | 35–60 | — | TODO | — |
-| [ ] | [D-001](tracks/A.md#d-001) — Checklist nghiệm thu và hồ sơ evidence | P0 | core | M6 | 30–45 | PRE-007, PRE-004 | TODO | — |
-| [ ] | [A-001](tracks/A.md#a-001) — Room schema và Clothing Repository | P0 | core | M2 | 90–150 | S-002 | TODO | — |
-| [ ] | [A-002](tracks/A.md#a-002) — MediaStore và nhập ảnh front/back | P0 | core | M2 | 75–120 | S-002 | TODO | — |
-| [ ] | [A-005](tracks/A.md#a-005) — Fake wardrobe và media fixtures | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
-| [ ] | [A-003](tracks/A.md#a-003) — Form loại/màu và danh sách tủ đồ | P0 | core | M2 | 60–100 | S-002, A-005 | TODO | — |
-| [ ] | [BACK-012](tracks/A.md#back-012) — Sửa/xóa món và lọc tủ đồ | P0 | core | M2 | 60–100 | A-001, A-003, A-002 | TODO | — |
-| [ ] | [A-006](tracks/A.md#a-006) — Component outfit trực quan dùng lại | P0 | core | M3 | 45–75 | S-002, A-005 | TODO | — |
-| [ ] | [BACK-005](tracks/A.md#back-005) — Nối recognition vào form và sửa thuộc tính | P0 | core | M3 | 45–75 | A-003, B-005 | TODO | — |
-| [ ] | [INT-001](tracks/A.md#int-001) — Tích hợp Room, media và Profile | P0 | core | M2 | 30–50 | A-001, A-002, A-003, D-004, BACK-008, D-005, BACK-012 | TODO | — |
-| [ ] | [A-004](tracks/A.md#a-004) — Kiểm tra persistence và recovery trên máy | P0 | core | M6 | 30–50 | INT-001, BACK-012 | TODO | — |
-| [ ] | [INT-003](tracks/A.md#int-003) — Regression và quyết định đóng băng | P0 | core | M6 | 45–75 | D-007, A-004, C-004, D-001 | TODO | — |
-| [ ] | [PRE-005](tracks/A.md#pre-005) — Nghiên cứu người dùng ngắn và trung thực | P1 | quality | M6 | 60–100 | — | TODO | — |
-| [ ] | [BACK-003](tracks/A.md#back-003) — Tách nền có kiểm tra model readiness | P1 | quality | M3 | 75–120 | A-002 | TODO | — |
-| [ ] | [A-101](tracks/A.md#a-101) — Chụp bằng ứng dụng camera hệ thống | P1 | quality | M2 | 20–40 | A-002 | TODO | — |
-| [ ] | [BACK-002](tracks/A.md#back-002) — CameraX capture và quyền camera | P2 | future | M2 | 90–150 | A-002 | TODO | — |
-| [ ] | [BACK-009](tracks/A.md#back-009) — Pilot beta nhỏ có kế hoạch đo | P2 | future | M6 | 60–100 | INT-004, BACK-011 | TODO | — |
-| [ ] | [BACK-010](tracks/A.md#back-010) — Phân tích kết quả và quyết định roadmap | P2 | future | M6 | 60–120 | BACK-009 | TODO | — |
-| [ ] | [LATER-003](tracks/A.md#later-003) — Chia sẻ ảnh outfit có lựa chọn | P2 | future | M6 | 75–120 | INT-004 | TODO | — |
-| [ ] | [LATER-004](tracks/A.md#later-004) — Thử bản địa hóa một luồng và một thị trường | P2 | future | M6 | 90–150 | BACK-010 | TODO | — |
-| [ ] | [LATER-005](tracks/A.md#later-005) — Khảo sát monetization có cost model | P2 | future | M6 | 60–100 | BACK-010, BACK-011 | TODO | — |
-| [ ] | [A-201](tracks/A.md#a-201) — Thiết kế sync boundary và export mapping | P2 | future | M6 | 90–150 | A-001, D-004 | TODO | — |
+| [x] | [PRE-002](tracks/A.md#pre-002) — Kiểm tra toolchain và máy Android | P0 | readiness | M0 | 40–70 | — | DONE | JDK 21/SDK 35 build và cài được trên Samsung API 36. Chờ D tái lập. [QA máy thật](../qa/track-a-physical-device.md). |
+| [x] | [PRE-004](tracks/A.md#pre-004) — Chuẩn bị ảnh và fixture có quyền dùng | P0 | readiness | M0 | 35–60 | — | DONE | Catalog Kaggle v1 có 24.856 ảnh sau audit. Fixtures 21 món, 24 ảnh, 3 cặp. A đã đối chiếu review của B và ghi nguồn theo trường. [Dữ liệu](../../data/README.md#fixtures-android). |
+| [x] | [D-001](tracks/A.md#d-001) — Checklist nghiệm thu và hồ sơ evidence | P0 | core | M6 | 30–45 | PRE-007, PRE-004 | DONE | [46/46 case P0](../qa/p0-case-index.md) và [mẫu evidence](../qa/evidence-template.md); không gán PASS cho gate chưa chạy. |
+| [x] | [A-001](tracks/A.md#a-001) — Room schema và Clothing Repository | P0 | core | M2 | 90–150 | S-002 | DONE | Room native API 35: migration, SQL abort rollback, reopen/delete, 8 writers/CAS; chờ D/B review shared CT-01. |
+| [x] | [A-002](tracks/A.md#a-002) — MediaStore và nhập ảnh front/back | P0 | core | M2 | 75–120 | S-002 | DONE | 3 scope/EXIF/hash/caps; thêm orphan recovery, bảo vệ ancestor và symlink, cleanup từng mục; unit + Android tests pass, chờ D/C nhận contract. |
+| [x] | [A-005](tracks/A.md#a-005) — Fake wardrobe và media fixtures | P0 | foundation | M1 | 25–40 | S-002 | DONE | 6 fake UUID fixtures/3 cặp, nullable back, lỗi IO/CAS/tombstone có tests; consumer D/C chưa tích hợp. |
+| [x] | [A-003](tracks/A.md#a-003) — Form loại/màu và danh sách tủ đồ | P0 | core | M2 | 60–100 | S-002, A-005 | DONE | Form/grid thủ công, UNKNOWN/null, search/filter; tests độc lập và QA emulator tại báo cáo. |
+| [x] | [BACK-012](tracks/A.md#back-012) — Sửa/xóa món và lọc tủ đồ | P0 | core | M2 | 60–100 | A-001, A-003, A-002 | DONE | Emulator API 35 và Samsung API 36 ẩn bộ phối cũ sau sửa/xóa và dùng revision mới khi phối lại. C/D review quy tắc cho selection/VTO. |
+| [x] | [A-006](tracks/A.md#a-006) — Component outfit trực quan dùng lại | P0 | core | M3 | 45–75 | S-002, A-005 | DONE | Today dùng OutfitVisual từ core:ui với ảnh theo ID/revision, hai mặt và callback mở món. Có test 1–5 cards và QA trên Samsung. Chờ D review. |
+| [x] | [BACK-005](tracks/A.md#back-005) — Nối recognition vào form và sửa thuộc tính | P0 | core | M3 | 45–75 | A-003, B-005 | DONE | Form dùng client B-007 đã merge, đọc capability theo provider. Consent, manual thắng AI muộn và timeout/cancel có test. Live smoke thuộc INT-002. |
+| [x] | [INT-001](tracks/A.md#int-001) — Tích hợp Room, media và Profile | P0 | core | M2 | 30–50 | A-001, A-002, A-003, D-004, BACK-008, D-005, BACK-012 | DONE | SQLite, ProfileStorage và xóa đúng scope PERSON đạt trên emulator API 35 và Samsung API 36. Chờ D review. [QA máy thật](../qa/track-a-physical-device.md). |
+| [x] | [A-004](tracks/A.md#a-004) — Kiểm tra persistence và recovery trên máy | P0 | core | M6 | 30–50 | INT-001, BACK-012 | DONE | Samsung API 36 giữ 20 món, 1 tombstone, 22 hash GARMENT và 2 hash PERSON sau 3 force-stop. Ca nhập ảnh trùng và hủy xóa đạt. Chờ D xem evidence. [QA máy thật](../qa/track-a-physical-device.md). |
+| [ ] | [INT-003](tracks/A.md#int-003) — Regression và quyết định đóng băng | P0 | core | M6 | 45–75 | D-007, A-004, C-004, D-001 | BLOCKED | Hồi quy cục bộ trên Samsung đạt cho dữ liệu, offline, vòng đời và Today → Try-On CORE. Sửa và test ca bộ đồ đổi revision khi đang đọc ảnh. Chờ INT-002 và D xác nhận D-007. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [PRE-005](tracks/A.md#pre-005) — Nghiên cứu người dùng ngắn và trung thực | P1 | quality | M6 | 60–100 | — | PARTIAL | [Protocol + hồ sơ n=0](../research/track-a-study-plan.md); không có validation người dùng. |
+| [x] | [BACK-003](tracks/A.md#back-003) — Tách nền có kiểm tra model readiness | P1 | quality | M3 | 75–120 | A-002 | DONE | Samsung API 36 báo READY và tạo 6/6 ảnh trong 703–1.154 ms. Preview trong app đạt. Rà trực quan 4 dùng được để xem trước, 2 cần xem lại. [QA tích hợp](../qa/track-a-b-handoff.md#ml-kit-trên-samsung). |
+| [ ] | [A-101](tracks/A.md#a-101) — Chụp bằng ứng dụng camera hệ thống | P1 | quality | M2 | 20–40 | A-002 | DEFERRED | Chọn một route CameraX đang có (BACK-002), đúng điều khoản không bắt cả intent/CameraX; picker giữ nguyên. |
+| [x] | [BACK-002](tracks/A.md#back-002) — CameraX capture và quyền camera | P2 | future | M2 | 90–150 | A-002 | DONE | Samsung API 36 lưu 5/5 ảnh, qua deny/picker, xoay màn hình và nhả camera khi chạy nền. Ba lần mở lại giữ đủ hash. [QA tích hợp](../qa/track-a-b-handoff.md). |
+| [ ] | [BACK-009](tracks/A.md#back-009) — Pilot beta nhỏ có kế hoạch đo | P2 | future | M6 | 60–100 | INT-004, BACK-011 | BLOCKED | [Kế hoạch pilot](../research/track-a-study-plan.md), n=0; chưa có người tham gia/INT-004/BACK-011. |
+| [ ] | [BACK-010](tracks/A.md#back-010) — Phân tích kết quả và quyết định roadmap | P2 | future | M6 | 60–120 | BACK-009 | BLOCKED | Chưa có dữ liệu pilot; không tạo kết quả hoặc chart usage giả. |
+| [ ] | [LATER-003](tracks/A.md#later-003) — Chia sẻ ảnh outfit có lựa chọn | P2 | future | M6 | 75–120 | INT-004 | PARTIAL | Bản CORE trên Samsung mở và hủy bảng chia sẻ, JPEG đọc được, test FileProvider URI và dọn cache đạt. Còn xác minh mở ảnh ở hai ứng dụng nhận. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [LATER-004](tracks/A.md#later-004) — Thử bản địa hóa một luồng và một thị trường | P2 | future | M6 | 90–150 | BACK-010 | DEFERRED | [Quyết định hoãn](../research/track-a-study-plan.md): chưa có evidence thị trường/BACK-010. |
+| [ ] | [LATER-005](tracks/A.md#later-005) — Khảo sát monetization có cost model | P2 | future | M6 | 60–100 | BACK-010, BACK-011 | PARTIAL | [Cost model minh bạch giả định](../research/track-a-study-plan.md); chưa có giá/account/evidence để quyết định business GO. |
+| [x] | [A-201](tracks/A.md#a-201) — Thiết kế sync boundary và export mapping | P2 | future | M6 | 90–150 | A-001, D-004 | DONE | [Metadata mapping + tests](../track-a-sync-boundary.md): ID giữ nguyên, delete thắng, exclude PERSON; D/C chưa review, chưa cloud. |
 
 ## B — AI Recognition & Recommendation
 
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
 | [ ] | [PRE-001](tracks/B.md#pre-001) — Chốt thể lệ và disclosure | P0 | readiness | M0 | 20–35 | — | TODO | — |
-| [ ] | [PRE-003](tracks/B.md#pre-003) — Xác minh provider và ngân sách | P0 | readiness | M0 | 45–75 | — | TODO | — |
+| [ ] | [PRE-003](tracks/B.md#pre-003) — Xác minh provider và ngân sách | P0 | readiness | M0 | 45–75 | — | PARTIAL | [Đề xuất 13/11](../track-b/PRE-003-provider-budget.md): pitching/demo dùng **OpenAI chính chủ** `gpt-6-luna`, key lấy lúc pitching; **tới lúc đó dùng tạm FOSTA** (chỉ dữ liệu test). Giá chính thức + token thật ⇒ ~$0,3 cho ~200 call, spend limit $10. Còn chờ: Cloudflare, người giữ key OpenAI, điều khoản dữ liệu. |
 | [ ] | [PRE-008](tracks/B.md#pre-008) — Phân vai theo kỹ năng và rehearsal rủi ro | P0 | readiness | M0 | 20–35 | — | TODO | — |
-| [ ] | [B-001](tracks/B.md#b-001) — Proxy HTTPS và hàng rào chi phí | P0 | core | M3 | 60–100 | PRE-001, PRE-003, PRE-007 | TODO | — |
-| [ ] | [B-005](tracks/B.md#b-005) — Fake AI và compatibility fixtures | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
-| [ ] | [BACK-004](tracks/B.md#back-004) — Recognition proxy cho ảnh trước/sau | P0 | core | M3 | 75–120 | B-001, B-005 | TODO | — |
-| [ ] | [B-002](tracks/B.md#b-002) — Recommendation tối đa 5 outfit có giải thích | P0 | core | M3 | 90–150 | B-001, B-005 | TODO | — |
-| [ ] | [B-003](tracks/B.md#b-003) — Android client cancellable và parser | P0 | core | M3 | 45–75 | S-002, B-005 | TODO | — |
-| [ ] | [B-004](tracks/B.md#b-004) — Đánh giá recommendation live và tính hợp lệ | P0 | core | M3 | 45–75 | B-002, B-003, PRE-004 | TODO | — |
-| [ ] | [B-006](tracks/B.md#b-006) — Evaluation recognition hai góc nhìn | P0 | core | M3 | 45–75 | BACK-004, PRE-004 | TODO | — |
-| [ ] | [B-007](tracks/B.md#b-007) — Android recognition client và upload có giới hạn | P0 | core | M3 | 45–75 | S-002, B-005 | TODO | — |
-| [ ] | [INT-002](tracks/B.md#int-002) — Tích hợp recognition và recommendation live | P0 | core | M3 | 45–75 | INT-001, B-004, B-006, B-007, BACK-005, C-003, A-006 | TODO | — |
+| [ ] | [B-001](tracks/B.md#b-001) — Proxy HTTPS và hàng rào chi phí | P0 | core | M3 | 60–100 | PRE-001, PRE-003, PRE-007 | REVIEW | **Đã deploy HTTPS** `https://fitcheck-proxy.long06hehe.workers.dev` (13/11, giai đoạn FOSTA `gpt-6-luna`, deadline proxy 60s): smoke 8/8 PASS (auth, kill switch, chặn trước AI, body cap, consent, 1 call live). Session/limits/log không PII; 167 Vitest. [Runbook](../track-b/B-001-deploy-runbook.md) có bước chuyển sang OpenAI lúc pitching. Try-on chưa mount (chờ C-205, [review](../track-b/C-207-mount-review.md)). |
+| [x] | [B-005](tracks/B.md#b-005) — Fake AI và compatibility fixtures | P0 | foundation | M1 | 25–40 | S-002 | DONE | `core/model` testFixtures `ai/fakes/AiFakes.kt`: FakeOutfitRecommendation (5/1/fewer/insufficient/focus/exclude/failure/hang), FakeClothingRecognition (front/dual/conflict/unknown/failure/hang, kiểm consent), FakeWeather current/stale/null; 14 tests + 4 compatibility tests enum/field Kotlin↔proxy pass. Chưa có interface WeatherProvider v2; A/D chưa dùng fakes. |
+| [ ] | [BACK-004](tracks/B.md#back-004) — Recognition proxy cho ảnh trước/sau | P0 | core | M3 | 75–120 | B-001, B-005 | PARTIAL | `/v2/recognition` front/back + consent + FRONT_ONLY; vitest pass. Live Gemini 11/11 qua proxy local: shape 100%, consent guard 403 ([B-006 summary](../../eval/ai/results/2026-11-11-B-006-summary.md)). Đã deploy (FOSTA) 13/11: 3 ca 17,7–23,5s, đúng. |
+| [ ] | [B-002](tracks/B.md#b-002) — Recommendation tối đa 5 outfit có giải thích | P0 | core | M3 | 90–150 | B-001, B-005 | PARTIAL | `/v2/outfits` 1–5 bộ, validator loại bộ sai, shortfall, chặn trước AI khi hết tổ hợp; prompt `outfits-v2.1`. Live Gemini 11/11 và luna/FOSTA 12/11 (eval B-004 invariant 0 lỗi). Chưa chạy trên OpenAI chính chủ. Đã deploy (FOSTA) 13/11: tủ 6 món/5 bộ 23,6–25,6s. |
+| [ ] | [B-003](tracks/B.md#b-003) — Android client cancellable và parser | P0 | core | M3 | 45–75 | S-002, B-005 | PARTIAL | `ProxyOutfitRecommendation` đã bind vào Today. MockEngine kiểm ID/revision/count/slot/signature, lỗi CT-07, timeout, cancel và chặn gửi trùng. Proxy local gọi thật qua FOSTA 2/3 OK. Còn lượt Android qua proxy HTTPS (INT-002). |
+| [ ] | [B-004](tracks/B.md#b-004) — Đánh giá recommendation live và tính hợp lệ | P0 | core | M3 | 45–75 | B-002, B-003, PRE-004 | PARTIAL | Eval Gemini 11/11 và luna/FOSTA 12/11: 8/10 case, invariant FAIL 0. **Chấm văn phong đạt**: A và B độc lập, 17/17 bộ ≥3/5 cả hai tiêu chí (A 3,94/3,94; B 3,94/3,82) ([bảng chấm](../../eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-luận-chấm-điểm)). Còn: lượt chạy ở điều kiện demo (luna mất 12–33s, chỉ đo được khi nới deadline); prompt v2.1 chưa eval. |
+| [ ] | [B-006](tracks/B.md#b-006) — Evaluation recognition hai góc nhìn | P0 | core | M3 | 45–75 | BACK-004, PRE-004 | PARTIAL | 25 case, cùng nhãn: luna/FOSTA 12/11 category 24/25, màu 23/25, pattern 21/25 (14–43s); Gemini 11/11 25/25/25 (1.8–7.2s) ([so sánh](../../eval/ai/results/2026-11-12-luna-summary.md)). Cảnh báo cặp chéo và guard consent OK cả hai. Nhãn review sau khi xem Gemini nên chưa phải accuracy độc lập. |
+| [x] | [B-007](tracks/B.md#b-007) — Android recognition client và upload có giới hạn | P0 | core | M3 | 45–75 | S-002, B-005 | DONE | Nhóm giữ `ProxyRecognitionClient` của A (12/11). B review: sửa parse `/health` bỏ qua field mới (trước đó field `providers` làm client luôn Unavailable), đọc `providers.recognition`, nhận `openai@host`; bỏ client trùng của B. MockEngine tests + `:app:assembleDebug`. Chưa INT-002 live. |
+| [ ] | [INT-002](tracks/B.md#int-002) — Tích hợp recognition và recommendation live | P0 | core | M3 | 45–75 | INT-001, B-004, B-006, B-007, BACK-005, C-003, A-006 | TODO | **Proxy HTTPS đã có** `https://fitcheck-proxy.long06hehe.workers.dev` (FOSTA, 18–26s/call). Repo đã đặt `fitcheck.proxyUrl` + `fitcheck.aiTimeoutMs=60000`; ViewModel nhận diện dùng `AiTimeouts.requestMs` (B sửa thay A, 13/11). Máy build chỉ cần thêm `fitcheck.accessCode`. Chưa chạy trên máy thật. |
 | [ ] | [BACK-011](tracks/B.md#back-011) — Củng cố bảo mật/quota trước public beta | P1 | quality | M6 | 120–240 | B-004 | TODO | — |
-| [ ] | [LATER-006](tracks/B.md#later-006) — Phối quanh một món có contract xuyên suốt | P1 | quality | M3 | 45–75 | B-002 | TODO | — |
-| [ ] | [C-002](tracks/B.md#c-002) — Fallback tối thiểu và phát hiện thiếu đồ | P1 | quality | M3 | 15–25 | S-002, B-005 | TODO | — |
-| [ ] | [C-101](tracks/B.md#c-101) — Thời tiết một thành phố có timestamp | P1 | quality | M3 | 45–75 | B-005 | TODO | — |
-| [ ] | [C-102](tracks/B.md#c-102) — Phối lại tránh bộ vừa chọn | P1 | quality | M3 | 40–70 | B-002 | TODO | — |
+| [x] | [LATER-006](tracks/B.md#later-006) — Phối quanh một món có contract xuyên suốt | P1 | quality | M3 | 45–75 | B-002 | DONE | CTA từ Tủ đồ sang Today đã giữ focus qua CT-02 và fallback. Server/client tests và UI offline trên Samsung đạt. |
+| [x] | [C-002](tracks/B.md#c-002) — Fallback tối thiểu và phát hiện thiếu đồ | P1 | quality | M3 | 15–25 | S-002, B-005 | DONE | `BasicOutfitFallback` đã nối vào Today. Samsung ở chế độ máy bay và tắt Wi-Fi vẫn có 1 bộ RULES đúng nhãn `Phối cơ bản`. Có unit tests cho tủ thiếu món, focus và exclusions. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [C-101](tracks/B.md#c-101) — Thời tiết một thành phố có timestamp | P1 | quality | M3 | 45–75 | B-005 | REVIEW | `core/ai/weather/CityWeatherResolver` + `WeatherCities` (12 thành phố VN, khớp không dấu/alias, không GPS): Open-Meteo, timeout riêng 3s, cache 30 phút, `isStale` khi số đo >1h hoặc dùng cache sau lỗi, lỗi ⇒ null không chặn phối đồ; 9 tests; gọi thật 1 lần OK. Attribution CC BY 4.0 bắt buộc, free tier chỉ phi thương mại ([ghi chú](../track-b/C-101-weather.md)). D chưa nối Today/profile. |
+| [x] | [C-102](tracks/B.md#c-102) — Phối lại tránh bộ vừa chọn | P1 | quality | M3 | 40–70 | B-002 | DONE | Nút Today dùng `rerollAfter` với cùng ngữ cảnh, loại tối đa 5 bộ vừa thấy. Test chặn double-tap và QA đổi bộ offline trên Samsung đạt. |
 
 ## C — Virtual Try-On
 
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | [C-201](tracks/C.md#c-201) — Khảo sát VTO provider, quyền dùng và privacy | P0 | feasibility | M0 | 45–90 | — | TODO | — |
-| [ ] | [C-202](tracks/C.md#c-202) — Bộ ảnh người và garment có consent cho POC | P0 | feasibility | M0 | 30–60 | — | TODO | — |
-| [ ] | [C-203](tracks/C.md#c-203) — POC front-view với một outfit được chọn | P0 | feasibility | M4-F | 60–120 | C-201, C-202, PRE-001 | TODO | — |
-| [ ] | [C-204](tracks/C.md#c-204) — POC back-view và consistency của cặp | P0 | feasibility | M4-F | 60–120 | C-203 | TODO | — |
-| [ ] | [C-205](tracks/C.md#c-205) — Feasibility gate và quyết định phạm vi VTO | P0 | feasibility | M4-F | 30–45 | C-201, C-202 | TODO | — |
-| [ ] | [C-206](tracks/C.md#c-206) — Fake TryOnService và preview states | P0 | foundation | M1 | 35–60 | S-002 | TODO | — |
-| [ ] | [C-210](tracks/C.md#c-210) — Privacy gate và cleanup ảnh/job | P0 | core | M5 | 60–100 | C-201, S-002 | TODO | — |
-| [ ] | [D-002](tracks/C.md#d-002) — Chuyển evidence thành pitch có giới hạn | P1 | quality | M6 | 30–45 | PRE-005, C-205 | TODO | — |
-| [ ] | [C-207](tracks/C.md#c-207) — Server adapter VTO và job idempotency | P1 | reliable | M4-R | 90–150 | B-001, C-205 | TODO | — |
-| [ ] | [C-208](tracks/C.md#c-208) — Android VTO client và khôi phục job | P1 | reliable | M4-R | 75–120 | S-002, C-206 | TODO | — |
-| [ ] | [C-209](tracks/C.md#c-209) — Try-On screen cho outfit đã chọn | P1 | reliable | M4-R | 60–100 | C-206 | TODO | — |
-| [ ] | [C-211](tracks/C.md#c-211) — Đánh giá runtime hai mặt và nhiều món | P1 | reliable | M4-R | 60–100 | C-207, C-208, C-209, C-210 | TODO | — |
-| [ ] | [C-212](tracks/C.md#c-212) — Tích hợp và nghiệm thu VTO theo capability | P1 | reliable | M4-R | 45–75 | C-207, C-208, C-209, C-210, INT-001 | TODO | — |
-| [ ] | [C-213](tracks/C.md#c-213) — Tối ưu nhiều món và ổn định góc nhìn | P2 | future | M4-R | 120–240 | C-212 | TODO | — |
+| [ ] | [C-201](tracks/C.md#c-201) — Khảo sát VTO provider, quyền dùng và privacy | P0 | feasibility | M0 | 45–90 | — | PARTIAL | [Khảo sát provider](tracks/C_201_PROVIDER_RESEARCH.md): FASHN/Vertex/FOSTA/OpenAI, privacy, trần POC đề xuất. Chờ duyệt ngân sách, PRE-001 và cấp key. |
+| [ ] | [C-202](tracks/C.md#c-202) — Bộ ảnh người và garment có consent cho POC | P0 | feasibility | M0 | 30–60 | — | BLOCKED | [Dataset readiness](tracks/C_202_DATASET_READINESS.md) + manifest kỹ thuật 3 positive/6 negative synthetic. Chưa có ≥3 bộ ảnh người thật có consent ngoài Git. |
+| [ ] | [C-203](tracks/C.md#c-203) — POC front-view với một outfit được chọn | P0 | feasibility | M4-F | 60–120 | C-201, C-202, PRE-001 | BLOCKED | Harness `eval/tryon/poc_runner.py` (7 tests). FOSTA live qua CLI chỉ thử FRONT+TOP; chưa chạy 3 case có consent và chưa có 2 reviewer chấm. [C log](tracks/C_IMPLEMENTATION_LOG.md) |
+| [ ] | [C-204](tracks/C.md#c-204) — POC back-view và consistency của cặp | P0 | feasibility | M4-F | 60–120 | C-203 | BLOCKED | Harness phân biệt TWO_INDEPENDENT_REQUESTS/NATIVE_PAIRED và PARTIAL mặt sau; BACK/TOP+BOTTOM chỉ có mock E2E. Chờ C-203 live. |
+| [x] | [C-205](tracks/C.md#c-205) — Feasibility gate và quyết định phạm vi VTO | P0 | feasibility | M4-F | 30–45 | C-201, C-202 | DONE | [Gate](tracks/C_205_FEASIBILITY_GATE.md) ghi quyết định **BLOCKED** (capability UNKNOWN, M4-F chưa PASS) kèm điều kiện mở lại. Chờ B/A/D review. |
+| [x] | [C-206](tracks/C.md#c-206) — Fake TryOnService và preview states | P0 | foundation | M1 | 35–60 | S-002 | DONE | `FakeVirtualTryOnService` + fixtures: SUCCEEDED/PARTIAL/TIMED_OUT/UNKNOWN_SUBMISSION/EXPIRED, idempotency 1 job/key, nhãn FAKE; unit tests pass. [C log](tracks/C_IMPLEMENTATION_LOG.md) |
+| [ ] | [C-210](tracks/C.md#c-210) — Privacy gate và cleanup ảnh/job | P0 | core | M5 | 60–100 | C-201, S-002 | PARTIAL | `TryOnPrivacyCoordinator` + `SafeTryOnLogger`: không consent → 0 upload, thu hồi/xóa ảnh chặn kết quả trễ, log lọc path/URL/base64/key; fake tests pass. Chưa test với ProfileStorage/MediaStore thật. |
+| [ ] | [D-002](tracks/C.md#d-002) — Chuyển evidence thành pitch có giới hạn | P1 | quality | M6 | 30–45 | PRE-005, C-205 | PARTIAL | [Pitch draft](tracks/C_D002_PITCH_SUPPORT.md): kịch bản 5 phút, bảng Claim→Evidence→Limitation. Chờ số PRE-005 và số đo live C-203/C-204. |
+| [ ] | [C-207](tracks/C.md#c-207) — Server adapter VTO và job idempotency | P1 | reliable | M4-R | 90–150 | B-001, C-205 | PARTIAL | `proxy/src/tryon/*`: router `/v2/tryon/*`, ledger JSON idempotency + quota, adapter OpenAI (`/v1/images/edits`) và FOSTA (`/v1/responses`), LIVE mặc định tắt; 3 vitest suites pass trên main. **Chưa mount vào `proxy/src/index.ts`**, chưa có durable store deploy. [C handoff](tracks/C_HANDOFF.md) |
+| [x] | [C-208](tracks/C.md#c-208) — Android VTO client và khôi phục job | P1 | reliable | M4-R | 75–120 | S-002, C-206 | DONE | `AndroidVirtualTryOnClient` + `AtomicFileTryOnLocalJobStore`: lưu PENDING_SUBMISSION trước khi gọi mạng, khôi phục sau process death, UNKNOWN_SUBMISSION không tự retry, chuẩn hóa EXIF; unit tests pass ở nhánh C. |
+| [x] | [C-209](tracks/C.md#c-209) — Try-On screen cho outfit đã chọn | P1 | reliable | M4-R | 60–100 | C-206 | DONE | `TryOnScreen`/`TryOnViewModel` + `TryOnDemoActivity`. 10 ca visual QA ở nhánh C trên emulator. Main đã include `:feature:tryon` và nối route Today, kiểm thông báo CORE trên Samsung. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [C-211](tracks/C.md#c-211) — Đánh giá runtime hai mặt và nhiều món | P1 | reliable | M4-R | 60–100 | C-207, C-208, C-209, C-210 | BLOCKED | Cần GO_DUAL từ C-205 + runtime live + 3 bộ ảnh có consent. |
+| [ ] | [C-212](tracks/C.md#c-212) — Tích hợp và nghiệm thu VTO theo capability | P1 | reliable | M4-R | 45–75 | C-207, C-208, C-209, C-210, INT-001 | BLOCKED | Cần GO_FRONT_ONLY/GO_DUAL, INT-001 và provider live. Đề xuất nối ghép ở [C_SHARED_CONTRACTS_PROPOSAL](tracks/C_SHARED_CONTRACTS_PROPOSAL.md). |
+| [ ] | [C-213](tracks/C.md#c-213) — Tối ưu nhiều món và ổn định góc nhìn | P2 | future | M4-R | 120–240 | C-212 | BLOCKED | P2, chờ C-212. |
 
 ## D — App Foundation & Experience
 
 | Done | Task | P | Scope | Milestone | Phút owner | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | [PRE-006](tracks/D.md#pre-006) — Wireflow Profile → Wardrobe → Today → Try-On | P0 | readiness | M0 | 30–45 | — | TODO | — |
-| [ ] | [PRE-007](tracks/D.md#pre-007) — Chốt contract v2 và compatibility fixtures | P0 | readiness | M0 | 40–60 | PRE-006 | TODO | — |
-| [ ] | [S-001](tracks/D.md#s-001) — Dựng project tối thiểu và cài APK đầu | P0 | foundation | M1 | 45–75 | PRE-001, PRE-002, PRE-008 | TODO | — |
-| [ ] | [S-002](tracks/D.md#s-002) — Khai báo contract và fake wiring | P0 | foundation | M1 | 30–45 | S-001, PRE-007 | TODO | — |
-| [ ] | [D-004](tracks/D.md#d-004) — ProfileStorage local và xóa ảnh cá nhân | P0 | core | M2 | 75–120 | S-002 | TODO | — |
-| [ ] | [D-006](tracks/D.md#d-006) — Fake ProfileStorage và preview app experience | P0 | foundation | M1 | 25–40 | S-002 | TODO | — |
-| [ ] | [BACK-008](tracks/D.md#back-008) — Onboarding và form hồ sơ tối giản | P0 | core | M2 | 60–90 | D-006 | TODO | — |
-| [ ] | [C-001](tracks/D.md#c-001) — Today: yêu cầu và danh sách outfit trực quan | P0 | core | M3 | 75–120 | D-006, B-005 | TODO | — |
-| [ ] | [C-003](tracks/D.md#c-003) — Nối service AI và kiểm soát request | P0 | core | M3 | 60–90 | C-001, D-006, B-005 | TODO | — |
-| [ ] | [C-004](tracks/D.md#c-004) — Kiểm tra offline và vòng đời UI | P0 | core | M6 | 30–50 | C-003 | TODO | — |
-| [ ] | [D-005](tracks/D.md#d-005) — Ảnh toàn thân trước/sau và consent UI | P0 | core | M2 | 45–75 | BACK-008, A-005 | TODO | — |
-| [ ] | [D-007](tracks/D.md#d-007) — Tích hợp journey và chọn release mode | P0 | core | M5 | 45–75 | INT-002, D-005, C-205, C-210 | TODO | — |
-| [ ] | [INT-004](tracks/D.md#int-004) — Đóng gói APK và kiểm tra bản nộp | P0 | core | M6 | 25–40 | INT-003 | TODO | — |
-| [ ] | [D-003](tracks/D.md#d-003) — Diễn tập và bàn giao nộp bài | P0 | core | M6 | 20–35 | INT-004, C-205 | TODO | — |
+| [ ] | [PRE-006](tracks/D.md#pre-006) — Wireflow Profile → Wardrobe → Today → Try-On | P0 | readiness | M0 | 30–45 | — | REVIEW | [Wireflow](tracks/D_PRE006_WIREFLOW.md) theo app thật: 4 route, đường skip/sửa, copy loading/error/stale/offline/CORE/consent, phân biệt collage vs mô phỏng. Còn paper walkthrough với A/B/C. |
+| [ ] | [PRE-007](tracks/D.md#pre-007) — Chốt contract v2 và compatibility fixtures | P0 | readiness | M0 | 40–60 | PRE-006 | PARTIAL | CT-02/04/06 Kotlin types + fixtures trong `core:model`; A/B dùng trực tiếp, B có compatibility test Kotlin↔proxy. C vẫn dùng bản sao contract riêng (`feature.tryon.contract`), app map qua `app/tryon/TryOnBridge.kt`; cần thống nhất trước khi bật live. |
+| [x] | [S-001](tracks/D.md#s-001) — Dựng project tối thiểu và cài APK đầu | P0 | foundation | M1 | 45–75 | PRE-001, PRE-002, PRE-008 | DONE | Scaffold đa module + Hilt từ `314e237`; `:app:assembleDebug` cài được trên emulator API 35 và Samsung API 36 (xem PRE-002). |
+| [x] | [S-002](tracks/D.md#s-002) — Khai báo contract và fake wiring | P0 | foundation | M1 | 30–45 | S-001, PRE-007 | DONE | Contracts v2 compile; fake của A-005/B-005/C-206/D-006 đều có chỗ cắm (testFixtures/`fake/`); không feature nào import feature khác; composition root Hilt + route Profile/Today/Wardrobe/TryOn đăng ký trong `FitCheckApp`. |
+| [x] | [D-004](tracks/D.md#d-004) — ProfileStorage local và xóa ảnh cá nhân | P0 | core | M2 | 75–120 | S-002 | DONE | `FileProfileStorage` atomic file trong noBackupFilesDir, xóa ảnh sau commit + invalidation. Samsung giữ ảnh PERSON qua ba force-stop và xóa đúng scope khi đặt lại hồ sơ. [QA CORE](../qa/track-a-core-regression.md). |
+| [x] | [D-006](tracks/D.md#d-006) — Fake ProfileStorage và preview app experience | P0 | foundation | M1 | 25–40 | S-002 | DONE | `FakeProfileStorage` minimal/full/missing-back/save-fail/load-fail trong testFixtures. |
+| [x] | [BACK-008](tracks/D.md#back-008) — Onboarding và form hồ sơ tối giản | P0 | core | M2 | 60–90 | D-006 | DONE | Onboarding/Profile form: mọi field optional, skip tới Today, edit/reset có xác nhận; VM + Robolectric tests. |
+| [x] | [C-001](tracks/D.md#c-001) — Today: yêu cầu và danh sách outfit trực quan | P0 | core | M3 | 75–120 | D-006, B-005 | DONE | Today: chọn dịp, **tùy chỉnh** style (≤5, trống = theo hồ sơ)/yêu cầu ≤500 ký tự/số bộ 1–5 chỉ gửi khi bấm *Gợi ý theo yêu cầu*; 1–5 bộ bằng `OutfitVisual` có nhãn nguồn; Mặc/Chia sẻ/**Thử đồ** đúng 1 bộ, không tự tạo job; tủ trống có hướng dẫn. `TodayViewModelTest` 12 tests pass. |
+| [x] | [C-003](tracks/D.md#c-003) — Nối service AI và kiểm soát request | P0 | core | M3 | 60–90 | C-001, D-006, B-005 | DONE | `TodayViewModel`: một request/lần, chặn double-tap, kết quả cũ không đè dịp mới, sửa/xóa món làm bộ stale, fallback RULES đúng nhãn, request chỉ gửi `ProfileProjection` (không ảnh người/cân nặng); `TodayViewModelTest` pass. |
+| [ ] | [C-004](tracks/D.md#c-004) — Kiểm tra offline và vòng đời UI | P0 | core | M6 | 30–50 | C-003 | PARTIAL | Có unit tests cho tủ trống, double-tap và kết quả đến muộn. Samsung đã kiểm chế độ máy bay/tắt Wi-Fi, xoay màn hình và force-stop trên CORE. D còn tổng hợp failure matrix với INT-002. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [D-005](tracks/D.md#d-005) — Ảnh toàn thân trước/sau và consent UI | P0 | core | M2 | 45–75 | BACK-008, A-005 | PARTIAL | Samsung đã kiểm chọn ảnh FRONT/BACK đúng scope PERSON, hủy picker và xóa hồ sơ. Cần D/C review consent theo job cùng C-210. [QA CORE](../qa/track-a-core-regression.md). |
+| [ ] | [D-007](tracks/D.md#d-007) — Tích hợp journey và chọn release mode | P0 | core | M5 | 45–75 | INT-002, D-005, C-205, C-210 | PARTIAL | [Bản ghi mode](tracks/D_007_RELEASE_MODE.md): **CORE**, M5-CORE chưa PASS. Hành trình local sau wiring và thông báo Try-On đã kiểm trên Samsung. Còn INT-002 live và kiểm deletion/invalidation với late-result fixture và store thật. |
+| [ ] | [INT-004](tracks/D.md#int-004) — Đóng gói APK và kiểm tra bản nộp | P0 | core | M6 | 25–40 | INT-003 | BLOCKED | Chờ INT-003. Script đóng gói và 6 tests đạt. Đã thử đóng gói CORE debug cục bộ trên nền `199983d`, có SHA-256 và scan key clean. Còn đóng gói từ bản đã chốt và smoke live trên đúng APK nộp. [Quy trình + README + disclosure](tracks/D_INT004_SUBMISSION.md). |
+| [ ] | [D-003](tracks/D.md#d-003) — Diễn tập và bàn giao nộp bài | P0 | core | M6 | 20–35 | INT-004, C-205 | BLOCKED | Chờ INT-004. [Kịch bản demo CORE + checklist trước giờ](tracks/D_003_DEMO_SCRIPT.md) đã soạn, chưa dry run. |
 
 ## Counts và effort
 

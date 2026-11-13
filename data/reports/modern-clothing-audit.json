@@ -1,0 +1,79 @@
+{
+  "source": "https://github.com/alexeygrigorev/clothing-dataset",
+  "commit": "7ed86a9cc56763b6acb35e41cb35184e43a5d218",
+  "license": "CC0-1.0",
+  "labelledRows": 5403,
+  "imageFiles": 5756,
+  "unlabelledFiles": 358,
+  "usableUniqueLabelledImages": 5096,
+  "excludedRows": 307,
+  "exactDuplicatesRemoved": 0,
+  "exclusions": {
+    "ambiguous_source_label": 302,
+    "missing_image": 5
+  },
+  "sourceLabels": {
+    "Not sure": 228,
+    "T-Shirt": 1011,
+    "Shoes": 431,
+    "Shorts": 308,
+    "Shirt": 378,
+    "Pants": 692,
+    "Skirt": 155,
+    "Other": 67,
+    "Top": 43,
+    "Outwear": 312,
+    "Dress": 357,
+    "Body": 69,
+    "Longsleeve": 699,
+    "Undershirt": 118,
+    "Hat": 171,
+    "Polo": 120,
+    "Blouse": 23,
+    "Hoodie": 100,
+    "Skip": 12,
+    "Blazer": 109
+  },
+  "categories": {
+    "TOP": 2561,
+    "OUTERWEAR": 421,
+    "BOTTOM": 1155,
+    "DRESS": 357,
+    "ACCESSORY": 171,
+    "SHOES": 431
+  },
+  "splits": {
+    "train": {
+      "TOP": 1739,
+      "OUTERWEAR": 325,
+      "BOTTOM": 866,
+      "DRESS": 261,
+      "ACCESSORY": 139,
+      "SHOES": 363
+    },
+    "validation": {
+      "OUTERWEAR": 65,
+      "TOP": 300,
+      "BOTTOM": 134,
+      "DRESS": 42,
+      "SHOES": 44,
+      "ACCESSORY": 20
+    },
+    "test": {
+      "TOP": 522,
+      "SHOES": 24,
+      "BOTTOM": 155,
+      "ACCESSORY": 12,
+      "OUTERWEAR": 31,
+      "DRESS": 54
+    }
+  },
+  "splitPolicy": "Deterministic contributor groups, linked by exact duplicates. Small/imbalanced holdouts are reported as-is.",
+  "limitations": [
+    "No measured AI accuracy; source class labels have not all been manually verified.",
+    "Low resolution product/household photos; not a VTO ground-truth dataset.",
+    "No verified same-garment front/back pairing in the bulk source.",
+    "Near duplicates and identical garments across contributors may remain.",
+    "Contributor grouping limits leakage but does not prove unseen-garment generalization."
+  ]
+}

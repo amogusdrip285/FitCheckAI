@@ -14,10 +14,7 @@ import javax.inject.Singleton
 
 private const val FAKE_LATENCY_MS = 600L
 
-/**
- * SPRINT 0 STUB — luôn trả về một áo thun trắng.
- * TODO(Track B): ClaudeClothingTagger gọi `POST /v1/tag` qua proxy ([BuildConfig.PROXY_URL]).
- */
+/** Stub cho consumer v1. Tủ đồ v2 dùng [ProxyRecognitionClient]. */
 @Singleton
 class StubClothingTagger @Inject constructor() : ClothingTagger {
     override suspend fun tag(imagePath: String): Result<ClothingAttributes> {
@@ -34,8 +31,8 @@ class StubClothingTagger @Inject constructor() : ClothingTagger {
 }
 
 /**
- * SPRINT 0 STUB — ghép áo/quần/giày đầu tiên tìm thấy, giả lập AI.
- * TODO(Track B): ClaudeOutfitGenerator gọi `POST /v1/outfits` qua proxy.
+ * SPRINT 0 STUB v1 — chỉ còn cho consumer v1 (`AiOutfitGenerator`). Recommendation v2 thật là
+ * [com.fitcheckai.core.ai.proxy.ProxyOutfitRecommendation] (B-003), bind vào `OutfitRecommendation` ở AiModule.
  */
 @Singleton
 class StubAiOutfitGenerator @Inject constructor() : AiOutfitGenerator {

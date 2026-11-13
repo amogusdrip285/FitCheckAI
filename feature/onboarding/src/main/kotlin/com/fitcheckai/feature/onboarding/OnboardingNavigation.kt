@@ -4,16 +4,22 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.fitcheckai.core.model.nav.Routes
+import com.fitcheckai.feature.onboarding.profile.ProfileMode
+import com.fitcheckai.feature.onboarding.profile.ProfileRoute
 
-/** Điểm vào duy nhất của feature — `app` gọi đúng 1 lần. */
+/** Entry point for onboarding + profile edit — `app` calls it exactly once. */
 fun NavGraphBuilder.onboardingGraph(navController: NavController) {
     composable(Routes.ONBOARDING) {
-        OnboardingScreen(
-            onFinished = {
+        ProfileRoute(
+            mode = ProfileMode.ONBOARDING,
+            onDone = {
                 navController.navigate(Routes.TODAY) {
                     popUpTo(Routes.ONBOARDING) { inclusive = true }
                 }
             },
         )
+    }
+    composable(Routes.PROFILE) {
+        ProfileRoute(mode = ProfileMode.EDIT, onDone = {})
     }
 }

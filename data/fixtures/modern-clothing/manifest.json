@@ -1,0 +1,1250 @@
+{
+  "schemaVersion": 2,
+  "collection": "Modern clothing reference fixtures",
+  "bulkSourceRevision": "7ed86a9cc56763b6acb35e41cb35184e43a5d218",
+  "items": [
+    {
+      "id": "f05a884a-5cbe-5f81-8fac-a82280a295fd",
+      "name": "Áo khoác sơ mi kẻ đỏ đen",
+      "category": "OUTERWEAR",
+      "colors": [
+        "RED",
+        "BLACK"
+      ],
+      "pattern": "CHECKED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/f05a884a-5cbe-5f81-8fac-a82280a295fd-front.jpg",
+        "sha256": "4e96e3cff63101e5983a2f05591d2356502258d1676e60da7fe51c498bb8636b",
+        "originalSha256": "a7df5ac66f5a33cdc25b8291a1fdb286480b03ee903eba37315d877ed8dce4b1",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 54103,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/b0c03127-9dfb-4573-8934-1958396937bf.jpg",
+        "sourceId": "b0c03127-9dfb-4573-8934-1958396937bf",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "track_a_visual_review",
+          "sourceLabel": "Shirt",
+          "note": "Dáng sơ mi mặc ngoài, có lớp lót thấy ở cổ tay và gấu."
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "9e8a5c51-7ff1-56fd-9ae5-30377c174e1c",
+      "name": "Áo sơ mi trắng",
+      "category": "TOP",
+      "colors": [
+        "WHITE"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/9e8a5c51-7ff1-56fd-9ae5-30377c174e1c-front.jpg",
+        "sha256": "226ab36a1053d5c31f3cbfa9488b76e9b705b429eaa0e230a636454e7a804fdb",
+        "originalSha256": "d96a17868188bc9091fa3bd4d3596247221e4f668695b2169dbacd27f19cf3f5",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 542,
+        "byteCount": 28065,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/09f4ffb6-ed86-42b6-ac23-6f8f2359460f.jpg",
+        "sourceId": "09f4ffb6-ed86-42b6-ac23-6f8f2359460f",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shirt"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "914979a5-24cc-5af7-a0b4-50628d23e122",
+      "name": "Áo thun đỏ đô",
+      "category": "TOP",
+      "colors": [
+        "RED"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/914979a5-24cc-5af7-a0b4-50628d23e122-front.jpg",
+        "sha256": "1deaede9f49ff7e3a9f24841f57941c8a5031f8198c871d151b4316879797bc0",
+        "originalSha256": "c93a7d3e6346629ec2575a5bfba183cfbd94c926bc728ffd680564d049840f8a",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 18141,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/ea7b6656-3f84-4eb3-9099-23e623fc1018.jpg",
+        "sourceId": "ea7b6656-3f84-4eb3-9099-23e623fc1018",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "T-Shirt"
+        },
+        "colors": {
+          "method": "track_a_visual_review",
+          "note": "Màu đỏ đô được quy về RED trong bảng màu của app."
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "2b7c2338-7c4f-5a8f-b996-6537ba80b64b",
+      "name": "Quần jeans xanh",
+      "category": "BOTTOM",
+      "colors": [
+        "BLUE"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/2b7c2338-7c4f-5a8f-b996-6537ba80b64b-front.jpg",
+        "sha256": "ceeb032de4a2a43f1288fdc9978c8d7497ac9196a91beabfa33b962c5a5bd6d4",
+        "originalSha256": "76de0d9d761e68943bfccdd6c1a354ffeb2b664577d342a0fa5aad22179c0343",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 711,
+        "byteCount": 42639,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/97074b7f-706a-4c17-b875-bd9baa5bed0e.jpg",
+        "sourceId": "97074b7f-706a-4c17-b875-bd9baa5bed0e",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "8cca0e89-76f2-53bd-981a-3abd3c7bc9d5",
+      "name": "Quần xám",
+      "category": "BOTTOM",
+      "colors": [
+        "GRAY"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/8cca0e89-76f2-53bd-981a-3abd3c7bc9d5-front.jpg",
+        "sha256": "6800c5831185c49ba990fb6bfa315c346118172b9a7198b206f4a216f05fc86f",
+        "originalSha256": "a10b0c7243e60cea4fa9f81a263a328145037d4917ebeb3a6b6e27651cf1261b",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 30160,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/c4f11a12-2fcd-4268-8045-5a00aec7e656.jpg",
+        "sourceId": "c4f11a12-2fcd-4268-8045-5a00aec7e656",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "4d0ffc98-c648-5150-89e4-467902677386",
+      "name": "Quần thể thao xanh navy",
+      "category": "BOTTOM",
+      "colors": [
+        "BLUE",
+        "WHITE"
+      ],
+      "pattern": "STRIPED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/4d0ffc98-c648-5150-89e4-467902677386-front.jpg",
+        "sha256": "08269e8565902a2493ae1c0b112ebcdbbba8eb44371b74a6612b16bff1779602",
+        "originalSha256": "d6d49fe2ed9e25b179bb3883e6d4b416f62efeba3dbe35281ca5a09bc97119e2",
+        "mimeType": "image/jpeg",
+        "width": 445,
+        "height": 400,
+        "byteCount": 33894,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/c995c900-693d-4dd6-8995-43f3051ec488.jpg",
+        "sourceId": "c995c900-693d-4dd6-8995-43f3051ec488",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Pants"
+        },
+        "colors": {
+          "method": "track_a_visual_review",
+          "note": "Giữ BLUE và WHITE. Vùng sáng thấy sắc xanh navy dù vùng tối gần đen."
+        },
+        "pattern": {
+          "method": "track_a_visual_review",
+          "note": "Hai dải sọc trắng dọc ống đủ rõ để dùng STRIPED."
+        }
+      }
+    },
+    {
+      "id": "ae39f6ec-2220-570e-965c-a098feb8fdcb",
+      "name": "Đầm hoa tím nền be",
+      "category": "DRESS",
+      "colors": [
+        "BEIGE",
+        "PURPLE",
+        "GREEN"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/ae39f6ec-2220-570e-965c-a098feb8fdcb-front.jpg",
+        "sha256": "8280b07682549d098f86d77b977db1b16a50f38228332d753a8a37da05fbdadd",
+        "originalSha256": "6ebe464ce11e42b9e64a24cd2c4cbc6ecf363b0c6fd2c1c29bccfcc85a305e8b",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 39557,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/e3c8e575-c5b8-4c4c-9f49-62b37b611b6b.jpg",
+        "sourceId": "e3c8e575-c5b8-4c4c-9f49-62b37b611b6b",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "track_a_visual_review",
+          "note": "Nền be nhạt, cụm hoa tím và lá xanh là ba màu thấy rõ."
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "a06aab12-9fbb-5fd9-9c7a-1af5cd789242",
+      "name": "Đầm đen",
+      "category": "DRESS",
+      "colors": [
+        "BLACK"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/a06aab12-9fbb-5fd9-9c7a-1af5cd789242-front.jpg",
+        "sha256": "30e29fb6c277a85eb4c6d178139f4b18a160bce10020ed29edb5d2092bd1b308",
+        "originalSha256": "adec3125619f642373b1503dfe06b351d022e3d4918153976b25b3090817ca26",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 30819,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/e6a8b33f-279c-4072-8dba-229d94205e55.jpg",
+        "sourceId": "e6a8b33f-279c-4072-8dba-229d94205e55",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "user_visual_confirmation"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "40d61e48-eb69-5b29-8d5f-f677a3310a4e",
+      "name": "Đầm xanh lá",
+      "category": "DRESS",
+      "colors": [
+        "GREEN"
+      ],
+      "pattern": "OTHER",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/40d61e48-eb69-5b29-8d5f-f677a3310a4e-front.jpg",
+        "sha256": "49c9bd031a696b085b1cba906944beb6a3de699e1da82d573c11f1ac9acd0bc9",
+        "originalSha256": "ac6cc17ae8e62eb7fd87f58f7078146abd3a0443dad50db9321647a079239b6b",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 80054,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/21059bce-cf86-4064-b9af-5dbbbc6e7593.jpg",
+        "sourceId": "21059bce-cf86-4064-b9af-5dbbbc6e7593",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Dress"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "4a93098c-cb1a-507a-bede-311b6b9027ea",
+      "name": "Áo khoác xanh ô liu",
+      "category": "OUTERWEAR",
+      "colors": [
+        "GREEN"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/4a93098c-cb1a-507a-bede-311b6b9027ea-front.jpg",
+        "sha256": "884469363b6557f7a75f003ad52e935c211593904b79ed1711eaace1d23eea51",
+        "originalSha256": "7fdaa1ac7dbac8d955ad5aff1d935dd318f5c1ca6059c979c54d81f355ceb09f",
+        "mimeType": "image/jpeg",
+        "width": 597,
+        "height": 400,
+        "byteCount": 35536,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/ff231d91-0ff6-4485-98e7-a05c26f09fec.jpg",
+        "sourceId": "ff231d91-0ff6-4485-98e7-a05c26f09fec",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "12f79b37-045d-509c-8458-1b65c2abdc6f",
+      "name": "Áo khoác trắng lót vàng",
+      "category": "OUTERWEAR",
+      "colors": [
+        "WHITE",
+        "YELLOW"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/12f79b37-045d-509c-8458-1b65c2abdc6f-front.jpg",
+        "sha256": "0873e5ff72d0c5a17a258cd74bb0a952b9e1f0917c38fd6d77b829dfc0913caa",
+        "originalSha256": "f837066eb30f22319dffd75c2bf91700fea7c2135cb784f197d61bd51bc966c6",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 26507,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/44bf7760-a7c2-41c2-9eb4-1d12bd5c235c.jpg",
+        "sourceId": "44bf7760-a7c2-41c2-9eb4-1d12bd5c235c",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "track_a_visual_review",
+          "note": "Vỏ trắng kem, phần lót vàng thấy rõ ở cổ áo."
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "8fff6408-b532-5c5b-b21e-eadccea35fb6",
+      "name": "Áo khoác đen",
+      "category": "OUTERWEAR",
+      "colors": [
+        "BLACK"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/8fff6408-b532-5c5b-b21e-eadccea35fb6-front.jpg",
+        "sha256": "c0ffe52dcf8246a3b6ed4dea2b32929f860088df3bd8d488b4a8ef5c94b54179",
+        "originalSha256": "1120bf5a484f5a38f6796aeadab7256261114e79a9ab26148807805404d8392f",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 38546,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/43ac2647-95bc-4174-b9c1-0518a5024ed2.jpg",
+        "sourceId": "43ac2647-95bc-4174-b9c1-0518a5024ed2",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Outwear"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "d05f08c5-2560-5ae4-952b-86857583722e",
+      "name": "Giày đen đế trắng",
+      "category": "SHOES",
+      "colors": [
+        "BLACK",
+        "WHITE"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/d05f08c5-2560-5ae4-952b-86857583722e-front.jpg",
+        "sha256": "a326bf76649c132d23e5ba7f094dc0e0b26fa3c5eac3ae11418f69291d2c01e2",
+        "originalSha256": "fd3db115ead43089a60d4ddcc12518ff8dce37ea4b79b3fab473528a29dd1fc1",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 533,
+        "byteCount": 38224,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/bf78527f-0734-44fd-a968-f6c32c12d61e.jpg",
+        "sourceId": "bf78527f-0734-44fd-a968-f6c32c12d61e",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "fd8339a5-a377-5390-b240-e5b7866d5acc",
+      "name": "Giày xanh đậm",
+      "category": "SHOES",
+      "colors": [
+        "BLUE"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/fd8339a5-a377-5390-b240-e5b7866d5acc-front.jpg",
+        "sha256": "b1fe14fd6072824c60aaa5f5f038360f1acfd4913fe102a60ef647b2dc55779f",
+        "originalSha256": "8c5c962d8547882787e1bfe46a3ef00d1cb3557e4cbf122f1b3a91fb4d45bf0e",
+        "mimeType": "image/jpeg",
+        "width": 711,
+        "height": 400,
+        "byteCount": 25868,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/61bbb3a2-2ee0-47bd-b3f9-2675b3076302.jpg",
+        "sourceId": "61bbb3a2-2ee0-47bd-b3f9-2675b3076302",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "287f9233-6405-599f-9509-4942425579f4",
+      "name": "Giày bệt trắng",
+      "category": "SHOES",
+      "colors": [
+        "WHITE"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/287f9233-6405-599f-9509-4942425579f4-front.jpg",
+        "sha256": "5fcf1e596ce7d92ec2e01c1b90d940dbde520147c5239f82f2571078286dad79",
+        "originalSha256": "acc83caf672b9d7a4454368b3b1306449e68941bd13f032bb346ce725d855f0c",
+        "mimeType": "image/jpeg",
+        "width": 533,
+        "height": 400,
+        "byteCount": 30212,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/b7935371-743f-4ad4-9a48-fdb9d0bca9e4.jpg",
+        "sourceId": "b7935371-743f-4ad4-9a48-fdb9d0bca9e4",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Shoes"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "track_a_visual_review",
+          "note": "Bề mặt trắng trơn là chủ đạo, đính đá tập trung ở mũi."
+        }
+      }
+    },
+    {
+      "id": "77fa7ad0-4aaa-5da2-a061-7eccb5006cbc",
+      "name": "Mũ len đen",
+      "category": "ACCESSORY",
+      "colors": [
+        "BLACK"
+      ],
+      "pattern": "SOLID",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/77fa7ad0-4aaa-5da2-a061-7eccb5006cbc-front.jpg",
+        "sha256": "8bd92333b16a7d1e2dcf530ec76bcf6ac5d73a2d6ba2e2dd175eae03ec047a6a",
+        "originalSha256": "2765f7d69820975bd47a74965c6f6744c31308cd441b9dea156c5f91744068db",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 711,
+        "byteCount": 31079,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/b6899eaa-fe32-4547-9217-05bbcb09c217.jpg",
+        "sourceId": "b6899eaa-fe32-4547-9217-05bbcb09c217",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "a3b267a2-2aef-55ba-9679-e82c9db039e9",
+      "name": "Mũ lưỡi trai xanh",
+      "category": "ACCESSORY",
+      "colors": [
+        "BLUE",
+        "YELLOW"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/a3b267a2-2aef-55ba-9679-e82c9db039e9-front.jpg",
+        "sha256": "2be293e466bd308a16f0d8e16db15b29535f9e4425896e55163fb613e8e357f4",
+        "originalSha256": "4233f4afd03401e054a1e6328959c2ca7bff84fba1ba876a4f183025695f8458",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 636,
+        "byteCount": 50623,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/70731fd8-417c-4d20-94c5-56cf17a7178e.jpg",
+        "sourceId": "70731fd8-417c-4d20-94c5-56cf17a7178e",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        }
+      }
+    },
+    {
+      "id": "64d3d6f7-25bf-5cec-a8b9-1f0d9cead259",
+      "name": "Mũ len có logo",
+      "category": "ACCESSORY",
+      "colors": [
+        "BLACK"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/64d3d6f7-25bf-5cec-a8b9-1f0d9cead259-front.jpg",
+        "sha256": "da308a2c52ed369afdd7f9326af1aaba423fed5ce40f210c6d68f0daaa9beea0",
+        "originalSha256": "2fcc12148ac19586a33c68698292a37260c35151ac2b86d997ee3fc65fac87e6",
+        "mimeType": "image/jpeg",
+        "width": 400,
+        "height": 712,
+        "byteCount": 43792,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://github.com/alexeygrigorev/clothing-dataset/blob/7ed86a9cc56763b6acb35e41cb35184e43a5d218/images/2d6afa47-fd6f-4b2b-9e51-010280547753.jpg",
+        "sourceId": "2d6afa47-fd6f-4b2b-9e51-010280547753",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Alexey Grigorev clothing-dataset contributors / Tagias",
+        "viewEvidence": "Visual reference/product view; the source has no explicit front/back annotation."
+      },
+      "back": null,
+      "pairVerified": false,
+      "annotationStatus": "assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "CC0-clothing-dataset",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "source_label_mapped_and_assistant_visual_review",
+          "sourceLabel": "Hat"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "track_a_visual_review",
+          "note": "Logo chữ là họa tiết đồ họa thấy rõ. Không suy ra kỹ thuật tạo logo."
+        }
+      }
+    },
+    {
+      "id": "90c35860-7e9d-5e80-a2ab-8642cebce60f",
+      "name": "Áo thun DDC trắng",
+      "category": "TOP",
+      "colors": [
+        "WHITE",
+        "RED"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/90c35860-7e9d-5e80-a2ab-8642cebce60f-front.jpg",
+        "sha256": "6a07048aae4834c67f46323928d1677d445ede390090005aacda79c72dd66199",
+        "originalSha256": "a81fa3ca2c50718771f6522c7adb06b57f3b47922a4382b8f73eb90455d8f44f",
+        "mimeType": "image/jpeg",
+        "width": 1152,
+        "height": 1536,
+        "byteCount": 373697,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_front.jpg",
+        "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/DDC_International_T-shirt_front.jpg/1280px-DDC_International_T-shirt_front.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "attribution": "Jonathan Schilling",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_front.jpg",
+        "restrictions": "",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "back": {
+        "file": "images/90c35860-7e9d-5e80-a2ab-8642cebce60f-back.jpg",
+        "sha256": "96e6909cde630303d4f1d3bd4883e7a380dcd8b2394a129b03a1611502d85e0f",
+        "originalSha256": "3af684a28de4cccba01e247659f0438693ba965377557d9e52f9b7790e624ca5",
+        "mimeType": "image/jpeg",
+        "width": 1152,
+        "height": 1536,
+        "byteCount": 333283,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_back.jpg",
+        "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/36/DDC_International_T-shirt_back.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "attribution": "Jonathan Schilling",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/File:DDC_International_T-shirt_back.jpg",
+        "restrictions": "",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "pairVerified": true,
+      "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern",
+        "pairIdentity"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
+    },
+    {
+      "id": "097c68f1-452f-5626-b75a-b1f89db7cb75",
+      "name": "Áo thun Wiki Loves Monuments",
+      "category": "TOP",
+      "colors": [
+        "BLACK",
+        "WHITE",
+        "RED"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/097c68f1-452f-5626-b75a-b1f89db7cb75-front.jpg",
+        "sha256": "779f5463696fda3616b1b9cea28b5af134556957afff47c0a97b285e510af8ab",
+        "originalSha256": "68d943b81f89f136eb1b9de83bbe6880552d52c53d54965fbf895602280ea1c2",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 1460,
+        "byteCount": 313616,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:WLM_shirt_-_Female_(front).jpg",
+        "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/WLM_shirt_-_Female_%28front%29.jpg/1280px-WLM_shirt_-_Female_%28front%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "attribution": "Béria L. Rodríguez @ Wikimedia Commons",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/User:Beria",
+        "restrictions": "",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "back": {
+        "file": "images/097c68f1-452f-5626-b75a-b1f89db7cb75-back.jpg",
+        "sha256": "2e8ebf7a273be048dfe246cd67eabb99613fda5bf2d9d238fc7d45a7e122eeb1",
+        "originalSha256": "3e06b7f8f0a767127d8474d314890ef95ea3be9d7561c8bc7b0397688dfd6bb3",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 1443,
+        "byteCount": 305424,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:WLM_shirt_-_Female_(back).jpg",
+        "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/WLM_shirt_-_Female_%28back%29.jpg/1280px-WLM_shirt_-_Female_%28back%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "attribution": "Béria L. Rodríguez @ Wikimedia Commons",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/User:Beria",
+        "restrictions": "",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "pairVerified": true,
+      "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern",
+        "pairIdentity"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
+    },
+    {
+      "id": "1df9ecb9-22ed-5bd3-b5db-188eebfe1041",
+      "name": "Áo thun Wikipedia trắng",
+      "category": "TOP",
+      "colors": [
+        "WHITE",
+        "RED",
+        "GRAY"
+      ],
+      "pattern": "PRINTED",
+      "material": null,
+      "formality": null,
+      "seasonTags": [],
+      "styleTags": [],
+      "front": {
+        "file": "images/1df9ecb9-22ed-5bd3-b5db-188eebfe1041-front.jpg",
+        "sha256": "18d09ad0eecef97714e259d89d2e14ab0be84e52ff5790c8bc9df2835b4ff5c6",
+        "originalSha256": "9179f7bfb194a1061728d244b7af1ca309ecc8fbeb6c0516a532f2c39f894434",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 960,
+        "byteCount": 173294,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:10_years_of_polish_Wikipedia,_event_T-shirt_front_side.JPG",
+        "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/10_years_of_polish_Wikipedia%2C_event_T-shirt_front_side.JPG/1280px-10_years_of_polish_Wikipedia%2C_event_T-shirt_front_side.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "attribution": "Juandev",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/File:10_years_of_polish_Wikipedia,_event_T-shirt_front_side.JPG",
+        "restrictions": "trademarked",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "back": {
+        "file": "images/1df9ecb9-22ed-5bd3-b5db-188eebfe1041-back.jpg",
+        "sha256": "1e4903545d25de8340d1b92831fbf756f8d61a080b18f96e0e498be432fd7755",
+        "originalSha256": "91acc57636e560ad14c8c509ef34369c91c9376a07bd40ddb9fc3a4fba344aee",
+        "mimeType": "image/jpeg",
+        "width": 1280,
+        "height": 960,
+        "byteCount": 180927,
+        "changes": "EXIF orientation applied; resized to max 1536 px; JPEG re-encoded; metadata stripped.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:10_years_of_polish_Wikipedia,_event_T-shirt_back_side.JPG",
+        "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/10_years_of_polish_Wikipedia%2C_event_T-shirt_back_side.JPG/1280px-10_years_of_polish_Wikipedia%2C_event_T-shirt_back_side.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "attribution": "Juandev",
+        "attributionUrl": "https://commons.wikimedia.org/wiki/File:10_years_of_polish_Wikipedia,_event_T-shirt_back_side.JPG",
+        "restrictions": "",
+        "viewEvidence": "Source description explicitly identifies view; paired files visually checked."
+      },
+      "pairVerified": true,
+      "annotationStatus": "source_pair_plus_assistant_visual_review_not_independently_human_verified",
+      "groundTruthFields": [],
+      "sourceGroup": "Wikimedia-Commons",
+      "referenceFields": [
+        "category",
+        "colors",
+        "pattern",
+        "pairIdentity"
+      ],
+      "independentReviewStatus": "PENDING",
+      "fieldProvenance": {
+        "name": {
+          "method": "assistant_authored_display_name"
+        },
+        "category": {
+          "method": "assistant_visual_review"
+        },
+        "colors": {
+          "method": "assistant_visual_review"
+        },
+        "pattern": {
+          "method": "assistant_visual_review"
+        },
+        "pairIdentity": {
+          "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        }
+      }
+    }
+  ],
+  "pendingVerifiedPairs": [],
+  "limits": "Functional test fixtures, not a statistically validated AI benchmark; photo dates/styles are not 2026 trend claims."
+}
