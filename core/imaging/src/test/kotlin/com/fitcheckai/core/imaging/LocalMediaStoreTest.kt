@@ -1,6 +1,7 @@
 package com.fitcheckai.core.imaging
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import androidx.exifinterface.media.ExifInterface
 import com.fitcheckai.core.model.wardrobe.*
@@ -86,9 +87,34 @@ class LocalMediaStoreTest {
         assertTrue(media.read(other).isSuccess)
         assertEquals(0, media.retryCleanup().getOrThrow())
     }
+    @Suppress("DEPRECATION") // WEBP_LOSSLESS is unavailable on the API 28 test device.
+    @Test fun `profile imports transparent WebP with a png filename`() = runBlocking {
+        val input = File.createTempFile("webp-photo-", ".png", context.cacheDir)
+        val bitmap = Bitmap.createBitmap(64, 80, Bitmap.Config.ARGB_8888)
+        try {
+            bitmap.eraseColor(Color.RED)
+            bitmap.setPixel(0, 0, Color.TRANSPARENT)
+            input.outputStream().use { assertTrue(bitmap.compress(Bitmap.CompressFormat.WEBP, 100, it)) }
+        } finally {
+            bitmap.recycle()
+        }
+
+        val ref = media.importImage(input.path, MediaScope.PERSON, owner, ImageView.FRONT).getOrThrow()
+        assertEquals("image/png", ref.mimeType)
+        assertTrue(media.displayPath(ref)!!.startsWith(context.noBackupFilesDir.path))
+        val bytes = media.read(ref).getOrThrow()
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        try {
+            assertEquals(Color.TRANSPARENT, decoded.getPixel(0, 0))
+        } finally {
+            decoded.recycle()
+        }
+    }
     @Test fun `invalid format huge encoded input and missing segmentation original create no registered output`() = runBlocking {
         val broken = File.createTempFile("broken", ".jpg", context.cacheDir).apply { writeText("not an image") }
-        assertTrue(media.importImage(broken.path, MediaScope.GARMENT, owner, ImageView.FRONT).isFailure)
+        val invalid = media.importImage(broken.path, MediaScope.GARMENT, owner, ImageView.FRONT).exceptionOrNull()
+        assertEquals(ErrorCode.INVALID_REQUEST, (invalid as WardrobeException).code)
+        assertTrue(invalid.message.orEmpty().startsWith("Không đọc được tệp ảnh."))
         val huge = File.createTempFile("huge", ".png", context.cacheDir)
         java.io.RandomAccessFile(huge, "rw").use { it.setLength(33L * 1024 * 1024) }
         assertEquals(ErrorCode.PAYLOAD_TOO_LARGE, (media.importImage(huge.path, MediaScope.GARMENT, owner, ImageView.FRONT).exceptionOrNull() as WardrobeException).code)

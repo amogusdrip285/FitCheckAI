@@ -256,12 +256,16 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
     private fun normalize(bytes: ByteArray, edge: Int): Bitmap {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-        require(options.outMimeType in setOf("image/jpeg", "image/png") && options.outWidth > 0 && options.outHeight > 0) { "Chỉ nhận ảnh JPEG hoặc PNG hợp lệ." }
+        require(options.outWidth > 0 && options.outHeight > 0) { UNREADABLE_IMAGE }
+        require(options.outMimeType in IMPORT_IMAGE_TYPES) {
+            "Định dạng ảnh chưa được hỗ trợ. Hãy chọn ảnh JPEG, PNG, WebP hoặc HEIC."
+        }
         require(options.outWidth.toLong() * options.outHeight <= 100_000_000) { "Ảnh vượt 100 megapixel." }
         options.inSampleSize = ImageStore.sampleSize(options.outWidth, options.outHeight, edge)
         options.inJustDecodeBounds = false
         options.inPreferredConfig = Bitmap.Config.ARGB_8888
-        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: throw IOException()
+        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            ?: throw WardrobeException(ErrorCode.INVALID_REQUEST, UNREADABLE_IMAGE)
         try {
             val exif = ExifInterface(ByteArrayInputStream(bytes))
             val matrix = Matrix().apply { if (exif.isFlipped) postScale(-1f, 1f); postRotate(exif.rotationDegrees.toFloat()) }
@@ -295,6 +299,8 @@ class LocalMediaStore @Inject constructor(@ApplicationContext private val contex
 
     companion object {
         private const val MAX_INPUT_BYTES = 32 * 1024 * 1024
+        private const val UNREADABLE_IMAGE = "Không đọc được tệp ảnh. Hãy tải lại tệp hoặc chọn một bản JPEG."
+        private val IMPORT_IMAGE_TYPES = setOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif")
         fun sha(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
         fun atomicWrite(file: File, bytes: ByteArray) {
             check(file.parentFile!!.mkdirs() || file.parentFile!!.isDirectory)

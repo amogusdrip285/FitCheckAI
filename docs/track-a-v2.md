@@ -54,7 +54,10 @@ Khi chọn thử đồ, Today kiểm lại revision sau khi đọc đường d�
 **Thử lại** tạo yêu cầu từ tủ hiện tại. **Phối lại** với cùng ngữ cảnh loại các bộ vừa hiển thị, rồi cho biết nếu đã hết tổ hợp phù hợp.
 Chia sẻ kiểm revision trước và sau khi ghép ảnh. Collage là JPEG trong cache, URI chỉ đọc. Người dùng chọn ứng dụng nhận hoặc hủy ở bảng chia sẻ.
 
-Ảnh import JPEG/PNG được xoay theo EXIF, xóa metadata, thu nhỏ tối đa 2.048 px, giới hạn 4 MiB; input tối đa 32 MiB/100 MP.
+Tủ đồ và Hồ sơ đọc JPEG, PNG, WebP và HEIC/HEIF theo định dạng thực tế của tệp. HEIC/HEIF cần bộ giải mã của Android trên thiết bị. App chuẩn hóa chiều ảnh, bỏ metadata và lưu thành JPEG hoặc PNG nếu có độ trong suốt. Ảnh lưu có cạnh dài tối đa 2.048 px và dung lượng tối đa 4 MiB. Tệp đầu vào tối đa 32 MiB và 100 megapixel.
+
+Đã kiểm trên Samsung Android 16 bằng hai ảnh HEIC chọn từ album Camera trong mục **Ảnh toàn thân (tùy chọn)**. Cả hai ảnh hiển thị đúng ô và được lưu thành hai tệp JPEG riêng trong dữ liệu hồ sơ trên máy.
+
 Ảnh mỗi mặt có UUID/hash, không ghi đè file cũ khi thay view. Hai mặt không được dùng cùng content hash, nhưng hash khác không chứng minh cùng garment;
 UI yêu cầu người dùng chọn đúng cặp, fixture mismatch vẫn cần người/provider review. Không claim có model phát hiện nhầm cặp.
 GARMENT ở private files; PERSON/TRYON_RESULT và registry ở noBackupFilesDir. Manifest app hiện `allowBackup=false`.
