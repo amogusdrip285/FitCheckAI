@@ -9,15 +9,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,24 +30,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,12 +65,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -135,39 +133,9 @@ object TryOnTestTags {
     const val REFRESH_CONNECTION_BUTTON = "tryon_refresh_connection_button"
 }
 
-// Track A-aligned shape & surface tokens (matching WardrobeDesign.kt without cross-module internal imports)
-private val PanelCornerShape = RoundedCornerShape(22.dp)
+// Track A-aligned shape tokens used locally
 private val PhotoFrameCornerShape = RoundedCornerShape(20.dp)
-private val ThumbnailCornerShape = RoundedCornerShape(16.dp)
-private val ActionButtonCornerShape = RoundedCornerShape(16.dp)
 private val NoticeCornerShape = RoundedCornerShape(14.dp)
-private val PillChipShape = RoundedCornerShape(50)
-
-@Composable
-private fun editorialPanelContainerColor(): Color {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.35f
-    return if (isDark) Color(0xFF22251F) else Color(0xFFFFFEFB)
-}
-
-@Composable
-private fun TryOnEditorialPanel(
-    modifier: Modifier = Modifier,
-    containerColor: Color = editorialPanelContainerColor(),
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = PanelCornerShape,
-        color = containerColor,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
-    }
-}
 
 @Composable
 fun TryOnRoute(
@@ -226,80 +194,82 @@ fun TryOnScreen(
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRefreshConnection: (() -> Unit)? = null,
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag(TryOnTestTags.SCREEN_ROOT),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        when {
-            state.isLoadingInitial -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+    TryOnEditorialTheme {
+        Surface(
+            modifier = modifier
+                .fillMaxSize()
+                .testTag(TryOnTestTags.SCREEN_ROOT),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            when {
+                state.isLoadingInitial -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
 
-            state.outfitSnapshot == null -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    EditorialTopBar(
-                        isFakeEnvironment = false,
-                        isFostaLiveEnvironment = false,
-                        onNavigateBack = onNavigateBack,
-                    )
-                    EmptyState(
-                        title = "Chưa chọn trang phục",
-                        message = "Hãy chọn một bộ gợi ý từ màn Hôm nay để bắt đầu thử đồ 2D.",
-                        actionLabel = "Quay lại chọn bộ đồ",
-                        onAction = onSelectDifferentOutfit,
-                    )
+                state.outfitSnapshot == null -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        TryOnTopBarSection(
+                            isFakeEnvironment = false,
+                            isFostaLiveEnvironment = false,
+                            onNavigateBack = onNavigateBack,
+                        )
+                        EmptyState(
+                            title = "Chưa chọn trang phục",
+                            message = "Hãy chọn một bộ gợi ý từ màn Hôm nay để bắt đầu thử đồ 2D.",
+                            actionLabel = "Quay lại chọn bộ đồ",
+                            onAction = onSelectDifferentOutfit,
+                        )
+                    }
                 }
-            }
 
-            else -> {
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val isTwoPane = maxWidth >= 600.dp
-                    if (isTwoPane) {
-                        TwoPaneEditorialLayout(
-                            state = state,
-                            onNavigateBack = onNavigateBack,
-                            onNavigateToProfilePhotos = onNavigateToProfilePhotos,
-                            onSelectDifferentOutfit = onSelectDifferentOutfit,
-                            onSelectViewMode = onSelectViewMode,
-                            onSelectPresentationMode = onSelectPresentationMode,
-                            onSelectGarmentCombo = onSelectGarmentCombo,
-                            onToggleItem = onToggleItem,
-                            onConsentChanged = onConsentChanged,
-                            onSubmit = onSubmit,
-                            onCancelJob = onCancelJob,
-                            onSelectResultTab = onSelectResultTab,
-                            onToggleCompareOriginal = onToggleCompareOriginal,
-                            onDeleteResult = onDeleteResult,
-                            onPrepareFreshAttempt = onPrepareFreshAttempt,
-                            onPickPersonPhoto = onPickPersonPhoto,
-                            onPickGarmentPhoto = onPickGarmentPhoto,
-                            onRefreshConnection = onRefreshConnection,
-                        )
-                    } else {
-                        CompactSingleColumnLayout(
-                            state = state,
-                            onNavigateBack = onNavigateBack,
-                            onNavigateToProfilePhotos = onNavigateToProfilePhotos,
-                            onSelectDifferentOutfit = onSelectDifferentOutfit,
-                            onSelectViewMode = onSelectViewMode,
-                            onSelectPresentationMode = onSelectPresentationMode,
-                            onSelectGarmentCombo = onSelectGarmentCombo,
-                            onToggleItem = onToggleItem,
-                            onConsentChanged = onConsentChanged,
-                            onSubmit = onSubmit,
-                            onCancelJob = onCancelJob,
-                            onSelectResultTab = onSelectResultTab,
-                            onToggleCompareOriginal = onToggleCompareOriginal,
-                            onDeleteResult = onDeleteResult,
-                            onPrepareFreshAttempt = onPrepareFreshAttempt,
-                            onPickPersonPhoto = onPickPersonPhoto,
-                            onPickGarmentPhoto = onPickGarmentPhoto,
-                            onRefreshConnection = onRefreshConnection,
-                        )
+                else -> {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val isTwoPane = maxWidth >= 600.dp
+                        if (isTwoPane) {
+                            TwoPaneEditorialLayout(
+                                state = state,
+                                onNavigateBack = onNavigateBack,
+                                onNavigateToProfilePhotos = onNavigateToProfilePhotos,
+                                onSelectDifferentOutfit = onSelectDifferentOutfit,
+                                onSelectViewMode = onSelectViewMode,
+                                onSelectPresentationMode = onSelectPresentationMode,
+                                onSelectGarmentCombo = onSelectGarmentCombo,
+                                onToggleItem = onToggleItem,
+                                onConsentChanged = onConsentChanged,
+                                onSubmit = onSubmit,
+                                onCancelJob = onCancelJob,
+                                onSelectResultTab = onSelectResultTab,
+                                onToggleCompareOriginal = onToggleCompareOriginal,
+                                onDeleteResult = onDeleteResult,
+                                onPrepareFreshAttempt = onPrepareFreshAttempt,
+                                onPickPersonPhoto = onPickPersonPhoto,
+                                onPickGarmentPhoto = onPickGarmentPhoto,
+                                onRefreshConnection = onRefreshConnection,
+                            )
+                        } else {
+                            CompactSingleColumnLayout(
+                                state = state,
+                                onNavigateBack = onNavigateBack,
+                                onNavigateToProfilePhotos = onNavigateToProfilePhotos,
+                                onSelectDifferentOutfit = onSelectDifferentOutfit,
+                                onSelectViewMode = onSelectViewMode,
+                                onSelectPresentationMode = onSelectPresentationMode,
+                                onSelectGarmentCombo = onSelectGarmentCombo,
+                                onToggleItem = onToggleItem,
+                                onConsentChanged = onConsentChanged,
+                                onSubmit = onSubmit,
+                                onCancelJob = onCancelJob,
+                                onSelectResultTab = onSelectResultTab,
+                                onToggleCompareOriginal = onToggleCompareOriginal,
+                                onDeleteResult = onDeleteResult,
+                                onPrepareFreshAttempt = onPrepareFreshAttempt,
+                                onPickPersonPhoto = onPickPersonPhoto,
+                                onPickGarmentPhoto = onPickGarmentPhoto,
+                                onRefreshConnection = onRefreshConnection,
+                            )
+                        }
                     }
                 }
             }
@@ -339,9 +309,9 @@ private fun CompactSingleColumnLayout(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(bottom = Spacing.xl),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(TryOnScreenHorizontalPadding),
     ) {
-        EditorialTopBar(
+        TryOnTopBarSection(
             isFakeEnvironment = state.isFakeEnvironment && state.isCapabilityAvailable,
             isFostaLiveEnvironment = !state.isFakeEnvironment && state.isFostaProvider && state.isCapabilityAvailable,
             onNavigateBack = onNavigateBack,
@@ -352,14 +322,14 @@ private fun CompactSingleColumnLayout(
                 message = error.message,
                 isStale = error.code == TryOnErrorCode.STALE_INPUT,
                 onSelectDifferentOutfit = onSelectDifferentOutfit,
-                modifier = Modifier.padding(horizontal = Spacing.md),
+                modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
         }
 
         state.statusNotice?.let { notice ->
             StatusNoticeBlock(
                 notice = notice,
-                modifier = Modifier.padding(horizontal = Spacing.md),
+                modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
         }
 
@@ -368,7 +338,7 @@ private fun CompactSingleColumnLayout(
                 state = state,
                 onSelectDifferentOutfit = onSelectDifferentOutfit,
                 onRefreshConnection = onRefreshConnection,
-                modifier = Modifier.padding(horizontal = Spacing.md),
+                modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
         } else {
             val currentResult = state.activeOrLatestResult
@@ -379,7 +349,7 @@ private fun CompactSingleColumnLayout(
                         onCancelJob = onCancelJob,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
-                            .padding(horizontal = Spacing.md),
+                            .padding(horizontal = TryOnScreenHorizontalPadding),
                     )
                 } else {
                     ResultShowcaseSection(
@@ -392,7 +362,7 @@ private fun CompactSingleColumnLayout(
                         onSelectDifferentOutfit = onSelectDifferentOutfit,
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
-                            .padding(horizontal = Spacing.md),
+                            .padding(horizontal = TryOnScreenHorizontalPadding),
                     )
                 }
             }
@@ -410,7 +380,7 @@ private fun CompactSingleColumnLayout(
                     state = state,
                     onNavigateToProfilePhotos = onNavigateToProfilePhotos,
                     onPickPersonPhoto = onPickPersonPhoto,
-                    modifier = Modifier.padding(horizontal = Spacing.md),
+                    modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
                 )
             }
 
@@ -419,7 +389,7 @@ private fun CompactSingleColumnLayout(
                 onSelectGarmentCombo = onSelectGarmentCombo,
                 onToggleItem = onToggleItem,
                 onPickGarmentPhoto = onPickGarmentPhoto,
-                modifier = Modifier.padding(horizontal = Spacing.md),
+                modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
 
             if (currentResult == null) {
@@ -427,14 +397,14 @@ private fun CompactSingleColumnLayout(
                     state = state,
                     onSelectPresentationMode = onSelectPresentationMode,
                     onSelectViewMode = onSelectViewMode,
-                    modifier = Modifier.padding(horizontal = Spacing.md),
+                    modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
                 )
 
                 PrivacyAndConsentSection(
                     state = state,
                     onConsentChanged = onConsentChanged,
                     onSubmit = onSubmit,
-                    modifier = Modifier.padding(horizontal = Spacing.md),
+                    modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
                 )
             }
         }
@@ -463,7 +433,7 @@ private fun TwoPaneEditorialLayout(
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        EditorialTopBar(
+        TryOnTopBarSection(
             isFakeEnvironment = state.isFakeEnvironment && state.isCapabilityAvailable,
             isFostaLiveEnvironment = !state.isFakeEnvironment && state.isFostaProvider && state.isCapabilityAvailable,
             onNavigateBack = onNavigateBack,
@@ -472,7 +442,7 @@ private fun TwoPaneEditorialLayout(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = Spacing.md),
+                .padding(horizontal = TryOnScreenHorizontalPadding),
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             // Left Pane: Image-First Inputs (1. Person -> 2-3. Garments & Combo -> 4-5. Mode & View -> 6-7. Consent & Submit)
@@ -481,8 +451,8 @@ private fun TwoPaneEditorialLayout(
                     .weight(1f)
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    .padding(vertical = TryOnScreenHorizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(TryOnScreenHorizontalPadding),
             ) {
                 state.bannerError?.let { error ->
                     ErrorBannerBlock(
@@ -529,9 +499,9 @@ private fun TwoPaneEditorialLayout(
                     .weight(1f)
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
-                    .padding(vertical = Spacing.md),
+                    .padding(vertical = TryOnScreenHorizontalPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(TryOnScreenHorizontalPadding),
             ) {
                 if (!state.isCapabilityAvailable) {
                     CapabilityUnavailableSection(
@@ -572,70 +542,46 @@ private fun TwoPaneEditorialLayout(
 }
 
 @Composable
-private fun EditorialTopBar(
+private fun TryOnTopBarSection(
     isFakeEnvironment: Boolean,
     isFostaLiveEnvironment: Boolean = false,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            IconButton(
-                onClick = onNavigateBack,
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Quay lại",
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "PHÒNG THỬ ĐỒ 2D",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                Text(
-                    text = "Thử đồ ảo",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-
+        TryOnBackTopBar(
+            title = "Thử đồ",
+            onBack = onNavigateBack,
+        )
         if (isFakeEnvironment) {
-            Surface(
-                modifier = Modifier.testTag(TryOnTestTags.FAKE_MODE_BADGE),
-                shape = PillChipShape,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-            ) {
-                Text(
-                    text = "CHẾ ĐỘ GIẢ LẬP DEV (FAKE — KHÔNG GỌI AI THẬT)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
+            TryOnInfoNotice(
+                text = "Chế độ kiểm thử · Kết quả giả lập, không gọi AI thực tế.",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = TryOnScreenHorizontalPadding)
+                    .testTag(TryOnTestTags.FAKE_MODE_BADGE),
+            )
         } else if (isFostaLiveEnvironment) {
-            Surface(
-                shape = PillChipShape,
-                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = TryOnScreenHorizontalPadding, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.tertiary),
+                )
                 Text(
-                    text = "AI LIVE — FOSTA LUNA (PROXY THỬ NGHIỆM)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    text = "Đang kết nối dịch vụ thử đồ trực tiếp",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -649,48 +595,46 @@ private fun CapabilityUnavailableSection(
     modifier: Modifier = Modifier,
     onRefreshConnection: (() -> Unit)? = null,
 ) {
-    val decisionLabel = when (state.capability?.decision) {
-        FeasibilityDecision.NO_GO -> "Đã khóa theo kết quả đánh giá chất lượng (NO_GO)"
-        else -> "Chưa mở mô phỏng trực tiếp (Cổng kiểm định: UNKNOWN / CORE)"
+    val decisionTitle = when (state.capability?.decision) {
+        FeasibilityDecision.NO_GO -> "Tính năng thử đồ đang tạm khóa"
+        else -> "Dịch vụ thử đồ chưa sẵn sàng"
     }
+    val reasonText = sanitizeUserFacingText(
+        state.capability?.lockedReason?.takeIf { it.isNotBlank() }
+            ?: "Mô phỏng ảnh người thật 2D chỉ mở khi dịch vụ xử lý ảnh sẵn sàng. Ứng dụng không hiển thị ảnh giả lập như kết quả AI thật.",
+    )
 
-    TryOnEditorialPanel(
-        modifier = modifier.testTag(TryOnTestTags.CAPABILITY_UNAVAILABLE_CARD),
+    TryOnPanel(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(TryOnTestTags.CAPABILITY_UNAVAILABLE_CARD),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-            )
-            Text(
-                text = decisionLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        Text(
-            text = state.capability?.lockedReason?.takeIf { it.isNotBlank() }
-                ?: "Mô phỏng ảnh người thật 2D chỉ kích hoạt khi dịch vụ xử lý ảnh sẵn sàng — ứng dụng không hiển thị ảnh giả lập như kết quả AI thật.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        TryOnSectionHeading(
+            title = decisionTitle,
+            subtitle = "Bạn vẫn có thể xem lại các món trong bộ phối này.",
+        )
+
+        TryOnInfoNotice(
+            text = reasonText,
+            icon = Icons.Outlined.Lock,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         val outfit = state.outfitSnapshot
         if (outfit != null) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Text(
-                text = "CÁC MÓN TRONG BỘ GỢI Ý",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Bộ trang phục đang chọn",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
-                text = outfit.explanation,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            if (outfit.explanation.isNotBlank()) {
+                Text(
+                    text = outfit.explanation,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 outfit.items.forEach { item ->
                     OutfitItemSwatchRow(item = item, statusLabel = categoryLabelVi(item.category))
@@ -699,27 +643,19 @@ private fun CapabilityUnavailableSection(
         }
 
         if (onRefreshConnection != null) {
-            Button(
+            TryOnPrimaryAction(
+                text = "Thử kết nối lại",
                 onClick = onRefreshConnection,
-                shape = ActionButtonCornerShape,
+                icon = Icons.Outlined.Refresh,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp)
                     .testTag(TryOnTestTags.REFRESH_CONNECTION_BUTTON),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(Spacing.sm))
-                Text("Thử kết nối lại Backend")
-            }
+            )
         }
 
         OutlinedButton(
             onClick = onSelectDifferentOutfit,
-            shape = ActionButtonCornerShape,
+            shape = RoundedCornerShape(50),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp),
@@ -730,9 +666,8 @@ private fun CapabilityUnavailableSection(
 }
 
 /**
- * Priority 1: Ảnh người dùng (Front & Back person reference cards with 3:4 portrait frames).
+ * Priority 1: Ảnh người dùng (Mặt trước | Mặt sau theo bố cục Track A).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PersonPhotosPanel(
     state: TryOnUiState,
@@ -740,45 +675,35 @@ private fun PersonPhotosPanel(
     modifier: Modifier = Modifier,
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
 ) {
-    TryOnEditorialPanel(modifier = modifier) {
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = "ẢNH NGƯỜI DÙNG",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-            Text(
-                text = if (state.hasPersonFront && state.hasPersonBack) "Đủ 2 góc nhìn" else "Cần cho góc nhìn chọn",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    TryOnPanel(modifier = modifier.fillMaxWidth()) {
+        TryOnSectionHeading(
+            title = "Ảnh người dùng",
+            subtitle = "Chọn ảnh toàn thân rõ dáng để thử đồ tự nhiên hơn.",
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            PersonReferenceSlotCard(
+            TryOnPhotoSlotColumn(
                 title = "Mặt trước",
                 mediaRef = state.personProfile?.bodyImages?.front,
-                missingLabel = "Thiếu ảnh mặt trước",
-                isActiveView = ImageView.FRONT in state.requestedViews,
-                buttonLabel = "Chọn Trước",
+                missingText = "Chưa có ảnh",
+                caption = "Mặt trước",
+                placeholderIcon = Icons.Outlined.Person,
+                enabled = !state.isJobActive && !state.isSubmitting,
                 onPickPhoto = onPickPersonPhoto?.let { picker -> { picker(ImageView.FRONT) } },
                 pickButtonTag = TryOnTestTags.PICK_PERSON_FRONT_INLINE,
                 previewTag = TryOnTestTags.PREVIEW_PERSON_FRONT,
                 modifier = Modifier.weight(1f),
             )
-            PersonReferenceSlotCard(
+            TryOnPhotoSlotColumn(
                 title = "Mặt sau",
                 mediaRef = state.personProfile?.bodyImages?.back,
-                missingLabel = "Chưa có ảnh mặt sau",
-                isActiveView = ImageView.BACK in state.requestedViews,
-                buttonLabel = "Chọn Sau",
+                missingText = "Chưa có ảnh",
+                caption = "Mặt sau",
+                placeholderIcon = Icons.Outlined.Person,
+                enabled = !state.isJobActive && !state.isSubmitting,
                 onPickPhoto = onPickPersonPhoto?.let { picker -> { picker(ImageView.BACK) } },
                 pickButtonTag = TryOnTestTags.PICK_PERSON_BACK_INLINE,
                 previewTag = TryOnTestTags.PREVIEW_PERSON_BACK,
@@ -789,7 +714,7 @@ private fun PersonPhotosPanel(
         if (!state.hasPersonFront || !state.hasPersonBack) {
             OutlinedButton(
                 onClick = onNavigateToProfilePhotos,
-                shape = ActionButtonCornerShape,
+                shape = RoundedCornerShape(50),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
@@ -803,9 +728,9 @@ private fun PersonPhotosPanel(
                 Spacer(Modifier.width(Spacing.sm))
                 Text(
                     text = if (!state.hasPersonFront) {
-                        "Thêm ảnh toàn thân mặt trước tại Hồ sơ"
+                        "Thêm ảnh mặt trước từ Hồ sơ"
                     } else {
-                        "Bổ sung ảnh mặt sau tại Hồ sơ"
+                        "Bổ sung ảnh mặt sau từ Hồ sơ"
                     },
                 )
             }
@@ -814,88 +739,63 @@ private fun PersonPhotosPanel(
 }
 
 @Composable
-private fun PersonReferenceSlotCard(
+private fun TryOnPhotoSlotColumn(
     title: String,
     mediaRef: MediaRef?,
-    missingLabel: String,
-    isActiveView: Boolean,
-    buttonLabel: String,
+    missingText: String?,
+    caption: String,
+    placeholderIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
     onPickPhoto: (() -> Unit)? = null,
     pickButtonTag: String? = null,
     previewTag: String? = null,
 ) {
-    val borderColor = if (isActiveView && mediaRef != null) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant
-    }
     Column(
-        modifier = modifier
-            .clip(ThumbnailCornerShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-            .border(1.dp, borderColor, ThumbnailCornerShape)
-            .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
         )
-        Box(
+        TryOnPhotoFrame(
+            mediaRef = mediaRef,
+            contentDescription = caption,
+            placeholderIcon = placeholderIcon,
+            missingText = missingText,
             modifier = Modifier
-                .widthIn(max = 148.dp)
                 .fillMaxWidth()
-                .aspectRatio(3f / 4f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .height(190.dp)
                 .let { mod -> if (previewTag != null) mod.testTag(previewTag) else mod }
-                .let { mod -> if (onPickPhoto != null) mod.clickable(onClick = onPickPhoto) else mod },
-            contentAlignment = Alignment.Center,
-        ) {
-            if (mediaRef == null) {
-                Text(
-                    text = missingLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(Spacing.xs),
-                )
-            } else {
-                TryOnMediaPreviewSurface(
-                    mediaRef = mediaRef,
-                    caption = title,
-                    isFakeOutput = false,
-                    compactThumbnail = true,
-                )
-            }
-        }
-        Text(
-            text = if (mediaRef != null) "Đã sẵn sàng" else "Chưa có ảnh",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (mediaRef != null) {
-                MaterialTheme.colorScheme.tertiary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            textAlign = TextAlign.Center,
+                .let { mod ->
+                    if (onPickPhoto != null) mod.clickable(enabled = enabled, onClick = onPickPhoto) else mod
+                },
         )
         if (onPickPhoto != null) {
             OutlinedButton(
                 onClick = onPickPhoto,
-                shape = PillChipShape,
+                enabled = enabled,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 12.dp,
+                    vertical = 10.dp,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 38.dp)
+                    .heightIn(min = 48.dp)
                     .let { mod -> if (pickButtonTag != null) mod.testTag(pickButtonTag) else mod },
             ) {
+                Icon(
+                    imageVector = Icons.Outlined.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
-                    text = buttonLabel,
-                    style = MaterialTheme.typography.labelSmall,
+                    text = if (mediaRef == null) "Chọn ảnh" else "Thay ảnh",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -903,7 +803,7 @@ private fun PersonReferenceSlotCard(
 }
 
 /**
- * Priority 2 & 3: Ảnh trang phục đã chọn (Real garment thumbnail cards) + Chọn áo / quần / cả hai.
+ * Priority 2 & 3: Ảnh trang phục đã chọn (1 TryOnPanel mỗi món -> 2 TryOnPhotoFrame) + Tổ hợp thay đồ.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -917,179 +817,139 @@ private fun SelectedGarmentsPanel(
     val outfit = state.outfitSnapshot ?: return
     val cap = state.capability
 
-    TryOnEditorialPanel(modifier = modifier) {
-        Text(
-            text = "TRANG PHỤC ĐÃ CHỌN",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-        Text(
-            text = outfit.explanation,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        TryOnSectionHeading(
+            title = "Trang phục đã chọn",
+            subtitle = outfit.explanation.takeIf { it.isNotBlank() },
         )
 
-        // Visual Garment Thumbnail Cards (Priority 2) — 2-slot Front | Back per item
+        // Visual Garment Cards (Priority 2) — max 2 layers: TryOnPanel -> 2 borderless TryOnPhotoFrames
         if (state.supportedOutfitItems.isNotEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                state.supportedOutfitItems.forEach { item ->
-                    val selected = item.itemId in state.selectedItemIds
-                    val pair = state.garmentImages[item.itemId]
-                    val isPrimaryTop = item.itemId == state.availableTopItem?.itemId
-                    val isPrimaryBottom = item.itemId == state.availableBottomItem?.itemId
-                    val frontPickTag = when {
-                        isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE
-                        isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_INLINE
-                        else -> null
-                    }
-                    val backPickTag = when {
-                        isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE
-                        isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE
-                        else -> null
-                    }
-                    val frontPreviewTag = when {
-                        isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT
-                        isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT
-                        else -> null
-                    }
-                    val backPreviewTag = when {
-                        isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK
-                        isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_BACK
-                        else -> null
-                    }
-                    GarmentThumbnailCard(
-                        item = item,
-                        imagePair = pair,
-                        requestedViews = state.requestedViews,
-                        selected = selected,
-                        enabled = !state.isJobActive && !state.isSubmitting,
-                        onClick = { onToggleItem(item.itemId) },
-                        onPickFrontPhoto = onPickGarmentPhoto?.let { picker ->
-                            { picker(item.itemId, ImageView.FRONT) }
-                        },
-                        onPickBackPhoto = onPickGarmentPhoto?.let { picker ->
-                            { picker(item.itemId, ImageView.BACK) }
-                        },
-                        frontPickButtonTag = frontPickTag,
-                        backPickButtonTag = backPickTag,
-                        frontPreviewTag = frontPreviewTag,
-                        backPreviewTag = backPreviewTag,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+            state.supportedOutfitItems.forEach { item ->
+                val selected = item.itemId in state.selectedItemIds
+                val pair = state.garmentImages[item.itemId]
+                val isPrimaryTop = item.itemId == state.availableTopItem?.itemId
+                val isPrimaryBottom = item.itemId == state.availableBottomItem?.itemId
+                val frontPickTag = when {
+                    isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE
+                    isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_INLINE
+                    else -> null
                 }
+                val backPickTag = when {
+                    isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE
+                    isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE
+                    else -> null
+                }
+                val frontPreviewTag = when {
+                    isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT
+                    isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT
+                    else -> null
+                }
+                val backPreviewTag = when {
+                    isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK
+                    isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_BACK
+                    else -> null
+                }
+                GarmentThumbnailCard(
+                    item = item,
+                    imagePair = pair,
+                    selected = selected,
+                    enabled = !state.isJobActive && !state.isSubmitting,
+                    onClick = { onToggleItem(item.itemId) },
+                    onPickFrontPhoto = onPickGarmentPhoto?.let { picker ->
+                        { picker(item.itemId, ImageView.FRONT) }
+                    },
+                    onPickBackPhoto = onPickGarmentPhoto?.let { picker ->
+                        { picker(item.itemId, ImageView.BACK) }
+                    },
+                    frontPickButtonTag = frontPickTag,
+                    backPickButtonTag = backPickTag,
+                    frontPreviewTag = frontPreviewTag,
+                    backPreviewTag = backPreviewTag,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
         // Priority 3: Chọn áo / quần / cả hai
-        if (state.canChooseGarmentCombos) {
-            Text(
-                text = "Tổ hợp thay đồ",
-                style = MaterialTheme.typography.labelLarge,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                FilterChip(
-                    selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_ONLY,
-                    onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_ONLY) },
-                    enabled = !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = {
-                        Text(
-                            text = "Chỉ thay Áo (TOP)",
-                            modifier = Modifier.padding(vertical = 4.dp),
+        if (
+            state.canChooseGarmentCombos ||
+            state.isSubsetSimulation ||
+            state.hasExperimentalSelection ||
+            state.excludedOutfitItems.isNotEmpty()
+        ) {
+            TryOnPanel(modifier = Modifier.fillMaxWidth()) {
+                if (state.canChooseGarmentCombos) {
+                    TryOnSectionHeading(
+                        title = "Phối món muốn thử",
+                        subtitle = "Chọn thử riêng từng món hoặc phối cả bộ.",
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        TryOnChoiceChip(
+                            label = "Chỉ áo",
+                            selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_ONLY,
+                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_ONLY) },
+                            enabled = !state.isJobActive && !state.isSubmitting,
+                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_TOP),
                         )
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.GARMENT_COMBO_TOP),
-                )
-                FilterChip(
-                    selected = state.activeGarmentCombo == TryOnGarmentCombo.BOTTOM_ONLY,
-                    onClick = { onSelectGarmentCombo(TryOnGarmentCombo.BOTTOM_ONLY) },
-                    enabled = !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = {
-                        Text(
-                            text = "Chỉ thay Quần (BOTTOM)",
-                            modifier = Modifier.padding(vertical = 4.dp),
+                        TryOnChoiceChip(
+                            label = "Chỉ quần",
+                            selected = state.activeGarmentCombo == TryOnGarmentCombo.BOTTOM_ONLY,
+                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.BOTTOM_ONLY) },
+                            enabled = !state.isJobActive && !state.isSubmitting,
+                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_BOTTOM),
                         )
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.GARMENT_COMBO_BOTTOM),
-                )
-                FilterChip(
-                    selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_AND_BOTTOM,
-                    onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM) },
-                    enabled = !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = {
-                        Text(
-                            text = "Cả Áo + Quần (TOP+BOTTOM)",
-                            modifier = Modifier.padding(vertical = 4.dp),
+                        TryOnChoiceChip(
+                            label = "Cả áo và quần",
+                            selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_AND_BOTTOM,
+                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM) },
+                            enabled = !state.isJobActive && !state.isSubmitting,
+                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_TOP_BOTTOM),
                         )
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.GARMENT_COMBO_TOP_BOTTOM),
-                )
-            }
-        }
-
-        if (state.isSubsetSimulation) {
-            Surface(
-                shape = NoticeCornerShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-            ) {
-                Text(
-                    text = "Đang áp dụng ${state.selectedItemIds.size}/${outfit.items.size} món (các món còn lại giữ nguyên trên ảnh gốc).",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-        }
-
-        if (state.hasExperimentalSelection) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(TryOnTestTags.EXPERIMENTAL_NOTICE),
-                shape = NoticeCornerShape,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-            ) {
-                Text(
-                    text = "THỬ NGHIỆM (EXPERIMENTAL): Tổ hợp BACK / BOTTOM / TOP+BOTTOM hiện mới kiểm thử logic và mock, chưa xác minh chất lượng AI thực tế.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
-        }
-
-        if (state.excludedOutfitItems.isNotEmpty()) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Text(
-                text = "Giữ nguyên trên ảnh người:",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            state.excludedOutfitItems.forEach { excluded ->
-                val reason = if (cap != null && excluded.category !in cap.supportedCategories) {
-                    "Danh mục ${categoryLabelVi(excluded.category)} chưa hỗ trợ"
+                    }
                 } else {
-                    "Không chọn thay"
+                    TryOnSectionHeading(title = "Trang phục áp dụng")
                 }
-                OutfitItemSwatchRow(item = excluded, statusLabel = reason)
+
+                if (state.isSubsetSimulation) {
+                    TryOnInfoNotice(
+                        text = "Đang thử ${state.selectedItemIds.size}/${outfit.items.size} món, các món còn lại giữ nguyên theo ảnh gốc.",
+                        tone = TryOnNoticeTone.NEUTRAL,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                if (state.hasExperimentalSelection) {
+                    TryOnInfoNotice(
+                        text = "Chế độ thử nghiệm: Thử mặt sau hoặc thử quần đang hoàn thiện, kết quả có thể chưa ổn định.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TryOnTestTags.EXPERIMENTAL_NOTICE),
+                    )
+                }
+
+                if (state.excludedOutfitItems.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text(
+                        text = "Giữ nguyên trên ảnh gốc",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    state.excludedOutfitItems.forEach { excluded ->
+                        val reason = if (cap != null && excluded.category !in cap.supportedCategories) {
+                            "Danh mục ${categoryLabelVi(excluded.category)} chưa hỗ trợ"
+                        } else {
+                            "Không chọn thay"
+                        }
+                        OutfitItemSwatchRow(item = excluded, statusLabel = reason)
+                    }
+                }
             }
         }
     }
@@ -1099,7 +959,6 @@ private fun SelectedGarmentsPanel(
 private fun GarmentThumbnailCard(
     item: TryOnItemSummary,
     imagePair: ImagePair?,
-    requestedViews: Set<ImageView>,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -1112,214 +971,96 @@ private fun GarmentThumbnailCard(
     backPreviewTag: String? = null,
 ) {
     val dotColor = parseSafeHex(item.accentHex) ?: MaterialTheme.colorScheme.secondary
-    val borderStroke = if (selected) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+    val panelBorder = if (selected) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
     } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    }
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .7f))
     }
 
-    Surface(
+    TryOnPanel(
         modifier = modifier
-            .clip(ThumbnailCornerShape)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
             .clickable(enabled = enabled, onClick = onClick),
-        shape = ThumbnailCornerShape,
-        color = containerColor,
-        border = borderStroke,
+        border = panelBorder,
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(dotColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = categoryLabelVi(item.category),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = item.label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = if (imagePair?.front != null && imagePair.back != null) "Đủ 2 mặt" else "Cần cho góc chọn",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = item.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = categoryLabelVi(item.category),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (selected) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.CheckCircle,
-                                contentDescription = "Đang chọn",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier
-                                    .padding(2.dp)
-                                    .size(16.dp),
-                            )
-                        }
-                    }
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                GarmentReferenceSlotCard(
-                    title = "Trước",
-                    mediaRef = imagePair?.front,
-                    missingLabel = "Chưa có ảnh trước",
-                    caption = "${item.label} (Trước)",
-                    isActiveView = selected && ImageView.FRONT in requestedViews,
-                    buttonLabel = "Chọn Trước",
-                    enabled = enabled,
-                    onPickPhoto = onPickFrontPhoto,
-                    pickButtonTag = frontPickButtonTag,
-                    previewTag = frontPreviewTag,
-                    modifier = Modifier.weight(1f),
-                )
-                GarmentReferenceSlotCard(
-                    title = "Sau",
-                    mediaRef = imagePair?.back,
-                    missingLabel = "Chưa có ảnh sau",
-                    caption = "${item.label} (Sau)",
-                    isActiveView = selected && ImageView.BACK in requestedViews,
-                    buttonLabel = "Chọn Sau",
-                    enabled = enabled,
-                    onPickPhoto = onPickBackPhoto,
-                    pickButtonTag = backPickButtonTag,
-                    previewTag = backPreviewTag,
-                    modifier = Modifier.weight(1f),
-                )
+            if (selected) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "Đang chọn",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(14.dp),
+                    )
+                }
             }
         }
-    }
-}
 
-@Composable
-private fun GarmentReferenceSlotCard(
-    title: String,
-    mediaRef: MediaRef?,
-    missingLabel: String,
-    caption: String,
-    isActiveView: Boolean,
-    buttonLabel: String,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onPickPhoto: (() -> Unit)? = null,
-    pickButtonTag: String? = null,
-    previewTag: String? = null,
-) {
-    val borderColor = if (isActiveView && mediaRef != null) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant
-    }
-    Column(
-        modifier = modifier
-            .clip(ThumbnailCornerShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-            .border(1.dp, borderColor, ThumbnailCornerShape)
-            .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Box(
-            modifier = Modifier
-                .widthIn(max = 128.dp)
-                .fillMaxWidth()
-                .aspectRatio(3f / 4f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                .let { mod -> if (previewTag != null) mod.testTag(previewTag) else mod }
-                .let { mod ->
-                    if (onPickPhoto != null) mod.clickable(enabled = enabled, onClick = onPickPhoto) else mod
-                },
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (mediaRef == null) {
-                Text(
-                    text = missingLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(Spacing.xs),
-                )
-            } else {
-                TryOnMediaPreviewSurface(
-                    mediaRef = mediaRef,
-                    caption = caption,
-                    isFakeOutput = false,
-                    compactThumbnail = true,
-                )
-            }
-        }
-        Text(
-            text = if (mediaRef != null) "Đã sẵn sàng" else "Chưa có ảnh",
-            style = MaterialTheme.typography.labelSmall,
-            color = if (mediaRef != null) {
-                MaterialTheme.colorScheme.tertiary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            textAlign = TextAlign.Center,
-        )
-        if (onPickPhoto != null) {
-            OutlinedButton(
-                onClick = onPickPhoto,
+            TryOnPhotoSlotColumn(
+                title = "Mặt trước",
+                mediaRef = imagePair?.front,
+                missingText = "Chưa có ảnh",
+                caption = "${item.label} (Trước)",
+                placeholderIcon = Icons.Outlined.Checkroom,
                 enabled = enabled,
-                shape = PillChipShape,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 38.dp)
-                    .let { mod -> if (pickButtonTag != null) mod.testTag(pickButtonTag) else mod },
-            ) {
-                Text(
-                    text = buttonLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
+                onPickPhoto = onPickFrontPhoto,
+                pickButtonTag = frontPickButtonTag,
+                previewTag = frontPreviewTag,
+                modifier = Modifier.weight(1f),
+            )
+            TryOnPhotoSlotColumn(
+                title = "Mặt sau",
+                mediaRef = imagePair?.back,
+                missingText = "Chưa có ảnh",
+                caption = "${item.label} (Sau)",
+                placeholderIcon = Icons.Outlined.Checkroom,
+                enabled = enabled,
+                onPickPhoto = onPickBackPhoto,
+                pickButtonTag = backPickButtonTag,
+                previewTag = backPreviewTag,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -1358,7 +1099,7 @@ private fun OutfitItemSwatchRow(
 }
 
 /**
- * Priority 4 & 5: Chọn chế độ Original Photo / Studio White + Chọn góc nhìn Front / Back.
+ * Priority 4 & 5: Chế độ khung hình & góc nhìn.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1368,110 +1109,82 @@ private fun TryOnConfigurationPanel(
     onSelectViewMode: (TryOnViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TryOnEditorialPanel(modifier = modifier) {
-        Text(
-            text = "CHẾ ĐỘ KHUNG HÌNH & GÓC NHÌN",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
+    TryOnPanel(modifier = modifier.fillMaxWidth()) {
+        TryOnSectionHeading(
+            title = "Chế độ khung hình & góc nhìn",
+            subtitle = "Chọn phông nền và hướng nhìn cho ảnh kết quả.",
         )
 
-        // Priority 4: Chọn chế độ Original Photo / Studio White
         if (state.canSelectStudioWhite || state.isFostaProvider) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Khung hình",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    TryOnChoiceChip(
+                        label = "Ảnh gốc",
+                        selected = state.selectedPresentationMode == TryOnPresentationMode.ORIGINAL_PHOTO,
+                        onClick = { onSelectPresentationMode(TryOnPresentationMode.ORIGINAL_PHOTO) },
+                        enabled = !state.isJobActive && !state.isSubmitting,
+                        modifier = Modifier.testTag(TryOnTestTags.PRESENTATION_ORIGINAL_PHOTO),
+                    )
+                    TryOnChoiceChip(
+                        label = "Nền trắng studio",
+                        selected = state.selectedPresentationMode == TryOnPresentationMode.STUDIO_WHITE,
+                        onClick = { onSelectPresentationMode(TryOnPresentationMode.STUDIO_WHITE) },
+                        enabled = state.canSelectStudioWhite && !state.isJobActive && !state.isSubmitting,
+                        modifier = Modifier.testTag(TryOnTestTags.PRESENTATION_STUDIO_WHITE),
+                    )
+                }
+                if (state.selectedPresentationMode == TryOnPresentationMode.STUDIO_WHITE) {
+                    TryOnInfoNotice(
+                        text = "AI dựng lại dáng đứng thẳng trên nền trắng sáng đều để dễ xem phom phối đồ.",
+                        tone = TryOnNoticeTone.NEUTRAL,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Chế độ khung hình",
-                style = MaterialTheme.typography.labelLarge,
+                text = "Góc nhìn",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                FilterChip(
-                    selected = state.selectedPresentationMode == TryOnPresentationMode.ORIGINAL_PHOTO,
-                    onClick = { onSelectPresentationMode(TryOnPresentationMode.ORIGINAL_PHOTO) },
+                TryOnChoiceChip(
+                    label = "Mặt trước",
+                    selected = state.selectedViewMode == TryOnViewMode.FRONT_ONLY,
+                    onClick = { onSelectViewMode(TryOnViewMode.FRONT_ONLY) },
                     enabled = !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = {
-                        Text(
-                            text = "Ảnh gốc (ORIGINAL_PHOTO)",
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.PRESENTATION_ORIGINAL_PHOTO),
+                    modifier = Modifier.testTag(TryOnTestTags.MODE_FRONT_ONLY),
                 )
-                FilterChip(
-                    selected = state.selectedPresentationMode == TryOnPresentationMode.STUDIO_WHITE,
-                    onClick = { onSelectPresentationMode(TryOnPresentationMode.STUDIO_WHITE) },
-                    enabled = state.canSelectStudioWhite && !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = {
-                        Text(
-                            text = "Nền trắng Studio (STUDIO_WHITE)",
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.PRESENTATION_STUDIO_WHITE),
+                TryOnChoiceChip(
+                    label = "Chỉ mặt sau",
+                    selected = state.selectedViewMode == TryOnViewMode.BACK_ONLY,
+                    onClick = { onSelectViewMode(TryOnViewMode.BACK_ONLY) },
+                    enabled = state.canSelectBackView && !state.isJobActive && !state.isSubmitting,
+                    modifier = Modifier.testTag(TryOnTestTags.MODE_BACK_ONLY),
                 )
-            }
-            if (state.selectedPresentationMode == TryOnPresentationMode.STUDIO_WHITE) {
-                Text(
-                    text = "Lưu ý Studio: AI dựng lại tư thế đứng thẳng toàn thân trên nền trắng sáng đều (không dùng để đo kích cỡ).",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        }
-
-        // Priority 5: Chọn Front / Back
-        Text(
-            text = "Góc nhìn mô phỏng",
-            style = MaterialTheme.typography.labelLarge,
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            FilterChip(
-                selected = state.selectedViewMode == TryOnViewMode.FRONT_ONLY,
-                onClick = { onSelectViewMode(TryOnViewMode.FRONT_ONLY) },
-                enabled = !state.isJobActive && !state.isSubmitting,
-                shape = PillChipShape,
-                colors = editorialFilterChipColors(),
-                label = { Text("Chỉ mặt trước", modifier = Modifier.padding(vertical = 4.dp)) },
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag(TryOnTestTags.MODE_FRONT_ONLY),
-            )
-            FilterChip(
-                selected = state.selectedViewMode == TryOnViewMode.BACK_ONLY,
-                onClick = { onSelectViewMode(TryOnViewMode.BACK_ONLY) },
-                enabled = state.canSelectBackView && !state.isJobActive && !state.isSubmitting,
-                shape = PillChipShape,
-                colors = editorialFilterChipColors(),
-                label = { Text("Chỉ mặt sau", modifier = Modifier.padding(vertical = 4.dp)) },
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag(TryOnTestTags.MODE_BACK_ONLY),
-            )
-            if (!state.isFostaProvider) {
-                FilterChip(
-                    selected = state.selectedViewMode == TryOnViewMode.FRONT_AND_BACK,
-                    onClick = { onSelectViewMode(TryOnViewMode.FRONT_AND_BACK) },
-                    enabled = state.canSelectDualView && !state.isJobActive && !state.isSubmitting,
-                    shape = PillChipShape,
-                    colors = editorialFilterChipColors(),
-                    label = { Text("Mặt trước & Mặt sau", modifier = Modifier.padding(vertical = 4.dp)) },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .testTag(TryOnTestTags.MODE_DUAL_VIEW),
-                )
+                if (!state.isFostaProvider) {
+                    TryOnChoiceChip(
+                        label = "Trước và sau",
+                        selected = state.selectedViewMode == TryOnViewMode.FRONT_AND_BACK,
+                        onClick = { onSelectViewMode(TryOnViewMode.FRONT_AND_BACK) },
+                        enabled = state.canSelectDualView && !state.isJobActive && !state.isSubmitting,
+                        modifier = Modifier.testTag(TryOnTestTags.MODE_DUAL_VIEW),
+                    )
+                }
             }
         }
 
@@ -1479,30 +1192,30 @@ private fun TryOnConfigurationPanel(
             val selectedSet = state.selectedItemIds.toSet()
             val missingBackTargets = buildList {
                 if (!state.hasPersonBack) {
-                    add("Ảnh người dùng (bấm 'Chọn Sau' ở mục Ảnh người dùng)")
+                    add("Ảnh người dùng (mặt sau)")
                 }
                 state.supportedOutfitItems
                     .filter { it.itemId in selectedSet && state.garmentImages[it.itemId]?.back == null }
                     .forEach { item ->
-                        add("${categoryLabelVi(item.category)}: ${item.label} (bấm 'Chọn Sau' trên thẻ trang phục)")
+                        add("${categoryLabelVi(item.category)}: ${item.label} (mặt sau)")
                     }
             }
+            val cleanReason = sanitizeUserFacingText(reason)
             val hintText = if (missingBackTargets.isNotEmpty()) {
-                "Lưu ý mặt sau: $reason Cần chọn thêm cho: ${missingBackTargets.joinToString("; ")}. Bạn vẫn có thể thử riêng mặt trước."
+                "$cleanReason Cần chọn thêm cho: ${missingBackTargets.joinToString("; ")}. Bạn vẫn có thể thử riêng mặt trước."
             } else {
-                "Lưu ý mặt sau: $reason Bạn vẫn có thể thử riêng mặt trước."
+                "$cleanReason Bạn vẫn có thể thử riêng mặt trước."
             }
-            Text(
+            TryOnInfoNotice(
                 text = hintText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 }
 
 /**
- * Priority 6 & 7: Xác nhận quyền xử lý ảnh + Nút tạo ảnh.
+ * Priority 6 & 7: Đồng ý xử lý ảnh + Nút tạo ảnh thử đồ.
  */
 @Composable
 private fun PrivacyAndConsentSection(
@@ -1513,26 +1226,69 @@ private fun PrivacyAndConsentSection(
 ) {
     val viewCount = state.requestedViews.size
     val garmentPhotoCount = state.selectedItemIds.size * viewCount
-
-    TryOnEditorialPanel(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+    val submitHint = remember(
+        state.canSubmitTryOn,
+        state.isSubmitting,
+        state.isJobActive,
+        state.isCapabilityAvailable,
+        state.selectedItemIds,
+        state.hasPersonFront,
+        state.hasAllSelectedGarmentFronts,
+        state.requestedViews,
+        state.selectedViewMode,
+        state.canSelectBackView,
+        state.canSelectDualView,
+        state.backViewUnavailableReason,
+        state.dualViewUnavailableReason,
+        state.consentConfirmed,
     ) {
-        Text(
-            text = "XÁC NHẬN QUYỀN XỬ LÝ ẢNH",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
+        if (state.canSubmitTryOn || state.isSubmitting || state.isJobActive || !state.isCapabilityAvailable) {
+            null
+        } else {
+            when {
+                state.selectedItemIds.isEmpty() ->
+                    "Chọn ít nhất một món trang phục ở trên để tiếp tục."
+                ImageView.FRONT in state.requestedViews && !state.hasPersonFront ->
+                    "Chọn ảnh người dùng mặt trước để bắt đầu thử đồ."
+                ImageView.FRONT in state.requestedViews && !state.hasAllSelectedGarmentFronts ->
+                    "Chọn đủ ảnh mặt trước cho trang phục đang thử."
+                (ImageView.BACK in state.requestedViews && !state.canSelectBackView) ||
+                    (state.selectedViewMode == TryOnViewMode.FRONT_AND_BACK && !state.canSelectDualView) ->
+                    sanitizeUserFacingText(
+                        state.backViewUnavailableReason
+                            ?: state.dualViewUnavailableReason
+                            ?: "Bổ sung đủ ảnh cho góc nhìn đã chọn.",
+                    )
+                !state.consentConfirmed ->
+                    "Đánh dấu đồng ý gửi ảnh ở trên để mở nút tạo ảnh."
+                else -> null
+            }
+        }
+    }
+
+    TryOnPanel(modifier = modifier.fillMaxWidth()) {
+        TryOnSectionHeading(
+            title = "Đồng ý xử lý ảnh",
+            subtitle = "Chỉ gửi $viewCount ảnh toàn thân và $garmentPhotoCount ảnh trang phục đã chọn cho riêng lượt thử này.",
         )
-        Text(
-            text = "Chỉ gửi $viewCount ảnh toàn thân và $garmentPhotoCount ảnh trang phục đã chọn cho lượt thử này. ${TryOnPrivacyDisclosure.retentionNoticeForProvider(state.capability?.providerId)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = NoticeCornerShape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Text(
+                text = TryOnPrivacyDisclosure.retentionNoticeForProvider(state.capability?.providerId),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp),
+            )
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 52.dp)
+                .heightIn(min = 48.dp)
                 .clip(NoticeCornerShape)
                 .toggleable(
                     value = state.consentConfirmed,
@@ -1540,7 +1296,7 @@ private fun PrivacyAndConsentSection(
                     role = Role.Checkbox,
                     onValueChange = onConsentChanged,
                 )
-                .padding(vertical = Spacing.xs)
+                .padding(vertical = 4.dp)
                 .testTag(TryOnTestTags.CONSENT_CHECKBOX_ROW),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1561,22 +1317,30 @@ private fun PrivacyAndConsentSection(
             )
         }
 
-        Button(
+        val submitLabel = if (state.isSubmitting || state.isJobActive) {
+            "Đang tạo ảnh thử đồ…"
+        } else {
+            when (state.selectedViewMode) {
+                TryOnViewMode.FRONT_AND_BACK -> "Tạo ảnh thử đồ · Trước & sau"
+                TryOnViewMode.BACK_ONLY -> "Tạo ảnh thử đồ · Mặt sau"
+                TryOnViewMode.FRONT_ONLY -> "Tạo ảnh thử đồ"
+            }
+        }
+        TryOnPrimaryAction(
+            text = submitLabel,
             onClick = onSubmit,
             enabled = state.canSubmitTryOn,
-            shape = ActionButtonCornerShape,
+            busy = state.isSubmitting || state.isJobActive,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 54.dp)
                 .testTag(TryOnTestTags.SUBMIT_BUTTON),
-        ) {
-            Text(
-                text = when (state.selectedViewMode) {
-                    TryOnViewMode.FRONT_AND_BACK -> "Tạo ảnh thử đồ (Trước & Sau)"
-                    TryOnViewMode.BACK_ONLY -> "Tạo ảnh thử đồ (Mặt sau)"
-                    TryOnViewMode.FRONT_ONLY -> "Tạo ảnh thử đồ (Mặt trước)"
-                },
-                style = MaterialTheme.typography.labelLarge,
+        )
+
+        if (submitHint != null) {
+            TryOnInfoNotice(
+                text = submitHint,
+                tone = TryOnNoticeTone.NEUTRAL,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -1587,38 +1351,47 @@ private fun IdleLookbookStagePlaceholder(
     state: TryOnUiState,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    TryOnPanel(
         modifier = modifier
-            .widthIn(max = 380.dp)
-            .fillMaxWidth()
-            .aspectRatio(3f / 4f)
-            .clip(PhotoFrameCornerShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PhotoFrameCornerShape)
-            .padding(Spacing.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterVertically),
+            .widthIn(max = 400.dp)
+            .fillMaxWidth(),
     ) {
-        Text(
-            text = "KHUNG KẾT QUẢ 3:4",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-        Text(
-            text = "Sẵn sàng thử đồ 2D",
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = if (state.consentConfirmed) {
-                "Nhấn \"Tạo ảnh thử đồ\" ở cột bên trái để bắt đầu."
-            } else {
-                "Chọn trang phục và xác nhận quyền xử lý ảnh ở cột bên trái trước khi tạo ảnh."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .clip(PhotoFrameCornerShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(Spacing.lg),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    text = "Khung xem kết quả",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Text(
+                    text = "Sẵn sàng thử đồ 2D",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = if (state.consentConfirmed) {
+                        "Nhấn \"Tạo ảnh thử đồ\" ở cột bên trái để bắt đầu."
+                    } else {
+                        "Chọn trang phục và đánh dấu đồng ý xử lý ảnh ở cột bên trái trước khi tạo ảnh."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }
 
@@ -1629,69 +1402,44 @@ private fun ProcessingStageSection(
     modifier: Modifier = Modifier,
 ) {
     val stageTitle = when (result.status) {
-        TryOnJobStatus.QUEUED -> "Đang chuẩn bị ảnh..."
-        else -> "Đang tạo ảnh thử đồ 2D..."
+        TryOnJobStatus.QUEUED -> "Đang chuẩn bị ảnh…"
+        else -> "Đang tạo ảnh thử đồ…"
     }
 
-    TryOnEditorialPanel(
-        modifier = modifier.widthIn(max = 420.dp),
+    TryOnPanel(
+        modifier = modifier
+            .widthIn(max = 440.dp)
+            .fillMaxWidth(),
     ) {
-        Text(
-            text = "TIẾN TRÌNH XỬ LÝ",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
+        TryOnSectionHeading(
+            title = stageTitle,
+            subtitle = "Có thể mất 1–2 phút. Bạn có thể để màn hình mở trong lúc chờ.",
         )
-        Text(
-            text = stageTitle,
-            style = MaterialTheme.typography.titleLarge,
-        )
+
         LinearProgressIndicator(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .clip(RoundedCornerShape(50)),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            result.views.forEach { (view, vr) ->
-                val label = if (view == ImageView.FRONT) "Góc nhìn mặt trước" else "Góc nhìn mặt sau"
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(label, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = viewStateLabelVi(vr.state),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-            }
-        }
-
-        Text(
-            text = "Quá trình thường mất 8–20 giây. Bạn có thể hủy nếu không muốn tiếp tục chờ.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
         OutlinedButton(
             onClick = onCancelJob,
-            shape = ActionButtonCornerShape,
+            shape = RoundedCornerShape(50),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .testTag(TryOnTestTags.CANCEL_BUTTON),
         ) {
-            Text("Hủy yêu cầu thử đồ")
+            Text("Hủy lượt thử")
         }
     }
 }
 
 /**
- * Priority 8: Kết quả Virtual Try-On (Large 3:4 ContentScale.Fit portrait + Compare Original + Retry + Delete).
+ * Priority 8: Kết quả thử đồ 2D (Khung 3:4 ContentScale.Fit không viền + So sánh ảnh gốc + Thử lại/Xóa).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1715,14 +1463,15 @@ private fun ResultShowcaseSection(
         activeViewResult.qualityReview != QualityReviewState.REJECTED &&
         state.personProfile?.bodyImages?.refFor(activeTab) != null
 
-    TryOnEditorialPanel(
+    TryOnPanel(
         modifier = modifier
             .widthIn(max = 440.dp)
+            .fillMaxWidth()
             .testTag(TryOnTestTags.RESULT_SECTION),
     ) {
         ResultStatusHeaderBadge(result = result)
 
-        // Front / Back view tabs + Compare Original toggle
+        // Tab Mặt trước / Mặt sau + So sánh ảnh gốc theo chip Track A
         if (result.views.size > 1 || canCompareOriginal) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -1731,46 +1480,27 @@ private fun ResultShowcaseSection(
             ) {
                 if (result.views.containsKey(ImageView.FRONT) && result.views.size > 1) {
                     val frontVr = result.views[ImageView.FRONT]
-                    FilterChip(
+                    TryOnChoiceChip(
+                        label = "Mặt trước · ${shortViewBadgeVi(frontVr)}",
                         selected = activeTab == ImageView.FRONT,
                         onClick = { onSelectResultTab(ImageView.FRONT) },
-                        shape = PillChipShape,
-                        colors = editorialFilterChipColors(),
-                        label = {
-                            Text(
-                                text = "Mặt trước (${shortViewBadgeVi(frontVr)})",
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag(TryOnTestTags.TAB_FRONT),
+                        modifier = Modifier.testTag(TryOnTestTags.TAB_FRONT),
                     )
                 }
                 if (result.views.containsKey(ImageView.BACK) && result.views.size > 1) {
                     val backVr = result.views[ImageView.BACK]
-                    FilterChip(
+                    TryOnChoiceChip(
+                        label = "Mặt sau · ${shortViewBadgeVi(backVr)}",
                         selected = activeTab == ImageView.BACK,
                         onClick = { onSelectResultTab(ImageView.BACK) },
-                        shape = PillChipShape,
-                        colors = editorialFilterChipColors(),
-                        label = {
-                            Text(
-                                text = "Mặt sau (${shortViewBadgeVi(backVr)})",
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag(TryOnTestTags.TAB_BACK),
+                        modifier = Modifier.testTag(TryOnTestTags.TAB_BACK),
                     )
                 }
                 if (canCompareOriginal) {
-                    FilterChip(
+                    TryOnChoiceChip(
+                        label = if (state.compareWithOriginal) "Đang xem ảnh gốc" else "So sánh ảnh gốc",
                         selected = state.compareWithOriginal,
                         onClick = { onToggleCompareOriginal(!state.compareWithOriginal) },
-                        shape = PillChipShape,
-                        colors = editorialFilterChipColors(),
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.SwapHoriz,
@@ -1778,21 +1508,13 @@ private fun ResultShowcaseSection(
                                 modifier = Modifier.size(18.dp),
                             )
                         },
-                        label = {
-                            Text(
-                                text = if (state.compareWithOriginal) "Đang xem ảnh gốc" else "So sánh ảnh gốc",
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag(TryOnTestTags.COMPARE_ORIGINAL_TOGGLE),
+                        modifier = Modifier.testTag(TryOnTestTags.COMPARE_ORIGINAL_TOGGLE),
                     )
                 }
             }
         }
 
-        // Large 3:4 Editorial Portrait Frame (ContentScale.Fit so head & feet are never cropped)
+        // Khung ảnh kết quả 3:4 lớn, bo 20.dp, không viền, ContentScale.Fit để giữ trọn đầu và chân
         Box(
             modifier = Modifier
                 .widthIn(max = 380.dp)
@@ -1800,8 +1522,7 @@ private fun ResultShowcaseSection(
                 .align(Alignment.CenterHorizontally)
                 .aspectRatio(3f / 4f)
                 .clip(PhotoFrameCornerShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PhotoFrameCornerShape),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             RenderResultCanvasContent(
@@ -1815,7 +1536,7 @@ private fun ResultShowcaseSection(
         if (result.views.size > 1 && state.capability?.supportsNativePairedViews == false) {
             Text(
                 text = "Lưu ý: Mặt trước và mặt sau được tạo độc lập.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -1828,52 +1549,36 @@ private fun ResultShowcaseSection(
             if (excludedNames.isNotEmpty()) {
                 Text(
                     text = "Giữ nguyên từ ảnh gốc: $excludedNames.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
 
-        // Mandatory Product Honesty Disclaimer
-        Surface(
+        // Tuyên bố giới hạn tính năng (tonal gọn)
+        TryOnInfoNotice(
+            text = TryOnPrivacyDisclosure.PRODUCT_LIMITATION_DISCLAIMER,
+            tone = TryOnNoticeTone.NEUTRAL,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(TryOnTestTags.DISCLAIMER_TEXT),
-            shape = NoticeCornerShape,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-        ) {
-            Text(
-                text = TryOnPrivacyDisclosure.PRODUCT_LIMITATION_DISCLAIMER,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(12.dp),
-            )
-        }
+        )
 
-        // Secondary & Recovery Actions
+        // Hành động tiếp theo
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(
+            TryOnPrimaryAction(
+                text = "Tạo lượt thử mới",
                 onClick = onPrepareFreshAttempt,
-                shape = ActionButtonCornerShape,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(Spacing.sm))
-                Text("Thử lại / Tạo lượt mới")
-            }
+                icon = Icons.Outlined.Refresh,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             OutlinedButton(
                 onClick = onDeleteResult,
-                shape = ActionButtonCornerShape,
+                shape = RoundedCornerShape(50),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
@@ -1885,7 +1590,7 @@ private fun ResultShowcaseSection(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(Spacing.sm))
-                Text("Xóa kết quả & ảnh tạm")
+                Text("Xóa kết quả này")
             }
 
             TextButton(
@@ -1902,88 +1607,77 @@ private fun ResultShowcaseSection(
 
 @Composable
 private fun ResultStatusHeaderBadge(result: TryOnResult) {
-    val (title, subtitle, accent, tag) = when (result.status) {
+    when (result.status) {
         TryOnJobStatus.SUCCEEDED -> {
-            val label = when {
-                result.views.size > 1 -> "KẾT QUẢ THỬ ĐỒ (2 GÓC NHÌN)"
-                result.views.keys == setOf(ImageView.BACK) -> "KẾT QUẢ THỬ ĐỒ (MẶT SAU)"
-                else -> "KẾT QUẢ THỬ ĐỒ (MẶT TRƯỚC)"
+            val subtitle = when {
+                result.views.size > 1 -> "Đã tạo đủ 2 góc nhìn. Chạm \"So sánh ảnh gốc\" để đối chiếu."
+                result.views.keys == setOf(ImageView.BACK) -> "Kết quả mặt sau. Chạm \"So sánh ảnh gốc\" để đối chiếu."
+                else -> "Chạm \"So sánh ảnh gốc\" để đối chiếu trước và sau khi thay đồ."
             }
-            Quad(
-                label,
-                "Nhấn \"So sánh ảnh gốc\" để đối chiếu trước và sau khi thay đồ.",
-                MaterialTheme.colorScheme.tertiary,
-                null,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.tertiary,
+                )
+                TryOnSectionHeading(
+                    title = "Kết quả thử đồ",
+                    subtitle = subtitle,
+                )
+            }
+        }
+
+        TryOnJobStatus.PARTIAL -> {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                TryOnSectionHeading(
+                    title = "Kết quả thử đồ",
+                    subtitle = "Hoàn tất 1/${result.views.size} góc nhìn.",
+                )
+                TryOnInfoNotice(
+                    text = "Một góc nhìn không tạo được. Ứng dụng giữ nguyên thông báo lỗi, không tự chèn ảnh thay thế.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TryOnTestTags.PARTIAL_BADGE),
+                )
+            }
+        }
+
+        TryOnJobStatus.TIMED_OUT -> {
+            TryOnErrorNotice(
+                text = "Yêu cầu quá thời gian chờ xử lý. Bạn có thể tạo lại lượt mới khi sẵn sàng.",
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
-        TryOnJobStatus.PARTIAL -> Quad(
-            "Hoàn tất một phần (1/${result.views.size} góc nhìn)",
-            "Một góc nhìn không thể tạo thành công. Ứng dụng giữ nguyên trạng thái lỗi của góc nhìn đó, không tự chèn ảnh giả.",
-            MaterialTheme.colorScheme.secondary,
-            TryOnTestTags.PARTIAL_BADGE,
-        )
-
-        TryOnJobStatus.TIMED_OUT -> Quad(
-            "Quá thời gian chờ xử lý",
-            "Yêu cầu vượt quá thời hạn xử lý. Bạn có thể thử lại khi sẵn sàng.",
-            MaterialTheme.colorScheme.error,
-            null,
-        )
-
-        TryOnJobStatus.UNKNOWN_SUBMISSION -> Quad(
-            "Chưa xác nhận được trạng thái gửi",
-            "Kết nối bị ngắt trước khi máy chủ trả mã tiến trình. Ứng dụng không tự gửi lại.",
-            MaterialTheme.colorScheme.error,
-            null,
-        )
-
-        TryOnJobStatus.CANCELLED -> Quad(
-            "Đã hủy lượt thử đồ",
-            "Tiến trình đã dừng theo yêu cầu của bạn.",
-            MaterialTheme.colorScheme.onSurfaceVariant,
-            null,
-        )
-
-        else -> Quad(
-            "Không thể hoàn tất mô phỏng",
-            result.views.values.firstNotNullOfOrNull { it.error?.message }
-                ?: "Đã xảy ra lỗi khi xử lý bộ ảnh này.",
-            MaterialTheme.colorScheme.error,
-            null,
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .let { mod -> if (tag != null) mod.testTag(tag) else mod },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Icon(
-                imageVector = if (result.status == TryOnJobStatus.SUCCEEDED) {
-                    Icons.Outlined.CheckCircle
-                } else {
-                    Icons.Outlined.Info
-                },
-                contentDescription = null,
-                tint = accent,
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = accent,
+        TryOnJobStatus.UNKNOWN_SUBMISSION -> {
+            TryOnErrorNotice(
+                text = "Kết nối bị ngắt trước khi máy chủ xác nhận. Ứng dụng không tự gửi lại để tránh trùng lượt.",
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+
+        TryOnJobStatus.CANCELLED -> {
+            TryOnInfoNotice(
+                text = "Đã hủy lượt thử đồ theo yêu cầu của bạn.",
+                tone = TryOnNoticeTone.NEUTRAL,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        else -> {
+            val msg = result.views.values.firstNotNullOfOrNull { it.error?.message }
+                ?.let(::sanitizeUserFacingText)
+                ?.takeIf { it.isNotBlank() }
+                ?: "Không thể tạo ảnh cho bộ phối này. Vui lòng thử lại."
+            TryOnErrorNotice(
+                text = msg,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -1998,15 +1692,15 @@ private fun RenderResultCanvasContent(
         viewResult == null -> {
             CanvasMessageState(
                 title = "Chưa có dữ liệu cho góc nhìn này",
-                body = "Góc nhìn chưa được yêu cầu trong lượt thử đồ.",
+                body = "Góc nhìn này chưa được yêu cầu trong lượt thử đồ.",
             )
         }
 
         viewResult.state == ViewProcessState.SUCCEEDED &&
             viewResult.qualityReview == QualityReviewState.REJECTED -> {
             CanvasMessageState(
-                title = "Đã ẩn ảnh không đạt chất lượng",
-                body = "Ảnh mô phỏng của góc nhìn này có sai lệch hình thể hoặc trang phục nghiêm trọng nên đã bị chặn hiển thị.",
+                title = "Đã ẩn ảnh chưa đạt chất lượng",
+                body = "Ảnh tạo ra có sai lệch dáng hoặc trang phục nên đã được ẩn đi.",
                 isError = true,
             )
         }
@@ -2019,14 +1713,9 @@ private fun RenderResultCanvasContent(
             }
             val viewTitle = if (activeView == ImageView.FRONT) "Mặt trước" else "Mặt sau"
             val modeSuffix = if (!state.compareWithOriginal && result.presentationMode == TryOnPresentationMode.STUDIO_WHITE) {
-                " • Studio White"
+                " · Nền trắng studio"
             } else {
                 ""
-            }
-            val liveLabel = if (result.providerId == "fosta" || state.isFostaProvider) {
-                "AI LIVE — FOSTA"
-            } else {
-                "AI LIVE (OpenAI)"
             }
             TryOnMediaPreviewSurface(
                 mediaRef = targetRef,
@@ -2037,7 +1726,6 @@ private fun RenderResultCanvasContent(
                 },
                 isFakeOutput = !state.compareWithOriginal && result.source == TryOnSource.FAKE,
                 isLiveAiOutput = !state.compareWithOriginal && result.source == TryOnSource.AI_LIVE,
-                liveProviderBadgeLabel = liveLabel,
                 showBottomCaptionOnDiskImage = true,
             )
         }
@@ -2045,19 +1733,19 @@ private fun RenderResultCanvasContent(
         viewResult.state == ViewProcessState.EXPIRED -> {
             CanvasMessageState(
                 title = "Ảnh kết quả tạm thời đã hết hạn",
-                body = "Ảnh này không còn lưu trên máy chủ. Hãy tạo lại lượt thử mới nếu cần.",
+                body = "Ảnh không còn lưu trên máy chủ. Hãy tạo lại lượt thử mới nếu cần.",
             )
         }
 
         else -> {
             CanvasMessageState(
                 title = if (activeView == ImageView.BACK) {
-                    "Góc nhìn mặt sau không thành công"
+                    "Góc nhìn mặt sau chưa thành công"
                 } else {
-                    "Góc nhìn mặt trước không thành công"
+                    "Góc nhìn mặt trước chưa thành công"
                 },
-                body = viewResult.error?.message
-                    ?: "Không thể tạo ảnh hợp lệ cho góc nhìn này. Không hiển thị ảnh thay thế giả.",
+                body = viewResult.error?.message?.let(::sanitizeUserFacingText)
+                    ?: "Không thể tạo ảnh hợp lệ cho góc nhìn này.",
                 isError = true,
             )
         }
@@ -2086,6 +1774,7 @@ private fun CanvasMessageState(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Text(
@@ -2099,7 +1788,7 @@ private fun CanvasMessageState(
 
 /**
  * Renders private file-backed media via Coil `AsyncImage`, or renders a non-deceptive
- * editorial vector lookbook diagram when `localRelativePath` starts with `seed://` (FAKE/DEV fixtures).
+ * editorial vector lookbook diagram when `localRelativePath` starts with `seed://`.
  */
 @Composable
 private fun TryOnMediaPreviewSurface(
@@ -2107,7 +1796,6 @@ private fun TryOnMediaPreviewSurface(
     caption: String,
     isFakeOutput: Boolean,
     isLiveAiOutput: Boolean = false,
-    liveProviderBadgeLabel: String = "AI LIVE (OpenAI)",
     showBottomCaptionOnDiskImage: Boolean = false,
     compactThumbnail: Boolean = false,
 ) {
@@ -2155,20 +1843,21 @@ private fun TryOnMediaPreviewSurface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.90f))
                         .padding(Spacing.sm),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = caption,
                         style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                     )
                     if (isFakeOutput) {
                         Text(
-                            text = "FAKE • CHƯA QUA MÔ HÌNH AI",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
+                            text = "Ảnh giả lập · chưa qua AI",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -2195,38 +1884,39 @@ private fun TryOnMediaPreviewSurface(
                 model = imageRequest,
                 contentDescription = caption,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
             )
             if (!compactThumbnail) {
                 if (isFakeOutput) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(Spacing.sm),
-                        shape = PillChipShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                            .padding(12.dp),
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
                     ) {
                         Text(
-                            text = "FAKE • OFFLINE MOCK",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            text = "Ảnh giả lập",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         )
                     }
                 } else if (isLiveAiOutput) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(Spacing.sm),
-                        shape = PillChipShape,
-                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.94f),
+                            .padding(12.dp),
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
                     ) {
                         Text(
-                            text = liveProviderBadgeLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onTertiary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            text = "Ảnh AI thực tế",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         )
                     }
                 }
@@ -2241,7 +1931,8 @@ private fun TryOnMediaPreviewSurface(
                     ) {
                         Text(
                             text = caption,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -2258,43 +1949,23 @@ private fun ErrorBannerBlock(
     onSelectDifferentOutfit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    TryOnErrorNotice(
+        text = sanitizeUserFacingText(message),
         modifier = modifier.fillMaxWidth(),
-        shape = NoticeCornerShape,
-        color = MaterialTheme.colorScheme.error.copy(alpha = 0.10f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ErrorOutline,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            if (isStale) {
+        action = if (isStale) {
+            {
                 OutlinedButton(
                     onClick = onSelectDifferentOutfit,
-                    shape = ActionButtonCornerShape,
+                    shape = RoundedCornerShape(50),
                     modifier = Modifier.heightIn(min = 48.dp),
                 ) {
-                    Text("Quay lại chọn lại trang phục mới")
+                    Text("Chọn lại trang phục")
                 }
             }
-        }
-    }
+        } else {
+            null
+        },
+    )
 }
 
 @Composable
@@ -2302,55 +1973,42 @@ private fun StatusNoticeBlock(
     notice: String,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    TryOnInfoNotice(
+        text = sanitizeUserFacingText(notice),
+        tone = TryOnNoticeTone.NEUTRAL,
         modifier = modifier.fillMaxWidth(),
-        shape = NoticeCornerShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Text(
-            text = notice,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(12.dp),
-        )
-    }
+    )
 }
 
-@Composable
-private fun editorialFilterChipColors() = FilterChipDefaults.filterChipColors(
-    containerColor = editorialPanelContainerColor(),
-    labelColor = MaterialTheme.colorScheme.onSurface,
-    iconColor = MaterialTheme.colorScheme.onSurface,
-    selectedContainerColor = MaterialTheme.colorScheme.primary,
-    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-)
+private val TechnicalPrefixRegex = Regex("^[A-Z][A-Z0-9_]{2,}:\\s*")
 
-private data class Quad<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D,
-)
+/** Removes internal enum names and error codes before showing server/VM reasons to users. */
+private fun sanitizeUserFacingText(raw: String): String = raw
+    .lineSequence()
+    .map { line ->
+        line.replace(TechnicalPrefixRegex, "")
+            .replace(" (FRONT_ONLY)", "")
+            .replace(" (BACK_ONLY)", "")
+            .replace(" (ORIGINAL_PHOTO)", "")
+            .replace(" (STUDIO_WHITE)", "")
+            .replace(" (TOP+BOTTOM)", "")
+            .replace("TRYON_LIVE_ENABLED đang là false", "chế độ trực tiếp đang tắt")
+            .replace("FOSTA_APPROVE_QUOTA=true", "xác nhận hạn mức")
+            .replace("FOSTA_API_KEY", "khóa kết nối dịch vụ")
+            .replace("'UNKNOWN'", "hiện tại")
+            .replace("'NO_GO'", "tạm khóa")
+            .trim()
+    }
+    .filter { it.isNotEmpty() }
+    .joinToString(" ")
 
 private fun categoryLabelVi(category: Category): String = when (category) {
     Category.TOP -> "Áo"
-    Category.BOTTOM -> "Quần/Chân váy"
+    Category.BOTTOM -> "Quần / chân váy"
     Category.DRESS -> "Đầm liền"
     Category.OUTERWEAR -> "Áo khoác"
     Category.SHOES -> "Giày"
     Category.ACCESSORY -> "Phụ kiện"
-}
-
-private fun viewStateLabelVi(state: ViewProcessState): String = when (state) {
-    ViewProcessState.NOT_REQUESTED -> "Không yêu cầu"
-    ViewProcessState.QUEUED -> "Đang chờ"
-    ViewProcessState.RUNNING -> "Đang xử lý"
-    ViewProcessState.SUCCEEDED -> "Hoàn tất"
-    ViewProcessState.FAILED -> "Thất bại"
-    ViewProcessState.EXPIRED -> "Hết hạn"
-    ViewProcessState.CANCELLED -> "Đã hủy"
 }
 
 private fun shortViewBadgeVi(vr: ViewResult?): String = when (vr?.state) {
