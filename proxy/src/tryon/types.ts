@@ -328,9 +328,17 @@ export interface UpstreamVtoProvider {
   readonly supportsMultiGarment: boolean;
   readonly maxGarmentsPerJob: number;
   readonly supportedCategories: ReadonlySet<Category>;
+  validateViewInput?(input: UpstreamViewSubmitInput): void;
   submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput>;
   pollView(upstreamPredictionId: string, requestId: string): Promise<UpstreamViewPollOutput>;
   cancelView(upstreamPredictionId: string): Promise<{ attempted: boolean; confirmed: boolean }>;
+}
+
+export interface FostaIncompleteDiagnostic {
+  status: string;
+  incompleteReason: string | null;
+  errorCode: string | null;
+  outputItemTypes: string[];
 }
 
 export interface SafeTryOnLogEntry {
@@ -339,6 +347,7 @@ export interface SafeTryOnLogEntry {
     | "tryon.submit.replayed"
     | "tryon.submit.rejected"
     | "tryon.submit.ambiguous"
+    | "tryon.upstream.incomplete"
     | "tryon.poll"
     | "tryon.cancel"
     | "tryon.delete";
@@ -350,6 +359,7 @@ export interface SafeTryOnLogEntry {
   mode?: "FAKE" | "OFFLINE_MOCK_OPENAI" | "OFFLINE_MOCK_FOSTA" | "AI_LIVE";
   status?: TryOnJobStatus;
   errorCode?: TryOnErrorCode;
+  incompleteDiagnostic?: FostaIncompleteDiagnostic;
   estimatedCostUsd?: number;
   inputTokens?: number;
   outputTokens?: number;

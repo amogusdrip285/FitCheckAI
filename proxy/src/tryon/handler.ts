@@ -4,6 +4,8 @@
 import {
   decodeStrictBase64,
   inspectImageBytes,
+  MAX_DECODED_PIXEL_COUNT,
+  MAX_IMAGE_DIMENSION_PX,
 } from "./image_pipeline";
 import {
   createFostaResponsesMock,
@@ -263,11 +265,29 @@ function validateWireImage(
     };
   }
   const binaryBytes = decodeStrictBase64(candidate.base64Data);
-  if (!binaryBytes || inspectImageBytes(binaryBytes) === null) {
+  const inspected = binaryBytes ? inspectImageBytes(binaryBytes) : null;
+  if (!binaryBytes || inspected === null) {
     return {
       ok: false,
       code: "INVALID_REQUEST",
       message: `Dữ liệu ảnh ${label} bị hỏng hoặc không khớp magic bytes của JPEG/PNG/WebP.`,
+    };
+  }
+  if (
+    inspected.effectiveWidth > MAX_IMAGE_DIMENSION_PX ||
+    inspected.effectiveHeight > MAX_IMAGE_DIMENSION_PX
+  ) {
+    return {
+      ok: false,
+      code: "INVALID_REQUEST",
+      message: `Kích thước ảnh ${label} (${inspected.effectiveWidth}x${inspected.effectiveHeight}px) vượt giới hạn tối đa (${MAX_IMAGE_DIMENSION_PX}px).`,
+    };
+  }
+  if (inspected.pixelCount > MAX_DECODED_PIXEL_COUNT) {
+    return {
+      ok: false,
+      code: "PAYLOAD_TOO_LARGE",
+      message: `Độ phân giải ảnh ${label} vượt trần bộ nhớ giải mã an toàn.`,
     };
   }
 
@@ -1005,13 +1025,13 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       );
     }
 
-    const outfitItemsById = new Map(
+    const outfitItemsByIdPreview = new Map(
       body.outfitSnapshot.items.map((item) => [item.itemId, item]),
     );
     let selectedTopCount = 0;
     let selectedBottomCount = 0;
     for (const itemId of selectedItemIds) {
-      const summary = outfitItemsById.get(itemId);
+      const summary = outfitItemsByIdPreview.get(itemId);
       if (!summary) {
         return makeTypedError(
           "INVALID_REQUEST",
@@ -1190,6 +1210,55 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
         "Tổng dung lượng giải mã của các ảnh vượt quá giới hạn 8 MiB.",
         rawReqId,
       );
+    }
+
+    const outfitItemsById = new Map(
+      body.outfitSnapshot.items.map((item) => [item.itemId, item]),
+    );
+
+    // Run provider-level local input & image checks BEFORE reserving job/budget/live quota
+    // so invalid inputs (e.g. dimension < minInputDimensionPx, MIME mismatch, byte cap)
+    // never consume `usedLiveRequests` or trigger any upstream call.
+    if (provider.validateViewInput) {
+      for (const view of requestedViews) {
+        const garmentsForView = selectedItemIds.map((itemId) => {
+          const itemSummary = outfitItemsById.get(itemId)!;
+          return {
+            itemId,
+            category: itemSummary.category as Category,
+            colors: itemSummary.colors,
+            image: validatedGarments[itemId]![view]!,
+          };
+        });
+        try {
+          provider.validateViewInput({
+            jobId: "preflight_local_validation",
+            requestId: rawReqId,
+            view,
+            presentationMode,
+            personImage: validatedPerson[view]!,
+            garments: garmentsForView,
+          });
+        } catch (err) {
+          const code =
+            err instanceof UpstreamDeterministicError ? err.code : "INVALID_REQUEST";
+          const retryable =
+            err instanceof UpstreamDeterministicError ? err.retryable : false;
+          const message =
+            err instanceof Error ? err.message : "Ảnh đầu vào không hợp lệ.";
+          log({
+            event: "tryon.submit.rejected",
+            service: "tryon-v2",
+            requestId: rawReqId,
+            providerId: provider.providerId,
+            modelId: resolved.modelId,
+            mode: resolved.executionMode,
+            errorCode: code,
+            latencyMs: now() - startedAt,
+          });
+          return makeTypedError(code, message, rawReqId, retryable);
+        }
+      }
     }
 
     // Compute canonical payload hash for session + inputGeneration + idempotencyKey
@@ -2025,10 +2094,21 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
     });
   }
 
-  function handlePreflight(env: TryOnEnvConfig): Response {
+  async function handlePreflight(env: TryOnEnvConfig): Promise<Response> {
     // Zero-cost, zero-network Section 15 Preflight check — NEVER exposes secret values!
     const selectedProvider = env.TRYON_PROVIDER?.trim().toLowerCase() || "openai";
     const liveEnabled = env.TRYON_LIVE_ENABLED === "true";
+
+    // Zero-unit read via existing store lock returns current usedLiveRequests without mutating the ledger.
+    const spendSnapshot = store.reserveLiveSpendAtomically
+      ? await store.reserveLiveSpendAtomically({
+          requestUnits: 0,
+          maxRequests: Number.MAX_SAFE_INTEGER,
+          estimatedUsd: 0,
+          maxEstimatedUsd: Number.MAX_SAFE_INTEGER,
+        })
+      : { allowed: true, usedRequests: 0, usedEstimatedUsd: 0 };
+    const usedLiveRequests = spendSnapshot.usedRequests;
 
     if (selectedProvider === "fosta") {
       const offlineMockEnabled = env.TRYON_OFFLINE_MOCK_FOSTA === "true";
@@ -2037,6 +2117,10 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       const modelId = env.FOSTA_MODEL?.trim() || DEFAULT_FOSTA_MODEL;
       const timeoutMs = Number(env.FOSTA_TIMEOUT_MS ?? String(DEFAULT_FOSTA_TIMEOUT_MS));
       const maxLiveRequests = Number(env.TRYON_LIVE_MAX_REQUESTS ?? "1");
+      const validMaxRequests =
+        Number.isInteger(maxLiveRequests) && maxLiveRequests >= 1 ? maxLiveRequests : 0;
+      const remainingLiveRequests = Math.max(0, validMaxRequests - usedLiveRequests);
+      const quotaExhausted = validMaxRequests > 0 ? usedLiveRequests >= validMaxRequests : true;
       const decision = env.VTO_FEASIBILITY_DECISION ?? "GO_DUAL";
 
       const blockers: string[] = [];
@@ -2070,12 +2154,19 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
         liveEnabled,
         offlineMockEnabled,
         readyForLivePocCall: blockers.length === 0,
+        usedLiveRequests,
+        maxRequests: maxLiveRequests,
+        remainingLiveRequests,
+        quotaExhausted,
         checks: {
           apiKeyConfigured,
           modelId,
           endpoint: env.FOSTA_ENDPOINT?.trim() || "https://codex.fosta.app/v1/responses",
           quotaApproved,
           maxLiveRequests,
+          usedLiveRequests,
+          remainingLiveRequests,
+          quotaExhausted,
           timeoutMs,
           feasibilityDecision: decision,
           durableStoreActive: store.isDurable,
@@ -2095,6 +2186,10 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       ? estimateOpenAiEditMaxUsd({ model: modelCheck.modelId, quality })
       : null;
     const maxLiveRequests = Number(env.TRYON_LIVE_MAX_REQUESTS ?? "1");
+    const validMaxRequests =
+      Number.isInteger(maxLiveRequests) && maxLiveRequests >= 1 ? maxLiveRequests : 0;
+    const remainingLiveRequests = Math.max(0, validMaxRequests - usedLiveRequests);
+    const quotaExhausted = validMaxRequests > 0 ? usedLiveRequests >= validMaxRequests : true;
     const maxEstimatedUsd = Number(env.TRYON_LIVE_MAX_ESTIMATED_USD ?? "0");
     const decision = env.VTO_FEASIBILITY_DECISION ?? "GO_FRONT_ONLY";
 
@@ -2137,6 +2232,10 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       liveEnabled,
       offlineMockEnabled,
       readyForLivePocCall: blockers.length === 0,
+      usedLiveRequests,
+      maxRequests: maxLiveRequests,
+      remainingLiveRequests,
+      quotaExhausted,
       checks: {
         apiKeyConfigured,
         modelId: modelCheck.ok ? modelCheck.modelId : (env.OPENAI_IMAGE_MODEL ?? null),
@@ -2145,6 +2244,9 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           "Một số tài khoản OpenAI yêu cầu hoàn tất API Organization Verification trong Settings -> Organization trước khi gọi các model GPT Image.",
         budgetConfirmed,
         maxLiveRequests,
+        usedLiveRequests,
+        remainingLiveRequests,
+        quotaExhausted,
         maxEstimatedUsd,
         estimatedMaxUsdPerFrontRequest: estUsd,
         feasibilityDecision: decision,

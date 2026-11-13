@@ -387,6 +387,54 @@ describe("Track C OpenAI Virtual Try-On Scaffold (Sections 3–15)", () => {
         ),
       ).toBeCloseTo(0.0677, 4);
     });
+
+    it("times out cleanly without retry when OpenAI mock returns headers then hangs while streaming body", async () => {
+      let networkCalls = 0;
+      const provider = new OpenAITryOnProvider({
+        apiKey: "sk-test-super-secret-body-hang",
+        model: "gpt-image-2",
+        timeoutMs: 250,
+        fetchImpl: async () => {
+          networkCalls += 1;
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(encoder.encode('{"data":[{"b64_json":"'));
+              // Keep stream open forever to simulate body hang after headers arrive
+            },
+          });
+          return new Response(stream, {
+            status: 200,
+            headers: { "content-type": "application/json", "x-request-id": "req_hang_openai" },
+          });
+        },
+      });
+
+      const startedAt = Date.now();
+      await expect(
+        provider.submitView({
+          jobId: "job_openai_body_hang",
+          requestId: "req_openai_body_hang",
+          view: "FRONT",
+          personImage: makePngWireImage("p_front", "FRONT"),
+          garments: [
+            {
+              itemId: "top_1",
+              category: "TOP",
+              image: makePngWireImage("g_front", "FRONT"),
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        name: "UpstreamAmbiguousTimeoutError",
+        retryable: false,
+      });
+      const elapsedMs = Date.now() - startedAt;
+
+      expect(elapsedMs).toBeLessThan(1_500);
+      expect(networkCalls).toBe(1);
+      expect(provider.submitCallCount).toBe(1);
+    });
   });
 
   describe("C & D. Router LIVE Gates, Cost Guard, Durable Ledger, Offline Mock E2E & Privacy", () => {

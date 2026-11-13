@@ -14,7 +14,11 @@ captures/
 google-services.json
 .env
 .env.*
+*.env
+tryon.env
 !.env.example
+!*.env.example
+!tryon.env.example
 .dev.vars
 
 # Eval AI — ảnh và nhãn thật không commit (PRE-004)

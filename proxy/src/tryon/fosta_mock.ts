@@ -178,7 +178,10 @@ export function createFostaResponsesMock(
           const b1 = decoded[decoded.byteLength - 7] ?? 65;
           const b2 = decoded[decoded.byteLength - 5] ?? 95;
           const b3 = decoded[decoded.byteLength - 3] ?? 135;
-          if (prompt.includes("BOTTOM garment") && !prompt.includes("TOP garment")) {
+          const isBottomOnly =
+            (prompt.includes("reference bottom") && !prompt.includes("reference top")) ||
+            (prompt.includes("BOTTOM garment") && !prompt.includes("TOP garment"));
+          if (isBottomOnly) {
             bottomColorSeed = [35 + (b1 % 120), 40 + (b2 % 120), 45 + (b3 % 120)];
           } else {
             topColorSeed = [42 + (b1 % 140), 48 + (b2 % 130), 56 + (b3 % 140)];
@@ -191,16 +194,18 @@ export function createFostaResponsesMock(
         }
       }
 
-      const detectedMode: TryOnPresentationMode | null = prompt.includes("MODE=STUDIO_WHITE")
-        ? "STUDIO_WHITE"
-        : prompt.includes("MODE=ORIGINAL_PHOTO")
-          ? "ORIGINAL_PHOTO"
-          : null;
-      const detectedView: ImageView | null = prompt.includes("VIEW=BACK")
-        ? "BACK"
-        : prompt.includes("VIEW=FRONT")
-          ? "FRONT"
-          : null;
+      const detectedMode: TryOnPresentationMode | null =
+        prompt.includes("white studio background") || prompt.includes("MODE=STUDIO_WHITE")
+          ? "STUDIO_WHITE"
+          : prompt.includes("original background") || prompt.includes("MODE=ORIGINAL_PHOTO")
+            ? "ORIGINAL_PHOTO"
+            : null;
+      const detectedView: ImageView | null =
+        prompt.includes("back-view") || prompt.includes("VIEW=BACK")
+          ? "BACK"
+          : prompt.includes("front-view") || prompt.includes("VIEW=FRONT")
+            ? "FRONT"
+            : null;
 
       controller.lastCapturedRequest = {
         url,
