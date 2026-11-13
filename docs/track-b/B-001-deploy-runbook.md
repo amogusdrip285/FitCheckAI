@@ -6,7 +6,11 @@
 
 ## Trạng thái deploy
 
-**13/11/2026: đã deploy** `https://fitcheck-proxy.long06hehe.workers.dev` (giai đoạn FOSTA, `gpt-6-luna`, cả hai service bật, deadline proxy 60s/65s).
+**13/11/2026 (bản 3, version `91d53b85`): deploy từ bản đã merge `garmentType` của A** — `/health` báo `recognitionGarmentTypeVersion: 1`; smoke 8/8 PASS; ảnh sơ mi flannel có `garmentTypeVersion` ⇒ `garmentType: SHIRT` + tag `áo sơ mi` (14,5s), không có ⇒ `áo sơ mi` (11,7s); tủ UUID 20 món 200, 5 bộ (13,7s).
+
+**13/11/2026 (bản 2, version `915bac2c`): deploy lại với `outfits-v2.2` + `recognition-v2.2`** — smoke 8/8 PASS; tủ UUID 6/20 món 200, 5 bộ (12,8s/16,0s); ảnh sơ mi flannel thật ⇒ `áo sơ mi`, CHECKED, RED/BLACK (11,3s).
+
+**13/11/2026: đã deploy lần đầu** `https://fitcheck-proxy.long06hehe.workers.dev` (giai đoạn FOSTA, `gpt-6-luna`, cả hai service bật, deadline proxy 60s/65s).
 - `proxy/scripts/smoke.mjs --live`: **8/8 PASS** (live outfits 9,9s).
 - Đo thêm trên bản deploy: outfits tủ 6 món/5 bộ 23,6–25,6s (2/2 OK); recognition FRONT 17,7s, cặp khớp 20,0s, cặp chéo 23,5s (cảnh báo khác món đúng).
 - Repo `gradle.properties` đã đặt `fitcheck.proxyUrl` = URL trên và `fitcheck.aiTimeoutMs=60000`; ViewModel nhận diện (A) dùng chung `AiTimeouts.requestMs`. Mỗi máy build chỉ cần thêm `fitcheck.accessCode=<mã demo>` vào `~/.gradle/gradle.properties` (mã gửi qua kênh riêng). Lưu ý: mã được nhúng vào APK debug — chỉ là bảo vệ mức demo (BACK-011).

@@ -1,4 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { RECOGNITION_PROMPT_VERSION, RECOGNITION_SYSTEM_PROMPT } from "../src/recognition/prompt";
+
+describe("prompt recognition-v2.2", () => {
+  it("tag đầu là kiểu món theo dấu hiệu nhìn thấy, sơ mi không bị gọi là áo thun", () => {
+    expect(RECOGNITION_PROMPT_VERSION).toBe("recognition-v2.2");
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('Tag ĐẦU TIÊN là kiểu món');
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('"áo sơ mi" (kể cả vải flannel/kẻ caro');
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('Không bao giờ gọi áo sơ mi là "áo thun"/"áo phông"');
+  });
+});
 import { sha256Hex, sniffImageType } from "../src/recognition/images";
 import type { RecognitionResultDto } from "../src/recognition/validate";
 import modelRecognition from "./fixtures/v2/model-recognition.json";

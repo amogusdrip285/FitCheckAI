@@ -108,6 +108,12 @@ Khi chưa có (1), (3), (4), (5): B-001 live, INT-002 vẫn **BLOCKED**; mock, f
 - `https://fitcheck-proxy.long06hehe.workers.dev`, `gpt-6-luna` qua FOSTA, deadline proxy 60s. Smoke 8/8 PASS.
 - Outfits tủ 6 món/5 bộ 23,6–25,6s; recognition 17,7–23,5s; mọi call 200 và đúng. Từ Workers không nhanh hơn từ laptop ⇒ xác nhận độ trễ do gateway.
 
+### Lỗi INT-002 trên máy thật và cách sửa (13/11/2026)
+
+- **Phối đồ luôn rơi về "Phối cơ bản" (502 `INVALID_AI_OUTPUT`)**: log Worker `rejected: {DUPLICATE_ITEM}`. Gọi thẳng model: với ID món là UUID, `gpt-6-luna` trả `"00000000-0000-…"` cho mọi món. Các eval trước dùng ID ngắn nên không lộ. Sửa ở `outfits-v2.2`: prompt dùng mã ngắn `A1…An`, proxy đổi ngược về UUID. Tái hiện trước/sau trên tủ 6 và 20 món UUID: 502 ⇒ **200, 5 bộ, 14–15s**.
+- **Nhận diện luôn "quá thời gian"**: client nhận diện (`core/ai` `ProxyRecognitionClient`) chỉ đặt `requestTimeoutMillis`, nên OkHttp giữ `readTimeout` mặc định **10s** (đã xác nhận trong bytecode Ktor 3.1.2) trong khi gateway trả lời sau 18–24s. Sửa: thêm `socketTimeoutMillis`; test hồi quy với server thật trả lời sau 11s (trước: `SocketTimeoutException` 10,5s; sau: PASS).
+- **Sơ mi flannel bị gắn "áo phông"**: tag kiểu món do model tự đặt. Sửa ở `recognition-v2.2`: tag đầu là kiểu món theo dấu hiệu nhìn thấy (cổ bẻ + hàng cúc ⇒ "áo sơ mi"). Ảnh thật từ máy: 2/2 lần ra `áo sơ mi`, `CHECKED`, `RED/BLACK`.
+
 ### Prompt
 
 - `outfits-v2.1` (13/11/2026): không ghi số/tên trường nội bộ ("độ trang trọng 3") trong giải thích — cả hai reviewer cùng trừ điểm lỗi này ở lượt `outfits-v2.0`. **Chưa eval lại trên v2.1.**
