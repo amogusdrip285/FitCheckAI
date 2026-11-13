@@ -10,6 +10,7 @@ export type Category =
   | "OUTERWEAR"
   | "SHOES"
   | "ACCESSORY"
+  | "HAT"
   | "UNKNOWN";
 
 export type FeasibilityDecision =
@@ -22,7 +23,7 @@ export type TryOnSource = "AI_LIVE" | "FAKE";
 
 export type TryOnPresentationMode = "ORIGINAL_PHOTO" | "STUDIO_WHITE";
 
-export type FostaGarmentKind = "TOP" | "BOTTOM";
+export type FostaGarmentKind = "TOP" | "BOTTOM" | "HAT" | "SHOES";
 
 export type ViewProcessState =
   | "NOT_REQUESTED"
@@ -109,6 +110,7 @@ export interface OutfitItemSummary {
   itemId: string;
   revision: number;
   category: Category;
+  slot?: FostaGarmentKind;
   colors?: string[];
 }
 
@@ -301,6 +303,7 @@ export interface UpstreamViewSubmitInput {
   garments: Array<{
     itemId: string;
     category: Category;
+    slot?: FostaGarmentKind;
     colors?: string[];
     image: WireImageInput;
   }>;

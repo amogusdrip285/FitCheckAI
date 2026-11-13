@@ -238,10 +238,10 @@ export function createOpenAiImageEditsMock(
         );
       }
 
-      if (imageEntries.length < 2) {
+      if (imageEntries.length < 2 || imageEntries.length > 5) {
         return openAiErrorJson(
           400,
-          "Virtual Try-On image edit requires at least 2 reference images in 'image[]' (person + garment).",
+          "Virtual Try-On image edit requires 2 to 5 reference images in 'image[]' (1 person + 1..4 garments).",
           "invalid_request_error",
           "invalid_image_count",
           "image[]",

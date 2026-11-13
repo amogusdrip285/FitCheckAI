@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createFostaResponsesMock } from "../src/tryon/fosta_mock";
 import {
   buildFostaTryOnPrompt,
+  CANONICAL_FOSTA_GARMENT_ORDER,
   FOSTA_EXPERIMENTAL_CAPABILITIES,
   FOSTA_VTO_PROMPT_VERSION,
+  MAX_FOSTA_PROMPT_LENGTH,
 } from "../src/tryon/fosta_prompt";
 import {
   buildFostaResponsesPayload,
@@ -133,82 +135,71 @@ function makeFostaSubmitRequest(
   return { ...base, ...overrides };
 }
 
-describe("FOSTA Luna Prompt Matrix — All 12 (Mode x View x Garment) Combinations", () => {
+describe("FOSTA Luna Prompt Matrix — All 60 (15 Subsets x 2 Modes x 2 Views) Combinations v2.2", () => {
   const modes: TryOnPresentationMode[] = ["ORIGINAL_PHOTO", "STUDIO_WHITE"];
   const views: ImageView[] = ["FRONT", "BACK"];
-  const combos: Array<{ label: string; kinds: FostaGarmentKind[] }> = [
-    { label: "TOP", kinds: ["TOP"] },
-    { label: "BOTTOM", kinds: ["BOTTOM"] },
-    { label: "TOP+BOTTOM", kinds: ["TOP", "BOTTOM"] },
-  ];
+  const allSubsets: FostaGarmentKind[][] = [];
+  for (let mask = 1; mask < 16; mask += 1) {
+    const subset = CANONICAL_FOSTA_GARMENT_ORDER.filter((_, idx) => (mask & (1 << idx)) !== 0);
+    allSubsets.push(subset);
+  }
 
-  for (const mode of modes) {
-    for (const view of views) {
-      for (const combo of combos) {
-        it(`builds concise tailored prompt for ${mode} + ${view} + ${combo.label} within length budget`, () => {
-          const prompt = buildFostaTryOnPrompt({
-            mode,
-            view,
-            garmentKinds: combo.kinds,
+  it("stays strictly <= 620 chars across all 60 (Mode x View x Subset) combinations with canonical Image numbering", () => {
+    expect(allSubsets).toHaveLength(15);
+    expect(FOSTA_VTO_PROMPT_VERSION).toBe("v2.2");
+
+    const nounByKind: Record<FostaGarmentKind, string> = {
+      TOP: "top",
+      BOTTOM: "bottom",
+      HAT: "hat",
+      SHOES: "shoes",
+    };
+
+    for (const mode of modes) {
+      for (const view of views) {
+        for (const kinds of allSubsets) {
+          const prompt = buildFostaTryOnPrompt({ mode, view, garmentKinds: kinds });
+
+          expect(prompt.length).toBeLessThanOrEqual(MAX_FOSTA_PROMPT_LENGTH);
+          expect(prompt.length).toBeLessThanOrEqual(620);
+          expect(prompt).toContain("Create one photorealistic");
+          expect(prompt).toContain(
+            view === "BACK" ? "back-view virtual try-on image" : "front-view virtual try-on image",
+          );
+          expect(prompt).toContain(
+            view === "BACK"
+              ? "Image 1 is the person from behind (back view)"
+              : "Image 1 is the person (front view)",
+          );
+
+          // Exact canonical Image 2..N numbering
+          kinds.forEach((kind, idx) => {
+            const imgNum = idx + 2;
+            const expectedRef =
+              idx === 0
+                ? `image 2 is the reference ${nounByKind[kind]}`
+                : `image ${imgNum} is the ${nounByKind[kind]}`;
+            expect(prompt).toContain(expectedRef);
           });
+          expect(prompt).not.toContain(`image ${kinds.length + 2}`);
 
-          expect(FOSTA_VTO_PROMPT_VERSION).toBe("v2.1");
-          expect(prompt).not.toContain("FITCHECK_VTO_PROMPT_VERSION");
-          if (combo.label === "TOP+BOTTOM") {
-            expect(prompt.length).toBeLessThanOrEqual(750);
-          } else {
-            expect(prompt.length).toBeLessThanOrEqual(600);
+          if (kinds.includes("HAT")) {
+            expect(prompt).toContain("hat naturally on the head");
           }
-
-          expect(prompt).toContain("Create exactly one photorealistic");
-          expect(prompt).toContain("shoes");
-          expect(prompt).toContain("accessories");
-
-          if (combo.label === "TOP") {
-            expect(prompt).toContain("image 2 is the reference top");
-            expect(prompt).toContain(
-              "wear only the reference top, keeping their existing bottom unchanged.",
-            );
-            expect(prompt).not.toContain("image 3");
-          } else if (combo.label === "BOTTOM") {
-            expect(prompt).toContain("image 2 is the reference bottom");
-            expect(prompt).toContain(
-              "wear only the reference bottom, keeping their existing top unchanged.",
-            );
-            expect(prompt).not.toContain("image 3");
-          } else {
-            expect(prompt).toContain("image 2 is the reference top");
-            expect(prompt).toContain("image 3 is the reference bottom");
-            expect(prompt).toContain(
-              "wear both the reference top and reference bottom with natural waist layering.",
-            );
+          if (kinds.includes("SHOES")) {
+            expect(prompt).toContain("replace only the shoes");
           }
-
-          if (view === "BACK") {
-            expect(prompt).toContain("back-view virtual try-on image");
-            expect(prompt).toContain("Image 1 is the person from behind (back view)");
-            expect(prompt).toContain(
-              "Keep the person facing away, preserving their identity, face when visible, hairstyle, skin tone, body proportions, pose",
-            );
-          } else {
-            expect(prompt).toContain("front-view virtual try-on image");
-            expect(prompt).toContain("Image 1 is the person (front view)");
-            expect(prompt).toContain(
-              "Preserve the person's face, hairstyle, skin tone, body proportions, pose",
-            );
-          }
-
           if (mode === "STUDIO_WHITE") {
             expect(prompt).toContain("clean white studio background with soft even lighting.");
             expect(prompt).not.toContain("original background");
           } else {
-            expect(prompt).toContain("lighting and original background.");
+            expect(prompt).toContain("lighting, and original background.");
             expect(prompt).not.toContain("white studio background");
           }
-        });
+        }
       }
     }
-  }
+  });
 });
 
 describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
@@ -325,7 +316,7 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
       "image 2 is the reference top",
     );
     expect(mock.lastCapturedRequest?.prompt).toContain(
-      "image 3 is the reference bottom",
+      "image 3 is the bottom",
     );
 
     // Duplicate TOP + TOP must be rejected before network call
@@ -341,7 +332,7 @@ describe("FOSTA Payload Assembly, Provider Safety & Error Handling", () => {
           { itemId: "top_b", category: "TOP", image: topImg },
         ],
       }),
-    ).rejects.toThrow(/tối đa 1 TOP và 1 BOTTOM/);
+    ).rejects.toThrow(/tối đa 1 món cho mỗi ô/);
     expect(mock.callCount).toBe(beforeCalls);
   });
 
@@ -1506,5 +1497,374 @@ describe("/v2/tryon Router — FOSTA Dual-Provider Isolation, Consent, Rear Phot
     expect(preflight.usedLiveRequests).toBe(1);
     expect(preflight.remainingLiveRequests).toBe(0);
     expect(preflight.quotaExhausted).toBe(true);
+  });
+});
+
+describe("FOSTA 4-Slot Multi-Item (TOP, BOTTOM, HAT, SHOES) End-to-End, Canonical Ordering & Pre-Quota Guards", () => {
+  it("reorders out-of-order [SHOES, HAT, TOP] submissions into canonical Image 2=top, Image 3=hat, Image 4=shoes order", async () => {
+    const mock = createFostaResponsesMock("success");
+    const provider = new FostaTryOnProvider({
+      apiKey: "mock-key",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      offlineMockMode: true,
+      fetchImpl: mock.fetchImpl,
+    });
+
+    const personImg = makePngWireImage("p_front", "FRONT");
+    const shoesImg = makePngWireImage("g_shoes", "FRONT", [190, 80, 40]);
+    const hatImg = makePngWireImage("g_hat", "FRONT", [40, 170, 90]);
+    const topImg = makePngWireImage("g_top", "FRONT", [40, 80, 200]);
+
+    const res = await provider.submitView({
+      jobId: "job_reorder_3",
+      requestId: "req_reorder_3",
+      view: "FRONT",
+      presentationMode: "ORIGINAL_PHOTO",
+      personImage: personImg,
+      garments: [
+        { itemId: "s1", category: "SHOES", slot: "SHOES", image: shoesImg },
+        { itemId: "h1", category: "ACCESSORY", slot: "HAT", image: hatImg },
+        { itemId: "t1", category: "TOP", slot: "TOP", image: topImg },
+      ],
+    });
+
+    expect(res.initialState).toBe("SUCCEEDED");
+    expect(mock.lastCapturedRequest?.imageCount).toBe(4);
+    expect(mock.lastCapturedRequest?.prompt).toContain("image 2 is the reference top");
+    expect(mock.lastCapturedRequest?.prompt).toContain("image 3 is the hat");
+    expect(mock.lastCapturedRequest?.prompt).toContain("image 4 is the shoes");
+  });
+
+  it("executes all 15 non-empty subsets of {TOP, BOTTOM, HAT, SHOES} through /v2/tryon/jobs FOSTA mock (including HAT-only, SHOES-only, 4-item DUAL)", async () => {
+    const router = createTryOnRouter();
+    const env: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "false",
+      TRYON_OFFLINE_MOCK_FOSTA: "true",
+      VTO_FEASIBILITY_DECISION: "GO_DUAL",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const allItems = [
+      { itemId: "item_top_1", category: "TOP" as const, slot: "TOP" as const, revision: 1, colors: ["NAVY"] },
+      { itemId: "item_bottom_1", category: "BOTTOM" as const, slot: "BOTTOM" as const, revision: 1, colors: ["BEIGE"] },
+      { itemId: "item_hat_1", category: "ACCESSORY" as const, slot: "HAT" as const, revision: 1, colors: ["BLACK"] },
+      { itemId: "item_shoes_1", category: "SHOES" as const, slot: "SHOES" as const, revision: 1, colors: ["WHITE"] },
+    ];
+
+    for (let mask = 1; mask < 16; mask += 1) {
+      const subsetItems = allItems.filter((_, idx) => (mask & (1 << idx)) !== 0);
+      const selectedItemIds = subsetItems.map((i) => i.itemId);
+      // Reverse selectedItemIds on odd masks to verify canonical reordering in handler
+      const requestItemIds = mask % 2 === 1 ? [...selectedItemIds].reverse() : selectedItemIds;
+      const views: ImageView[] = mask === 15 ? ["FRONT", "BACK"] : ["FRONT"];
+
+      const garmentImages: TryOnSubmitWireRequest["garmentImages"] = {};
+      const mediaIds = ["person_front_1"];
+      if (views.includes("BACK")) mediaIds.push("person_back_1");
+      for (const item of subsetItems) {
+        garmentImages[item.itemId] = {
+          front: makePngWireImage(`${item.itemId}_f_${mask}`, "FRONT", [40 + mask * 10, 70, 120]),
+          ...(views.includes("BACK")
+            ? { back: makePngWireImage(`${item.itemId}_b_${mask}`, "BACK", [50 + mask * 10, 80, 130]) }
+            : {}),
+        };
+        mediaIds.push(`${item.itemId}_f_${mask}`);
+        if (views.includes("BACK")) mediaIds.push(`${item.itemId}_b_${mask}`);
+      }
+
+      const submitReq = makeFostaSubmitRequest({
+        requestId: `req_subset_${mask}`,
+        idempotencyKey: `idem_subset_${mask}`,
+        requestedViews: views,
+        outfitSnapshot: {
+          outfitId: "outfit_4slots",
+          wardrobeSnapshotId: "ward_4slots",
+          items: allItems,
+        },
+        selectedItemIds: requestItemIds,
+        personImages: {
+          front: makePngWireImage("person_front_1", "FRONT", [190, 165, 140]),
+          ...(views.includes("BACK")
+            ? { back: makePngWireImage("person_back_1", "BACK", [185, 160, 135]) }
+            : {}),
+        },
+        garmentImages,
+        consentGrant: {
+          id: `consent_subset_${mask}`,
+          purpose: "TRYON",
+          providerId: "fosta",
+          providerConfigVersion: "v2-fosta-poc-1",
+          confirmedByUser: true,
+          issuedAtEpochMillis: 1_762_900_000_000,
+          allowedViews: views,
+          selectedMediaIds: mediaIds,
+          requestGeneration: 1,
+          revokedAtEpochMillis: null,
+        },
+      });
+
+      const submitRes = await router.handle(
+        new Request("https://fitcheck.local/v2/tryon/jobs", {
+          method: "POST",
+          body: JSON.stringify(submitReq),
+        }),
+        env,
+        { sessionId: `sess_subset_${mask}` },
+      );
+      expect(submitRes.status).toBe(202);
+      const submitJson = (await submitRes.json()) as TryOnJobSubmitResponse;
+      expect(submitJson.status).toBe("SUCCEEDED");
+
+      const pollRes = await router.handle(
+        new Request(`https://fitcheck.local/v2/tryon/jobs/${submitJson.jobId}`),
+        env,
+        { sessionId: `sess_subset_${mask}` },
+      );
+      const pollJson = (await pollRes.json()) as TryOnResultWire;
+      expect(pollJson.status).toBe("SUCCEEDED");
+      // Handler must store appliedItemIds in canonical TOP->BOTTOM->HAT->SHOES order
+      expect(pollJson.appliedItemIds).toEqual(selectedItemIds);
+    }
+  });
+
+  it("rejects empty set, missing HAT/SHOES back photo, cloned front/back hash, >4 items, duplicate slot, and unknown category BEFORE quota deduction", async () => {
+    const durableStore = makeMemoryBackedDurableStore();
+    const mockUpstream = createFostaResponsesMock("success");
+    const liveProvider = new FostaTryOnProvider({
+      apiKey: "secret-fosta-live-guard",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      fetchImpl: mockUpstream.fetchImpl,
+    });
+    const router = createTryOnRouter({ store: durableStore, provider: liveProvider });
+    const liveEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "true",
+      FOSTA_API_KEY: "secret-fosta-live-guard",
+      FOSTA_APPROVE_QUOTA: "true",
+      TRYON_LIVE_MAX_REQUESTS: "5",
+      VTO_FEASIBILITY_DECISION: "GO_DUAL",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const items = [
+      { itemId: "t1", category: "TOP" as const, slot: "TOP" as const, revision: 1 },
+      { itemId: "b1", category: "BOTTOM" as const, slot: "BOTTOM" as const, revision: 1 },
+      { itemId: "h1", category: "ACCESSORY" as const, slot: "HAT" as const, revision: 1 },
+      { itemId: "h2", category: "ACCESSORY" as const, slot: "HAT" as const, revision: 1 },
+      { itemId: "s1", category: "SHOES" as const, slot: "SHOES" as const, revision: 1 },
+      { itemId: "u1", category: "UNKNOWN" as const, revision: 1 },
+    ];
+
+    const send = async (suffix: string, overrides: Partial<TryOnSubmitWireRequest>) => {
+      const req = makeFostaSubmitRequest({
+        requestId: `req_guard_${suffix}`,
+        idempotencyKey: `idem_guard_${suffix}`,
+        outfitSnapshot: { outfitId: "o_guard", wardrobeSnapshotId: "w_guard", items },
+        ...overrides,
+      });
+      return router.handle(
+        new Request("https://fitcheck.local/v2/tryon/jobs", {
+          method: "POST",
+          body: JSON.stringify(req),
+        }),
+        liveEnv,
+        { sessionId: `sess_guard_${suffix}` },
+      );
+    };
+
+    // 1. Empty selectedItemIds
+    expect((await send("empty", { selectedItemIds: [] })).status).toBe(400);
+
+    // 2. Missing BACK on HAT when BACK is requested
+    const hatFront = makePngWireImage("hat_f", "FRONT");
+    const rMissingHatBack = await send("missing_hat_back", {
+      selectedItemIds: ["h1"],
+      requestedViews: ["BACK"],
+      personImages: { back: makePngWireImage("p_back", "BACK") },
+      garmentImages: { h1: { front: hatFront } },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["BACK"],
+        selectedMediaIds: ["p_back"],
+      },
+    });
+    expect(rMissingHatBack.status).toBe(400);
+
+    // 3. Cloned front/back hash on SHOES
+    const shoesFront = makePngWireImage("shoes_f", "FRONT");
+    const shoesClonedBack = { ...makePngWireImage("shoes_b", "BACK"), contentHash: shoesFront.contentHash };
+    const rClonedShoes = await send("cloned_shoes", {
+      selectedItemIds: ["s1"],
+      requestedViews: ["FRONT", "BACK"],
+      personImages: {
+        front: makePngWireImage("p_f", "FRONT"),
+        back: makePngWireImage("p_b", "BACK"),
+      },
+      garmentImages: { s1: { front: shoesFront, back: shoesClonedBack } },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["FRONT", "BACK"],
+        selectedMediaIds: ["p_f", "p_b", "shoes_f", "shoes_b"],
+      },
+    });
+    expect(rClonedShoes.status).toBe(400);
+
+    // 4. > 4 items
+    const rOver4 = await send("over_4", {
+      selectedItemIds: ["t1", "b1", "h1", "h2", "s1"],
+    });
+    expect(rOver4.status).toBe(400);
+
+    // 5. Duplicate HAT slot (h1 + h2)
+    const rDupHat = await send("dup_hat", {
+      selectedItemIds: ["h1", "h2"],
+    });
+    expect(rDupHat.status).toBe(400);
+
+    // 6. Unknown category u1
+    const rUnknown = await send("unknown_cat", {
+      selectedItemIds: ["u1"],
+    });
+    expect(rUnknown.status).toBe(400);
+
+    // Zero upstream calls and zero quota consumed!
+    expect(mockUpstream.callCount).toBe(0);
+    const preflightRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_guard_check" },
+    );
+    const preflight = (await preflightRes.json()) as { usedLiveRequests: number };
+    expect(preflight.usedLiveRequests).toBe(0);
+  });
+
+  it("enforces MAX_TOTAL_DECODED_BYTES (8 MiB) on worst-case 10-image DUAL 4-item request and rejects > 8 MiB with 413 (0 quota)", async () => {
+    const durableStore = makeMemoryBackedDurableStore();
+    const mockUpstream = createFostaResponsesMock("success");
+    const liveProvider = new FostaTryOnProvider({
+      apiKey: "secret-fosta-live-cap",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      approvedLive: true,
+      approvedQuotaUse: true,
+      fetchImpl: mockUpstream.fetchImpl,
+    });
+    const router = createTryOnRouter({ store: durableStore, provider: liveProvider });
+    const liveEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "true",
+      FOSTA_API_KEY: "secret-fosta-live-cap",
+      FOSTA_APPROVE_QUOTA: "true",
+      TRYON_LIVE_MAX_REQUESTS: "5",
+      VTO_FEASIBILITY_DECISION: "GO_DUAL",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const padPngToBytes = (base: Uint8Array, targetSize: number): Uint8Array => {
+      if (base.byteLength >= targetSize) return base;
+      const out = new Uint8Array(targetSize);
+      out.set(base, 0);
+      return out;
+    };
+
+    // Valid padded PNG ~950 KB for person (x2 = 1.9 MB) and ~520 KB for garments (x8 = 4.16 MB) -> ~6.06 MB < 8 MiB!
+    const basePng = buildLookbookMockPngBytes({ width: 128, height: 160 });
+    const makeSizedWire = (id: string, view: ImageView, targetBytes: number): WireImageInput => ({
+      mediaId: id,
+      view,
+      mimeType: "image/png",
+      width: 128,
+      height: 160,
+      revision: 1,
+      contentHash: `sha256:${id}`,
+      base64Data: encodeBase64(padPngToBytes(basePng, targetBytes)),
+    });
+
+    const items = [
+      { itemId: "t1", category: "TOP" as const, slot: "TOP" as const, revision: 1 },
+      { itemId: "b1", category: "BOTTOM" as const, slot: "BOTTOM" as const, revision: 1 },
+      { itemId: "h1", category: "ACCESSORY" as const, slot: "HAT" as const, revision: 1 },
+      { itemId: "s1", category: "SHOES" as const, slot: "SHOES" as const, revision: 1 },
+    ];
+
+    // Exceed 8 MiB decoded (2 x 1.25 MB + 8 x 0.90 MB = 9.7 MB > 8 MiB) -> 413 PAYLOAD_TOO_LARGE, 0 quota
+    const overMediaIds = ["pf_o", "pb_o", "tf_o", "tb_o", "bf_o", "bb_o", "hf_o", "hb_o", "sf_o", "sb_o"];
+    const overReq = makeFostaSubmitRequest({
+      requestId: "req_10img_over",
+      idempotencyKey: "idem_10img_over",
+      requestedViews: ["FRONT", "BACK"],
+      outfitSnapshot: { outfitId: "o_10", wardrobeSnapshotId: "w_10", items },
+      selectedItemIds: ["t1", "b1", "h1", "s1"],
+      personImages: {
+        front: makeSizedWire("pf_o", "FRONT", 1_250_000),
+        back: makeSizedWire("pb_o", "BACK", 1_250_000),
+      },
+      garmentImages: {
+        t1: { front: makeSizedWire("tf_o", "FRONT", 900_000), back: makeSizedWire("tb_o", "BACK", 900_000) },
+        b1: { front: makeSizedWire("bf_o", "FRONT", 900_000), back: makeSizedWire("bb_o", "BACK", 900_000) },
+        h1: { front: makeSizedWire("hf_o", "FRONT", 900_000), back: makeSizedWire("hb_o", "BACK", 900_000) },
+        s1: { front: makeSizedWire("sf_o", "FRONT", 900_000), back: makeSizedWire("sb_o", "BACK", 900_000) },
+      },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["FRONT", "BACK"],
+        selectedMediaIds: overMediaIds,
+      },
+    });
+    const overRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(overReq),
+      }),
+      liveEnv,
+      { sessionId: "sess_over" },
+    );
+    expect(overRes.status).toBe(413);
+    expect(((await overRes.json()) as TryOnErrorEnvelope).error.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(mockUpstream.callCount).toBe(0);
+
+    // Budgeted Android worst-case: 2 x 950 KB + 8 x 520 KB = 6.06 MB < 8 MiB decoded!
+    const okMediaIds = ["pf_ok", "pb_ok", "tf_ok", "tb_ok", "bf_ok", "bb_ok", "hf_ok", "hb_ok", "sf_ok", "sb_ok"];
+    const okReq = makeFostaSubmitRequest({
+      requestId: "req_10img_ok",
+      idempotencyKey: "idem_10img_ok",
+      requestedViews: ["FRONT", "BACK"],
+      outfitSnapshot: { outfitId: "o_10", wardrobeSnapshotId: "w_10", items },
+      selectedItemIds: ["t1", "b1", "h1", "s1"],
+      personImages: {
+        front: makeSizedWire("pf_ok", "FRONT", 950_000),
+        back: makeSizedWire("pb_ok", "BACK", 950_000),
+      },
+      garmentImages: {
+        t1: { front: makeSizedWire("tf_ok", "FRONT", 520_000), back: makeSizedWire("tb_ok", "BACK", 520_000) },
+        b1: { front: makeSizedWire("bf_ok", "FRONT", 520_000), back: makeSizedWire("bb_ok", "BACK", 520_000) },
+        h1: { front: makeSizedWire("hf_ok", "FRONT", 520_000), back: makeSizedWire("hb_ok", "BACK", 520_000) },
+        s1: { front: makeSizedWire("sf_ok", "FRONT", 520_000), back: makeSizedWire("sb_ok", "BACK", 520_000) },
+      },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["FRONT", "BACK"],
+        selectedMediaIds: okMediaIds,
+      },
+    });
+    const okRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(okReq),
+      }),
+      liveEnv,
+      { sessionId: "sess_ok" },
+    );
+    expect(okRes.status).toBe(202);
+    expect(mockUpstream.callCount).toBe(2); // 1 FRONT + 1 BACK
+    const preflightRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/preflight"),
+      liveEnv,
+      { sessionId: "sess_check_after" },
+    );
+    // 2 views = 2 units!
+    expect(((await preflightRes.json()) as { usedLiveRequests: number }).usedLiveRequests).toBe(2);
   });
 });

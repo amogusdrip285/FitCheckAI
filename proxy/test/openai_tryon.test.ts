@@ -775,5 +775,33 @@ describe("Track C OpenAI Virtual Try-On Scaffold (Sections 3–15)", () => {
       expect(receipt.remoteDeletionState).toBe("UNSUPPORTED");
       expect(receipt.message).toContain("Data Retention");
     });
+
+    it("supports multi-item HAT + SHOES + TOP (up to 4 garments) in canonical order through OpenAI mock", async () => {
+      const mock = createOpenAiImageEditsMock("success");
+      const provider = new OpenAITryOnProvider({
+        apiKey: "sk-test-openai-multi-item-12345",
+        model: "gpt-image-2",
+        offlineMockMode: true,
+        fetchImpl: mock.fetchImpl,
+      });
+      expect(provider.supportsMultiGarment).toBe(true);
+      expect(provider.maxGarmentsPerJob).toBe(4);
+      expect(provider.supportedCategories.has("SHOES")).toBe(true);
+      expect(provider.supportedCategories.has("ACCESSORY")).toBe(true);
+
+      const out = await provider.submitView({
+        jobId: "job_openai_multi",
+        requestId: "req_openai_multi",
+        view: "FRONT",
+        personImage: makePngWireImage("p_front", "FRONT"),
+        garments: [
+          { itemId: "shoes_1", category: "SHOES", slot: "SHOES", image: makePngWireImage("s_f", "FRONT") },
+          { itemId: "hat_1", category: "ACCESSORY", slot: "HAT", image: makePngWireImage("h_f", "FRONT") },
+          { itemId: "top_1", category: "TOP", slot: "TOP", image: makePngWireImage("t_f", "FRONT") },
+        ],
+      });
+      expect(out.initialState).toBe("SUCCEEDED");
+      expect(mock.lastCapturedRequest?.imageCount).toBe(4);
+    });
   });
 });

@@ -2,6 +2,7 @@
 // Runs on 127.0.0.1:8788 ONLY (reachable from Android Emulator at http://10.0.2.2:8788).
 // Does NOT modify Track B's `proxy/src/index.ts` or `proxy/package.json`.
 
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as os from "node:os";
@@ -121,6 +122,63 @@ function buildRuntimeEnv(): {
   return { envConfig, rawMerged: merged };
 }
 
+const step3eCache: {
+  personJpg?: Uint8Array;
+  topPng?: Uint8Array;
+  lastScreenshotPng?: Uint8Array;
+} = {};
+
+function ensureStep3eSeeds(): void {
+  if (step3eCache.personJpg && step3eCache.topPng) {
+    return;
+  }
+  const script = `
+import io, os, sys
+from PIL import Image
+# 1. Synthetic 4000x3000 EXIF=6 noisy gradient JPEG in 4.2-5.5 MB range
+w, h = 4000, 3000
+raw_noise = os.urandom(w * h)
+# Deterministic pseudo-photo gradient + micro-grain so JPEG stays ~4.5 MB cleanly
+img = Image.frombytes("L", (w, h), raw_noise).convert("RGB")
+exif = img.getexif()
+exif[0x0112] = 6
+buf_p = io.BytesIO()
+img.save(buf_p, format="JPEG", quality=85, exif=exif.tobytes())
+# Trim/verify range 4.1..5.8MB
+q = 85
+while len(buf_p.getvalue()) < 4_200_000 and q < 98:
+    q += 4
+    buf_p = io.BytesIO()
+    img.save(buf_p, format="JPEG", quality=q, exif=exif.tobytes())
+while len(buf_p.getvalue()) > 5_800_000 and q > 40:
+    q -= 6
+    buf_p = io.BytesIO()
+    img.save(buf_p, format="JPEG", quality=q, exif=exif.tobytes())
+
+# 2. Synthetic garment PNG in 2.1-3.0 MB range (1100x900 RGB noise)
+gw, gh = 1100, 900
+g_bytes = os.urandom(gw * gh * 3)
+gimg = Image.frombytes("RGB", (gw, gh), g_bytes)
+buf_g = io.BytesIO()
+gimg.save(buf_g, format="PNG")
+
+p_b = buf_p.getvalue()
+g_b = buf_g.getvalue()
+import base64, json
+print(json.dumps({
+    "person": base64.b64encode(p_b).decode("ascii"),
+    "top": base64.b64encode(g_b).decode("ascii"),
+}))
+`;
+  const stdout = execFileSync("python3", ["-c", script], {
+    maxBuffer: 24 * 1024 * 1024,
+    encoding: "utf8",
+  });
+  const parsed = JSON.parse(stdout) as { person: string; top: string };
+  step3eCache.personJpg = new Uint8Array(Buffer.from(parsed.person, "base64"));
+  step3eCache.topPng = new Uint8Array(Buffer.from(parsed.top, "base64"));
+}
+
 async function main(): Promise<void> {
   const { rawMerged } = buildRuntimeEnv();
   const bindHost = rawMerged.TRYON_BIND_HOST?.trim() || "127.0.0.1";
@@ -185,6 +243,32 @@ async function main(): Promise<void> {
         const url = `http://${bindHost}:${port}${req.url ?? "/"}`;
         const method = req.method ?? "GET";
         const parsedPath = new URL(url).pathname;
+        if (
+          latestMerged.TRYON_ENABLE_STEP3E_SEED === "true" &&
+          envConfig.TRYON_LIVE_ENABLED !== "true" &&
+          (parsedPath.startsWith("/__step3e_seed/") || parsedPath === "/__step3e_screenshot")
+        ) {
+          if (parsedPath === "/__step3e_seed/person.jpg" && (method === "GET" || method === "HEAD")) {
+            ensureStep3eSeeds();
+            const bytes = step3eCache.personJpg!;
+            res.writeHead(200, { "content-type": "image/jpeg", "content-length": String(bytes.byteLength) });
+            res.end(method === "HEAD" ? undefined : bytes);
+            return;
+          }
+          if (parsedPath === "/__step3e_seed/top.png" && (method === "GET" || method === "HEAD")) {
+            ensureStep3eSeeds();
+            const bytes = step3eCache.topPng!;
+            res.writeHead(200, { "content-type": "image/png", "content-length": String(bytes.byteLength) });
+            res.end(method === "HEAD" ? undefined : bytes);
+            return;
+          }
+          if (parsedPath === "/__step3e_screenshot" && method === "POST") {
+            step3eCache.lastScreenshotPng = rawBody;
+            res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: true, bytes: rawBody.byteLength }));
+            return;
+          }
+        }
         if (
           method === "GET" &&
           (parsedPath === "/v2/tryon/preflight" || parsedPath === "/v2/tryon/capabilities") &&

@@ -1,6 +1,6 @@
-// OWNER: Track C (Experimental FOSTA Luna `gpt-6-luna` 12-Branch Prompt Matrix)
-// Adapted from `fitcheck_fosta_vto_v2` integration kit into strict Cloudflare/TypeScript module.
-// Back, bottom-only, and top+bottom combinations remain UNVALIDATED_EXPERIMENTAL until live AI quality gates pass.
+// OWNER: Track C (Experimental FOSTA Luna `gpt-6-luna` Composable 4-Slot Prompt Matrix v2.2)
+// Adapted into strict TypeScript module supporting TOP, BOTTOM, HAT, and SHOES (15 non-empty subsets x 2 modes x 2 views = 60 prompts).
+// Back, bottom-only, hat, shoes, and multi-item combinations remain UNVALIDATED_EXPERIMENTAL until live AI quality gates pass.
 
 import { UpstreamDeterministicError } from "./providers";
 import type {
@@ -10,7 +10,15 @@ import type {
   TryOnPresentationMode,
 } from "./types";
 
-export const FOSTA_VTO_PROMPT_VERSION = "v2.1";
+export const FOSTA_VTO_PROMPT_VERSION = "v2.2";
+export const MAX_FOSTA_PROMPT_LENGTH = 620;
+
+export const CANONICAL_FOSTA_GARMENT_ORDER: readonly FostaGarmentKind[] = [
+  "TOP",
+  "BOTTOM",
+  "HAT",
+  "SHOES",
+] as const;
 
 export type FostaValidationStatus =
   | "POC_VALIDATED_SINGLE_EXAMPLE"
@@ -22,24 +30,60 @@ export const FOSTA_EXPERIMENTAL_CAPABILITIES: Readonly<{
   back: FostaValidationStatus;
   bottomOnly: FostaValidationStatus;
   topBottom: FostaValidationStatus;
+  hat: FostaValidationStatus;
+  shoes: FostaValidationStatus;
+  multiItem: FostaValidationStatus;
 }> = Object.freeze({
   frontTop: "POC_VALIDATED_SINGLE_EXAMPLE",
   studioTop: "POC_VALIDATED_SINGLE_EXAMPLE",
   back: "UNVALIDATED_EXPERIMENTAL",
   bottomOnly: "UNVALIDATED_EXPERIMENTAL",
   topBottom: "UNVALIDATED_EXPERIMENTAL",
+  hat: "UNVALIDATED_EXPERIMENTAL",
+  shoes: "UNVALIDATED_EXPERIMENTAL",
+  multiItem: "UNVALIDATED_EXPERIMENTAL",
 });
 
+const GARMENT_NOUN: Record<FostaGarmentKind, string> = {
+  TOP: "top",
+  BOTTOM: "bottom",
+  HAT: "hat",
+  SHOES: "shoes",
+};
+
+const KEEP_NOUN: Record<FostaGarmentKind, string> = {
+  TOP: "top",
+  BOTTOM: "bottom",
+  HAT: "headwear",
+  SHOES: "shoes",
+};
+
 export function mapCategoryToFostaGarmentKind(
-  category: Category,
+  category: Category | string,
+  slotOverride?: FostaGarmentKind | string | null,
 ): FostaGarmentKind | null {
-  if (category === "TOP") {
-    return "TOP";
+  if (
+    slotOverride === "TOP" ||
+    slotOverride === "BOTTOM" ||
+    slotOverride === "HAT" ||
+    slotOverride === "SHOES"
+  ) {
+    return slotOverride;
   }
-  if (category === "BOTTOM") {
-    return "BOTTOM";
+  switch (category) {
+    case "TOP":
+    case "OUTERWEAR":
+      return "TOP";
+    case "BOTTOM":
+      return "BOTTOM";
+    case "HAT":
+    case "ACCESSORY":
+      return "HAT";
+    case "SHOES":
+      return "SHOES";
+    default:
+      return null;
   }
-  return null;
 }
 
 export interface BuildFostaPromptInput {
@@ -49,15 +93,16 @@ export interface BuildFostaPromptInput {
 }
 
 /**
- * Builds the deterministic versioned prompt across all 12 combinations:
+ * Composes the deterministic `v2.2` FOSTA prompt across all 60 valid combinations:
  * - 2 presentation modes: `ORIGINAL_PHOTO` | `STUDIO_WHITE`
  * - 2 views: `FRONT` | `BACK`
- * - 3 garment combos: `TOP` | `BOTTOM` | `TOP+BOTTOM`
+ * - 15 non-empty subsets of `[TOP, BOTTOM, HAT, SHOES]`
  *
- * Reference image numbering is locked to:
- * - `REFERENCE IMAGE 1` = base `PERSON` photograph
- * - `REFERENCE IMAGE 2` = `TOP` (if selected) else `BOTTOM`
- * - `REFERENCE IMAGE 3` = `BOTTOM` (only when both `TOP` and `BOTTOM` are selected)
+ * Canonical reference image numbering:
+ * - `Image 1` = base `PERSON` photograph
+ * - `image 2..N` = selected items in strict `TOP -> BOTTOM -> HAT -> SHOES` order
+ *
+ * Every generated prompt is guaranteed <= 620 characters to avoid upstream length/timeout issues.
  */
 export function buildFostaTryOnPrompt({
   mode = "ORIGINAL_PHOTO",
@@ -77,93 +122,96 @@ export function buildFostaTryOnPrompt({
     );
   }
 
-  const uniqueKinds: FostaGarmentKind[] = [];
+  const seen = new Set<FostaGarmentKind>();
   for (const kind of garmentKinds) {
-    if (kind !== "TOP" && kind !== "BOTTOM") {
+    if (
+      kind !== "TOP" &&
+      kind !== "BOTTOM" &&
+      kind !== "HAT" &&
+      kind !== "SHOES"
+    ) {
       throw new UpstreamDeterministicError(
         "INVALID_REQUEST",
-        `Unsupported FOSTA garment kind: '${String(kind)}'. Choose TOP, BOTTOM, or TOP+BOTTOM.`,
+        `Unsupported FOSTA garment kind: '${String(kind)}'. Choose TOP, BOTTOM, HAT, or SHOES.`,
       );
     }
-    if (!uniqueKinds.includes(kind)) {
-      uniqueKinds.push(kind);
-    }
+    seen.add(kind);
   }
-  if (uniqueKinds.length === 0) {
+  if (seen.size === 0) {
     throw new UpstreamDeterministicError(
       "NEEDS_INPUT",
-      "At least one garment kind (TOP or BOTTOM) is required for FOSTA Virtual Try-On.",
+      "At least one garment kind (TOP, BOTTOM, HAT, or SHOES) is required for FOSTA Virtual Try-On.",
     );
   }
 
-  const hasTop = uniqueKinds.includes("TOP");
-  const hasBottom = uniqueKinds.includes("BOTTOM");
-  const combined = hasTop && hasBottom;
+  const active = CANONICAL_FOSTA_GARMENT_ORDER.filter((k) => seen.has(k));
+  const hasTop = seen.has("TOP");
+  const hasBottom = seen.has("BOTTOM");
+  const hasHat = seen.has("HAT");
+  const hasShoes = seen.has("SHOES");
 
-  const totalImages = 1 + (hasTop ? 1 : 0) + (hasBottom ? 1 : 0);
-  const viewTag = view === "FRONT" ? "front-view" : "back-view";
+  const viewLabel = view === "BACK" ? "back-view" : "front-view";
+  const personDesc =
+    view === "BACK"
+      ? "the person from behind (back view)"
+      : "the person (front view)";
 
-  const parts: string[] = [
-    `Create exactly one photorealistic ${viewTag} virtual try-on image using these ${totalImages} images.`,
-  ];
-
-  if (view === "FRONT") {
-    const imageRefs: string[] = ["Image 1 is the person (front view)"];
-    let idx = 2;
-    if (hasTop) {
-      imageRefs.push(`image ${idx} is the reference top`);
-      idx += 1;
-    }
-    if (hasBottom) {
-      imageRefs.push(`image ${idx} is the reference bottom`);
-    }
-    parts.push(`${imageRefs.join("; ")}.`);
-  } else {
-    const imageRefs: string[] = ["Image 1 is the person from behind (back view)"];
-    let idx = 2;
-    if (hasTop) {
-      imageRefs.push(`image ${idx} is the reference top (back view)`);
-      idx += 1;
-    }
-    if (hasBottom) {
-      imageRefs.push(`image ${idx} is the reference bottom (back view)`);
-    }
-    parts.push(`${imageRefs.join("; ")}.`);
-  }
-
-  if (combined) {
-    parts.push(
-      "Edit the person to wear both the reference top and reference bottom with natural waist layering.",
-    );
-  } else if (hasTop) {
-    parts.push(
-      "Edit the person to wear only the reference top, keeping their existing bottom unchanged.",
-    );
-  } else {
-    parts.push(
-      "Edit the person to wear only the reference bottom, keeping their existing top unchanged.",
-    );
-  }
-
-  const personPreservation =
-    view === "FRONT"
-      ? "Preserve the person's face, hairstyle, skin tone, body proportions, pose"
-      : "Keep the person facing away, preserving their identity, face when visible, hairstyle, skin tone, body proportions, pose";
-
-  if (mode === "ORIGINAL_PHOTO") {
-    parts.push(
-      `${personPreservation}, shoes, accessories, lighting and original background.`,
-    );
-  } else {
-    parts.push(
-      `${personPreservation}, shoes and accessories on a clean white studio background with soft even lighting.`,
-    );
-  }
-
-  const garmentNoun = combined ? "garments'" : hasTop ? "top's" : "bottom's";
-  parts.push(
-    `Preserve the ${garmentNoun} color, cut, fabric, logo, printed text and patterns faithfully.`,
+  const imgClauses = active.map((k, idx) =>
+    idx === 0
+      ? `image 2 is the reference ${GARMENT_NOUN[k]}`
+      : `image ${idx + 2} is the ${GARMENT_NOUN[k]}`,
   );
 
-  return parts.join(" ");
+  const actions: string[] = [];
+  if (hasTop && hasBottom) {
+    actions.push("wear the top and bottom with natural waist layering");
+  } else if (hasTop) {
+    actions.push("wear the reference top");
+  } else if (hasBottom) {
+    actions.push("wear the reference bottom");
+  }
+
+  if (hasHat) {
+    actions.push(
+      view === "BACK"
+        ? "wear the hat naturally on the head with unoccluded hair visible"
+        : "wear the hat naturally on the head, keeping face and unoccluded hair visible",
+    );
+  }
+
+  if (hasShoes) {
+    actions.push("replace only the shoes, keeping stance and ground natural");
+  }
+
+  const keepUnchanged = CANONICAL_FOSTA_GARMENT_ORDER.filter(
+    (k) => !seen.has(k),
+  ).map((k) => KEEP_NOUN[k]);
+  const keepClause =
+    keepUnchanged.length > 0
+      ? ` Keep existing ${keepUnchanged.join("/")} unchanged.`
+      : "";
+
+  const detailDir = view === "BACK" ? "rear" : "front";
+  const poseClause =
+    view === "BACK"
+      ? "Keep the person facing away, preserving identity, hair, skin tone, body, pose"
+      : "Preserve identity, face, hair, skin tone, body proportions, pose";
+  const bgClause =
+    mode === "STUDIO_WHITE"
+      ? " on a clean white studio background with soft even lighting."
+      : ", lighting, and original background.";
+
+  const prompt =
+    `Create one photorealistic ${viewLabel} virtual try-on image. ` +
+    `Image 1 is ${personDesc}; ${imgClauses.join(", ")}. ` +
+    `Dress the person to ${actions.join("; ")}, matching exact colors, textures, logos, and ${detailDir} details.${keepClause} ` +
+    `${poseClause}${bgClause}`;
+
+  if (prompt.length > MAX_FOSTA_PROMPT_LENGTH) {
+    throw new UpstreamDeterministicError(
+      "INVALID_REQUEST",
+      `FOSTA prompt exceeded safety ceiling (${prompt.length} > ${MAX_FOSTA_PROMPT_LENGTH}).`,
+    );
+  }
+  return prompt;
 }

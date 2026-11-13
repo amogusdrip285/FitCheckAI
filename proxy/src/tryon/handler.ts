@@ -11,7 +11,11 @@ import {
   createFostaResponsesMock,
   type FostaMockScenario,
 } from "./fosta_mock";
-import { FOSTA_EXPERIMENTAL_CAPABILITIES } from "./fosta_prompt";
+import {
+  CANONICAL_FOSTA_GARMENT_ORDER,
+  FOSTA_EXPERIMENTAL_CAPABILITIES,
+  mapCategoryToFostaGarmentKind,
+} from "./fosta_prompt";
 import {
   DEFAULT_FOSTA_MODEL,
   DEFAULT_FOSTA_TIMEOUT_MS,
@@ -42,6 +46,7 @@ import type {
   DeletionReceiptWire,
   DurableTryOnJobStore,
   FeasibilityDecision,
+  FostaGarmentKind,
   ImageView,
   RemoteDeletionState,
   SafeTryOnLogger,
@@ -1006,10 +1011,10 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       );
     }
 
-    const selectedItemIds = Array.isArray(body.selectedItemIds)
+    const rawSelectedItemIds = Array.isArray(body.selectedItemIds)
       ? Array.from(new Set(body.selectedItemIds))
       : [];
-    if (selectedItemIds.length === 0) {
+    if (rawSelectedItemIds.length === 0) {
       return makeTypedError(
         "NEEDS_INPUT",
         "Cần chọn ít nhất một món trang phục trong outfit để thử đồ.",
@@ -1017,7 +1022,7 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       );
     }
 
-    if (selectedItemIds.length > provider.maxGarmentsPerJob) {
+    if (rawSelectedItemIds.length > provider.maxGarmentsPerJob) {
       return makeTypedError(
         "UNSUPPORTED_CAPABILITY",
         `Dịch vụ hiện chỉ hỗ trợ tối đa ${provider.maxGarmentsPerJob} món trang phục mỗi lượt thử.`,
@@ -1030,7 +1035,12 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
     );
     let selectedTopCount = 0;
     let selectedBottomCount = 0;
-    for (const itemId of selectedItemIds) {
+    let selectedHatCount = 0;
+    let selectedShoesCount = 0;
+    const seenSlots = new Set<FostaGarmentKind>();
+    const sortableSelected: Array<{ itemId: string; orderIdx: number }> = [];
+
+    for (const itemId of rawSelectedItemIds) {
       const summary = outfitItemsByIdPreview.get(itemId);
       if (!summary) {
         return makeTypedError(
@@ -1039,24 +1049,44 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           rawReqId,
         );
       }
-      if (!provider.supportedCategories.has(summary.category)) {
+      const isSupportedCategory =
+        provider.supportedCategories.has(summary.category) ||
+        (summary.category === "HAT" && provider.supportedCategories.has("ACCESSORY"));
+      if (!isSupportedCategory) {
         return makeTypedError(
           "UNSUPPORTED_CAPABILITY",
           `Danh mục '${summary.category}' chưa được mô hình thử đồ hỗ trợ.`,
           rawReqId,
         );
       }
-      if (summary.category === "TOP") selectedTopCount += 1;
-      if (summary.category === "BOTTOM") selectedBottomCount += 1;
+      const slotKind = mapCategoryToFostaGarmentKind(summary.category, summary.slot);
+      if ((provider.providerId === "fosta" || provider.providerId === "openai") && slotKind === null && summary.category !== "DRESS") {
+        return makeTypedError(
+          "UNSUPPORTED_CAPABILITY",
+          `Danh mục '${summary.category}' chưa ánh xạ được sang ô trang phục hợp lệ.`,
+          rawReqId,
+        );
+      }
+      if ((provider.providerId === "fosta" || provider.providerId === "openai") && slotKind !== null) {
+        if (seenSlots.has(slotKind)) {
+          return makeTypedError(
+            "INVALID_REQUEST",
+            `Trong một lượt thử chỉ được chọn tối đa 1 món cho mỗi ô (${CANONICAL_FOSTA_GARMENT_ORDER.join(", ")}).`,
+            rawReqId,
+          );
+        }
+        seenSlots.add(slotKind);
+      }
+      if (slotKind === "TOP") selectedTopCount += 1;
+      if (slotKind === "BOTTOM") selectedBottomCount += 1;
+      if (slotKind === "HAT") selectedHatCount += 1;
+      if (slotKind === "SHOES") selectedShoesCount += 1;
+      const orderIdx = slotKind ? CANONICAL_FOSTA_GARMENT_ORDER.indexOf(slotKind) : 99;
+      sortableSelected.push({ itemId, orderIdx });
     }
 
-    if (provider.providerId === "fosta" && (selectedTopCount > 1 || selectedBottomCount > 1)) {
-      return makeTypedError(
-        "INVALID_REQUEST",
-        "Trong một lượt thử FOSTA chỉ được chọn tối đa 1 Áo (TOP) và 1 Quần (BOTTOM).",
-        rawReqId,
-      );
-    }
+    sortableSelected.sort((a, b) => a.orderIdx - b.orderIdx);
+    const selectedItemIds = sortableSelected.map((s) => s.itemId);
 
     // Validate per-request ConsentGrant + strict providerId binding (CT-03, CT-06, C-210, Section 11)
     const consent = body.consentGrant;
@@ -1226,6 +1256,7 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           return {
             itemId,
             category: itemSummary.category as Category,
+            slot: itemSummary.slot,
             colors: itemSummary.colors,
             image: validatedGarments[itemId]![view]!,
           };
@@ -1321,9 +1352,24 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           "EXPERIMENTAL_UNVALIDATED_BOTTOM: Chế độ chỉ thay quần (BOTTOM) mới chỉ kiểm thử logic, chưa được kiểm chứng chất lượng AI thực tế.",
         );
       }
-      if (selectedTopCount > 0 && selectedBottomCount > 0) {
+      if (selectedTopCount > 0 && selectedBottomCount > 0 && selectedHatCount === 0 && selectedShoesCount === 0) {
         warnings.push(
           "EXPERIMENTAL_UNVALIDATED_TOP_BOTTOM: Chế độ thay đồng thời Áo + Quần (TOP+BOTTOM) mới chỉ kiểm thử logic, chưa được kiểm chứng chất lượng AI thực tế.",
+        );
+      }
+      if (selectedHatCount > 0) {
+        warnings.push(
+          "EXPERIMENTAL_UNVALIDATED_HAT: Ghép Mũ (HAT) mới chỉ kiểm thử logic, chưa kiểm chứng chất lượng AI thực tế.",
+        );
+      }
+      if (selectedShoesCount > 0) {
+        warnings.push(
+          "EXPERIMENTAL_UNVALIDATED_SHOES: Ghép Giày (SHOES) mới chỉ kiểm thử logic; cần ảnh thấy rõ chân và chưa kiểm chứng chất lượng AI thực tế.",
+        );
+      }
+      if (selectedItemIds.length >= 2) {
+        warnings.push(
+          `EXPERIMENTAL_UNVALIDATED_MULTI_ITEM: Ghép đồng thời ${selectedItemIds.length} món mới chỉ kiểm thử logic, chất lượng AI thực tế chưa kiểm chứng.`,
         );
       }
     }
@@ -1514,6 +1560,7 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           return {
             itemId,
             category: itemSummary.category as Category,
+            slot: itemSummary.slot,
             colors: itemSummary.colors,
             image: validatedGarments[itemId]![view]!,
           };
@@ -2050,8 +2097,8 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
         supportedViews: [],
         supportedCategories:
           requestedProvider === "fosta"
-            ? ["TOP", "BOTTOM"]
-            : ["TOP", "BOTTOM", "DRESS", "OUTERWEAR"],
+            ? ["TOP", "OUTERWEAR", "BOTTOM", "SHOES", "ACCESSORY"]
+            : ["TOP", "BOTTOM", "DRESS", "OUTERWEAR", "SHOES", "ACCESSORY"],
         supportedPresentationModes:
           requestedProvider === "fosta"
             ? ["ORIGINAL_PHOTO", "STUDIO_WHITE"]

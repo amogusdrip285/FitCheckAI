@@ -14,6 +14,7 @@ import {
 } from "./image_pipeline";
 import {
   buildFostaTryOnPrompt,
+  CANONICAL_FOSTA_GARMENT_ORDER,
   FOSTA_VTO_PROMPT_VERSION,
   mapCategoryToFostaGarmentKind,
 } from "./fosta_prompt";
@@ -107,6 +108,9 @@ export interface BuildFostaPayloadInput {
   personBytes: Uint8Array;
   topBytes?: Uint8Array | null;
   bottomBytes?: Uint8Array | null;
+  hatBytes?: Uint8Array | null;
+  shoesBytes?: Uint8Array | null;
+  garments?: ReadonlyArray<{ kind: FostaGarmentKind; bytes: Uint8Array }>;
 }
 
 /**
@@ -173,11 +177,10 @@ function assertValidImageSlice(bytes: Uint8Array | undefined | null, label: stri
 }
 
 /**
- * Builds the exact FOSTA `/v1/responses` JSON payload in deterministic order:
- * 1. `input_text` (`FITCHECK_VTO_PROMPT_VERSION=v2.0 ...`)
+ * Builds the exact FOSTA `/v1/responses` JSON payload in canonical order:
+ * 1. `input_text` (`v2.2` composable prompt)
  * 2. `input_image` #1: `PERSON`
- * 3. `input_image` #2: `TOP` (if selected) else `BOTTOM`
- * 4. `input_image` #3: `BOTTOM` (when both `TOP` and `BOTTOM` are selected)
+ * 3. `input_image` #2..N: selected items sorted strictly `TOP -> BOTTOM -> HAT -> SHOES`
  */
 export function buildFostaResponsesPayload({
   mode = "ORIGINAL_PHOTO",
@@ -186,6 +189,9 @@ export function buildFostaResponsesPayload({
   personBytes,
   topBytes,
   bottomBytes,
+  hatBytes,
+  shoesBytes,
+  garments,
 }: BuildFostaPayloadInput): FostaResponsesRequestWire {
   if (mode !== "ORIGINAL_PHOTO" && mode !== "STUDIO_WHITE") {
     throw new UpstreamDeterministicError(
@@ -200,25 +206,41 @@ export function buildFostaResponsesPayload({
     );
   }
 
-  const orderedGarments: Array<{ kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime }> = [];
-  if (topBytes !== undefined && topBytes !== null) {
-    orderedGarments.push({
-      kind: "TOP",
-      bytes: topBytes,
-      mime: assertValidImageSlice(topBytes, "TOP"),
+  const byKind = new Map<FostaGarmentKind, { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime }>();
+  const registerGarment = (kind: FostaGarmentKind, bytes: Uint8Array | undefined | null): void => {
+    if (bytes === undefined || bytes === null) return;
+    if (byKind.has(kind)) {
+      throw new UpstreamDeterministicError(
+        "INVALID_REQUEST",
+        `Duplicate garment slot '${kind}' is not allowed in a single FOSTA request.`,
+      );
+    }
+    byKind.set(kind, {
+      kind,
+      bytes,
+      mime: assertValidImageSlice(bytes, kind),
     });
+  };
+
+  registerGarment("TOP", topBytes);
+  registerGarment("BOTTOM", bottomBytes);
+  registerGarment("HAT", hatBytes);
+  registerGarment("SHOES", shoesBytes);
+  if (garments) {
+    for (const entry of garments) {
+      registerGarment(entry.kind, entry.bytes);
+    }
   }
-  if (bottomBytes !== undefined && bottomBytes !== null) {
-    orderedGarments.push({
-      kind: "BOTTOM",
-      bytes: bottomBytes,
-      mime: assertValidImageSlice(bottomBytes, "BOTTOM"),
-    });
-  }
+
+  const orderedGarments = CANONICAL_FOSTA_GARMENT_ORDER.map((kind) => byKind.get(kind)).filter(
+    (entry): entry is { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime } =>
+      entry !== undefined,
+  );
+
   if (orderedGarments.length === 0) {
     throw new UpstreamDeterministicError(
       "NEEDS_INPUT",
-      "At least one garment (TOP or BOTTOM) is required for FOSTA Virtual Try-On.",
+      "At least one garment (TOP, BOTTOM, HAT, or SHOES) is required for FOSTA Virtual Try-On.",
     );
   }
 
@@ -478,8 +500,14 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
   public readonly providerId = "fosta";
   public readonly source: TryOnSource;
   public readonly supportsMultiGarment = true;
-  public readonly maxGarmentsPerJob = 2; // Max 1 TOP + 1 BOTTOM simultaneously
-  public readonly supportedCategories = new Set<Category>(["TOP", "BOTTOM"]);
+  public readonly maxGarmentsPerJob = 4; // Up to 1 TOP + 1 BOTTOM + 1 HAT + 1 SHOES simultaneously
+  public readonly supportedCategories = new Set<Category>([
+    "TOP",
+    "OUTERWEAR",
+    "BOTTOM",
+    "SHOES",
+    "ACCESSORY",
+  ]);
 
   public readonly modelId: string;
   public readonly endpoint: string;
@@ -566,14 +594,14 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
     if (input.garments.length === 0) {
       throw new UpstreamDeterministicError(
         "NEEDS_INPUT",
-        "Cần chọn ít nhất 1 món trang phục (Áo hoặc Quần) để thử đồ với FOSTA.",
+        "Cần chọn ít nhất 1 món trang phục (Áo, Quần, Mũ hoặc Giày) để thử đồ với FOSTA.",
         false,
       );
     }
     if (input.garments.length > this.maxGarmentsPerJob) {
       throw new UpstreamDeterministicError(
         "UNSUPPORTED_CAPABILITY",
-        `FOSTA Luna chỉ nhận tối đa ${this.maxGarmentsPerJob} món trang phục (1 Áo + 1 Quần) trong cùng một lượt.`,
+        `FOSTA Luna chỉ nhận tối đa ${this.maxGarmentsPerJob} món trang phục trong cùng một lượt.`,
         false,
       );
     }
@@ -612,30 +640,22 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       );
     }
 
-    // Map & validate TOP and/or BOTTOM garments; reject duplicate TOP+TOP or BOTTOM+BOTTOM
-    let topBytes: Uint8Array | null = null;
-    let bottomBytes: Uint8Array | null = null;
+    // Map & validate TOP / BOTTOM / HAT / SHOES slots; reject duplicate slot in a single request
+    const bytesByKind = new Map<FostaGarmentKind, Uint8Array>();
 
     for (const garment of input.garments) {
-      const kind = mapCategoryToFostaGarmentKind(garment.category);
+      const kind = mapCategoryToFostaGarmentKind(garment.category, garment.slot);
       if (!kind) {
         throw new UpstreamDeterministicError(
           "UNSUPPORTED_CAPABILITY",
-          `Danh mục '${garment.category}' chưa được FOSTA Luna hỗ trợ (chỉ hỗ trợ TOP và BOTTOM).`,
+          `Danh mục '${garment.category}' chưa được FOSTA Luna hỗ trợ (hỗ trợ TOP, OUTERWEAR, BOTTOM, ACCESSORY/HAT, SHOES).`,
           false,
         );
       }
-      if (kind === "TOP" && topBytes !== null) {
+      if (bytesByKind.has(kind)) {
         throw new UpstreamDeterministicError(
           "INVALID_REQUEST",
-          "Không được gửi hai món Áo (TOP) trong cùng một lượt thử FOSTA; chỉ chọn tối đa 1 TOP và 1 BOTTOM.",
-          false,
-        );
-      }
-      if (kind === "BOTTOM" && bottomBytes !== null) {
-        throw new UpstreamDeterministicError(
-          "INVALID_REQUEST",
-          "Không được gửi hai món Quần (BOTTOM) trong cùng một lượt thử FOSTA; chỉ chọn tối đa 1 TOP và 1 BOTTOM.",
+          `Không được gửi nhiều món cùng ô '${kind}' trong cùng một lượt thử FOSTA; chỉ chọn tối đa 1 món cho mỗi ô (TOP, BOTTOM, HAT, SHOES).`,
           false,
         );
       }
@@ -664,20 +684,20 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
         );
       }
 
-      if (kind === "TOP") {
-        topBytes = gBytes;
-      } else {
-        bottomBytes = gBytes;
-      }
+      bytesByKind.set(kind, gBytes);
     }
+
+    const canonicalGarments = CANONICAL_FOSTA_GARMENT_ORDER.flatMap((kind) => {
+      const bytes = bytesByKind.get(kind);
+      return bytes ? [{ kind, bytes }] : [];
+    });
 
     return buildFostaResponsesPayload({
       mode,
       view: input.view,
       model: this.modelId,
       personBytes,
-      topBytes,
-      bottomBytes,
+      garments: canonicalGarments,
     });
   }
 
