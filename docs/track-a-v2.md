@@ -1,6 +1,6 @@
 # Track A v2 — chạy độc lập và bàn giao
 
-Cập nhật ngày 12/11/2026. Luồng Hồ sơ, Tủ đồ, Today và độ bền dữ liệu đã kiểm trên emulator API 35 và Samsung SM-F721B API 36. Gate proxy live vẫn mở.
+Cập nhật ngày 13/11/2026. Luồng Hồ sơ, Tủ đồ, Today và độ bền dữ liệu đã kiểm trên emulator API 35 và Samsung SM-F721B API 36. Samsung đã chạy lại bản CORE sau khi nối Try-On. Nhận diện và phối đồ live còn chờ proxy HTTPS. [Hồi quy CORE trên Samsung](qa/track-a-core-regression.md).
 
 ## Chạy trên máy tính
 
@@ -50,6 +50,7 @@ Delete ghi tombstone, loại khỏi snapshot/flow ngay, xóa payload rồi clean
 Snapshot ID được tạo từ danh sách ID/revision; `isCurrent` và `resolveOutfitItems` giúp consumer chặn chọn outfit stale/deleted.
 Consumer D/C phải kiểm snapshot lại trước action/upload; events chỉ giúp làm mới UI, không thay thế kiểm revision ở boundary.
 Today chụp revision trước khi xin gợi ý và kiểm lại khi kết quả về. Sửa hoặc xóa món làm ẩn các bộ chứa revision cũ, kể cả khi Today đang ở tab nền.
+Khi chọn thử đồ, Today kiểm lại revision sau khi đọc đường dẫn ảnh. Nếu bộ đồ đã cũ, app trả `STALE_INPUT` trước khi chuyển bộ sang Try-On.
 **Thử lại** tạo yêu cầu từ tủ hiện tại. **Phối lại** với cùng ngữ cảnh loại các bộ vừa hiển thị, rồi cho biết nếu đã hết tổ hợp phù hợp.
 Chia sẻ kiểm revision trước và sau khi ghép ảnh. Collage là JPEG trong cache, URI chỉ đọc. Người dùng chọn ứng dụng nhận hoặc hủy ở bảng chia sẻ.
 
@@ -117,7 +118,7 @@ python -m unittest discover -s tools/data -p test_prepare_kaggle_fashion.py
 
 Máy RAM thấp dùng `--max-workers=1 -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process`.
 Báo cáo unit tests trong mỗi module `build/reports/tests/`; coverage ở `core/database/build/reports/jacoco/coverageReport/`.
-Evidence sau bàn giao B ở [QA tích hợp A–B](qa/track-a-b-handoff.md). Các lần trước có [QA trên máy thật](qa/track-a-physical-device.md), [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
+Báo cáo [hồi quy CORE trên Samsung](qa/track-a-core-regression.md) ghi từng ca và SHA-256 của APK đã cài. Các lần trước có [QA tích hợp A–B](qa/track-a-b-handoff.md), [QA trên máy thật](qa/track-a-physical-device.md), [QA trên emulator](qa/track-a-emulator-integration.md), [QA ban đầu](qa/track-a-acceptance.md) và [QA bổ sung độc lập](qa/track-a-independent-followup.md).
 Trạng thái card ở [board](execution/TASK_BOARD.md).
 [Điểm demo nội bộ](../Scorings.MD) và [điểm reviewer A cho B-004](../eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a) có thang chấm riêng.
 [Báo cáo v1](track-a-verification.md) là lịch sử, không được dùng thay kết quả v2.

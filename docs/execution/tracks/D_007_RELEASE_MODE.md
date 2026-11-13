@@ -15,7 +15,7 @@
 |---|---|---|
 | Module Try-On được build | `settings.gradle.kts`, `app/build.gradle.kts` | `:app:assembleDebug` pass |
 | Route CT-03 | `FitCheckApp.kt` → `tryOnDestination` | `Routes.TRYON_PATTERN` |
-| Chọn đúng 1 outfit, revision còn hiệu lực | `TodayViewModel.prepareTryOn` + `TryOnSelectionHandoff` | `TodayViewModelTest`: handoff đúng outfit, từ chối bộ stale |
+| Chọn đúng 1 outfit, revision còn hiệu lực | `TodayViewModel.prepareTryOn` + `TryOnSelectionHandoff` | `TodayViewModelTest`: chuyển đúng outfit, từ chối bộ stale kể cả khi revision đổi lúc đọc ảnh |
 | VTO tắt | `app/tryon/CoreModeVirtualTryOn.kt` | capability `UNKNOWN`, 0 view, `maxGarmentsPerJob = 0`; submit/cancel/delete trả lỗi, không I/O |
 | Profile → Try-On không lộ dữ liệu thừa | `ProfileStorageTryOnPort` | chỉ id/revision/ảnh toàn thân; không chiều cao/cân nặng/style |
 | Đường dẫn ảnh đã kiểm owner | `MediaStore.displayPath` | ref không resolve được bị bỏ, không đoán path |
@@ -26,9 +26,9 @@
 |---|---|---|
 | M2 đạt (Room, media, profile thật) | Đạt trên emulator API 35 + Samsung API 36 (INT-001, A-004) | A |
 | M3 live (recognition + recommendation qua proxy HTTPS) | **Chưa** — proxy chưa deploy HTTPS (INT-002 BLOCKED) | B |
-| Profile → Wardrobe → Today thật | Đạt ở unit + QA thiết bị của A; **chưa** chạy lại sau wiring Try-On | D (cần thiết bị) |
-| VTO unavailable đúng gate | Đạt ở code (`CoreModeVirtualTryOn`) | D |
-| Real-store deletion/invalidation với late-result fixtures C-210 | **Chưa** chạy trên thiết bị. Ở CORE không có job nên không có kết quả trễ để chặn; vẫn phải kiểm khi bật live | D + C |
+| Profile → Wardrobe → Today thật | Các ca local đã chạy lại trên Samsung sau wiring Try-On. [QA CORE](../../qa/track-a-core-regression.md) | D xác nhận |
+| VTO unavailable đúng gate | Nút Today mở đúng thông báo CORE trên Samsung. [QA CORE](../../qa/track-a-core-regression.md) | D |
+| Real-store deletion/invalidation với late-result fixtures C-210 | Xóa hồ sơ và dọn đúng scope đã đạt trên Samsung. Ca store thật với late-result fixture còn mở. | D + C |
 
 ## Đổi sang FRONT/DUAL
 

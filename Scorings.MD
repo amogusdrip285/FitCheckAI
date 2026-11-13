@@ -46,3 +46,5 @@ Nếu hòa điểm: ưu tiên lần lượt tiêu chí 1, tiêu chí 2 rồi ti�
 | **Tổng** | **51/100** | Tự chấm theo rubric trong repo. |
 
 Điểm 51/100 đánh giá mức sẵn sàng của demo toàn dự án. Phần chấm giải thích recommendation theo nhiệm vụ B-004 dùng thang 1–5. [Điểm reviewer A](eval/ai/results/2026-11-12T12-48-27-674-recommendation.md#kết-quả-rà-soát-của-track-a).
+
+Ngày 13/11/2026 giữ **51/100**. Bản CORE mới mở lại được trên Samsung, ML Kit chạy 6/6 mẫu và Today phối cơ bản khi mất mạng. Hai luồng AI qua proxy chưa được nghiệm thu trên điện thoại. Nghiên cứu người dùng và pilot vẫn có n=0. [Hồi quy CORE](docs/qa/track-a-core-regression.md).

@@ -283,6 +283,7 @@ class TodayViewModel @Inject constructor(
         val paths = withContext(Dispatchers.IO) {
             items.flatMap { it.images.refs() }.mapNotNull { ref -> media.displayPath(ref)?.let { ref.id to it } }.toMap()
         }
+        checkCurrent(selected, outfit)
         tryOnHandoff.publish(TryOnSelection(outfit, items, paths))
         Routes.tryOn(outfit.id, outfit.wardrobeSnapshotId)
     }

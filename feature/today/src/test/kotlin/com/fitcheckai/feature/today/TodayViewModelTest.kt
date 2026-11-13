@@ -23,15 +23,21 @@ import com.fitcheckai.core.model.recommendation.OutfitSource
 import com.fitcheckai.core.model.recommendation.outfitSignature
 import com.fitcheckai.core.model.tryon.InMemoryTryOnSelectionHandoff
 import com.fitcheckai.core.model.wardrobe.ErrorCode
+import com.fitcheckai.core.model.wardrobe.MediaRef
+import com.fitcheckai.core.model.wardrobe.MediaStore
 import com.fitcheckai.core.model.wardrobe.WardrobeException
 import com.fitcheckai.core.model.wardrobe.fakes.FakeMediaStore
 import com.fitcheckai.core.model.wardrobe.fakes.FakeWardrobeRepository
 import com.fitcheckai.core.model.wardrobe.fakes.fixtureId
 import com.fitcheckai.core.model.wardrobe.fakes.sixFixtures
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -188,6 +194,35 @@ class TodayViewModelTest {
         assertEquals(ErrorCode.STALE_INPUT, error.code)
     }
 
+    @Test fun `a wardrobe edit during path resolution cannot publish a Try-On selection`() = runTest(dispatcher) {
+        val readingPath = CompletableDeferred<Unit>()
+        val allowRead = CountDownLatch(1)
+        var pauseReads = false
+        val blockingMedia = object : MediaStore by media {
+            override fun displayPath(ref: MediaRef): String? {
+                if (pauseReads) {
+                    readingPath.complete(Unit)
+                    check(allowRead.await(5, TimeUnit.SECONDS))
+                }
+                return media.displayPath(ref)
+            }
+        }
+        val viewModel = create(mediaStore = blockingMedia)
+        val outfit = viewModel.settled().outfits.single()
+        pauseReads = true
+        val handoffAttempt = async { viewModel.prepareTryOn(outfit.outfitId) }
+        try {
+            readingPath.await()
+            repository.upsert(top.copy(name = "Edited during handoff"), top.revision).getOrThrow()
+        } finally {
+            allowRead.countDown()
+        }
+
+        val error = handoffAttempt.await().exceptionOrNull() as WardrobeException
+        assertEquals(ErrorCode.STALE_INPUT, error.code)
+        assertNull(handoff.find(outfit.outfitId))
+    }
+
     @Test fun `style, free text and count are sent only when the user applies them`() = runTest(dispatcher) {
         val viewModel = create()
         viewModel.settled()
@@ -254,10 +289,14 @@ class TodayViewModelTest {
         assertTrue(fake.requests.isEmpty())
     }
 
-    private fun create(focus: String? = null, engine: OutfitRecommendation = fake): TodayViewModel {
+    private fun create(
+        focus: String? = null,
+        engine: OutfitRecommendation = fake,
+        mediaStore: MediaStore = media,
+    ): TodayViewModel {
         val handle = SavedStateHandle(mapOf(Routes.ARG_FOCUS_ITEM_ID to focus))
         val viewModel = TodayViewModel(
-            handle, repository, FakeProfileStorage(profile), media, engine,
+            handle, repository, FakeProfileStorage(profile), mediaStore, engine,
             BasicOutfitFallback { 100 }, OutfitShare(ContextWrapper(null), media), wearLog,
             object : MetricsTracker { override fun track(event: MetricEvent) = Unit },
             handoff,
