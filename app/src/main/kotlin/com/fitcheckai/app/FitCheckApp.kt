@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -37,6 +38,19 @@ private val TABS = listOf(
     TopLevelTab(Routes.PROFILE, Routes.PROFILE, "Hồ sơ", Icons.Outlined.Person),
 )
 
+/**
+ * Switches bottom-bar tab, keeping each tab's own back stack. Use this for ANY jump to a tab root
+ * (not just the bar): a plain navigate() would push the tab inside the current tab's stack, and the
+ * bar could then never leave it (save + restore would bring the pushed screen straight back).
+ */
+internal fun NavController.navigateToTopLevel(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
 @Composable
 fun FitCheckApp(viewModel: MainViewModel = hiltViewModel()) {
     val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
@@ -54,13 +68,7 @@ fun FitCheckApp(viewModel: MainViewModel = hiltViewModel()) {
                     TABS.forEach { tab ->
                         NavigationBarItem(
                             selected = currentRoute?.startsWith(tab.routePrefix) == true,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { navController.navigateToTopLevel(tab.route) },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(tab.label) },
                         )
