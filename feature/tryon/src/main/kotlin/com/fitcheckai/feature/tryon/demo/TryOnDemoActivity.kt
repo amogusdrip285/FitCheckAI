@@ -69,6 +69,7 @@ import com.fitcheckai.feature.tryon.contract.ImageView
 import com.fitcheckai.feature.tryon.contract.MediaRef
 import com.fitcheckai.feature.tryon.contract.MediaScope
 import com.fitcheckai.feature.tryon.contract.TryOnCapability
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
 import com.fitcheckai.feature.tryon.contract.TryOnOutfitSnapshot
 import com.fitcheckai.feature.tryon.contract.TryOnPersonProfileSnapshot
@@ -79,6 +80,7 @@ import com.fitcheckai.feature.tryon.fake.FakeVirtualTryOnService
 import com.fitcheckai.feature.tryon.privacy.TryOnPrivacyCoordinator
 import com.fitcheckai.feature.tryon.ui.TryOnRoute
 import com.fitcheckai.feature.tryon.ui.TryOnViewModel
+import com.fitcheckai.feature.tryon.ui.defaultSlotItemId
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.CoroutineScope
@@ -274,13 +276,18 @@ fun TryOnDemoWorkbench(
         )
     }
 
-    // Track custom local MediaRefs picked or generated on the device (supports all 6 slots: Person/Top/Bottom x Front/Back)
+    // Track custom local MediaRefs picked or generated on the device (Person + 4 garment slots x Front/Back)
     var customPersonFront by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
     var customPersonBack by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
     var customGarmentFront by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
     var customGarmentBack by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
     var customBottomFront by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
     var customBottomBack by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
+    var customHatFront by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
+    var customHatBack by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
+    var customShoesFront by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
+    var customShoesBack by remember { mutableStateOf<Pair<MediaRef, ByteArray>?>(null) }
+    var removedSlots by remember { mutableStateOf<Set<TryOnGarmentSlot>>(emptySet()) }
 
     val demoEnvironment = remember(
         executionMode,
@@ -307,6 +314,11 @@ fun TryOnDemoWorkbench(
             customGarmentBack = customGarmentBack,
             customBottomFront = customBottomFront,
             customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = removedSlots,
         )
     }
 
@@ -329,6 +341,11 @@ fun TryOnDemoWorkbench(
         customGarmentBack,
         customBottomFront,
         customBottomBack,
+        customHatFront,
+        customHatBack,
+        customShoesFront,
+        customShoesBack,
+        removedSlots,
     ) {
         demoEnvironment.syncAllInputs(
             allowSampleBacks = allowSampleBacks,
@@ -338,6 +355,11 @@ fun TryOnDemoWorkbench(
             customGarmentBack = customGarmentBack,
             customBottomFront = customBottomFront,
             customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = removedSlots,
         )
     }
 
@@ -383,6 +405,21 @@ fun TryOnDemoWorkbench(
         }
     }
 
+    fun syncGarmentStateAndNotify(nextRemovedSlots: Set<TryOnGarmentSlot> = removedSlots) {
+        demoEnvironment.syncGarmentInputs(
+            allowSampleBacks = allowSampleBacks,
+            customGarmentFront = customGarmentFront,
+            customGarmentBack = customGarmentBack,
+            customBottomFront = customBottomFront,
+            customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = nextRemovedSlots,
+        )
+    }
+
     val pickGarmentFrontLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
@@ -396,13 +433,9 @@ fun TryOnDemoWorkbench(
                 view = ImageView.FRONT,
             )?.let { imported ->
                 customGarmentFront = imported
-                demoEnvironment.syncGarmentInputs(
-                    allowSampleBacks = allowSampleBacks,
-                    customGarmentFront = imported,
-                    customGarmentBack = customGarmentBack,
-                    customBottomFront = customBottomFront,
-                    customBottomBack = customBottomBack,
-                )
+                val nextRemoved = removedSlots - TryOnGarmentSlot.TOP
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
                 localInputStatus = "Đã nạp ảnh Áo (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -421,13 +454,9 @@ fun TryOnDemoWorkbench(
                 view = ImageView.BACK,
             )?.let { imported ->
                 customGarmentBack = imported
-                demoEnvironment.syncGarmentInputs(
-                    allowSampleBacks = allowSampleBacks,
-                    customGarmentFront = customGarmentFront,
-                    customGarmentBack = imported,
-                    customBottomFront = customBottomFront,
-                    customBottomBack = customBottomBack,
-                )
+                val nextRemoved = removedSlots - TryOnGarmentSlot.TOP
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
                 localInputStatus = "Đã nạp ảnh Áo (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -436,7 +465,7 @@ fun TryOnDemoWorkbench(
     val pickBottomFrontLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
-        val bottomId = demoEnvironment.secondaryBottomItemId ?: return@rememberLauncherForActivityResult
+        val bottomId = demoEnvironment.secondaryBottomItemId ?: defaultSlotItemId(TryOnGarmentSlot.BOTTOM)
         if (uri != null) {
             importUriToLocalRef(
                 context = context,
@@ -447,13 +476,9 @@ fun TryOnDemoWorkbench(
                 view = ImageView.FRONT,
             )?.let { imported ->
                 customBottomFront = imported
-                demoEnvironment.syncGarmentInputs(
-                    allowSampleBacks = allowSampleBacks,
-                    customGarmentFront = customGarmentFront,
-                    customGarmentBack = customGarmentBack,
-                    customBottomFront = imported,
-                    customBottomBack = customBottomBack,
-                )
+                val nextRemoved = removedSlots - TryOnGarmentSlot.BOTTOM
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
                 localInputStatus = "Đã nạp ảnh Quần (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
@@ -462,7 +487,7 @@ fun TryOnDemoWorkbench(
     val pickBottomBackLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
-        val bottomId = demoEnvironment.secondaryBottomItemId ?: return@rememberLauncherForActivityResult
+        val bottomId = demoEnvironment.secondaryBottomItemId ?: defaultSlotItemId(TryOnGarmentSlot.BOTTOM)
         if (uri != null) {
             importUriToLocalRef(
                 context = context,
@@ -473,14 +498,94 @@ fun TryOnDemoWorkbench(
                 view = ImageView.BACK,
             )?.let { imported ->
                 customBottomBack = imported
-                demoEnvironment.syncGarmentInputs(
-                    allowSampleBacks = allowSampleBacks,
-                    customGarmentFront = customGarmentFront,
-                    customGarmentBack = customGarmentBack,
-                    customBottomFront = customBottomFront,
-                    customBottomBack = imported,
-                )
+                val nextRemoved = removedSlots - TryOnGarmentSlot.BOTTOM
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
                 localInputStatus = "Đã nạp ảnh Quần (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
+            }
+        }
+    }
+
+    val pickHatFrontLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            importUriToLocalRef(
+                context = context,
+                uri = uri,
+                slotId = "local-picked-hat-front",
+                ownerId = demoEnvironment.hatItemId,
+                scope = MediaScope.GARMENT,
+                view = ImageView.FRONT,
+            )?.let { imported ->
+                customHatFront = imported
+                val nextRemoved = removedSlots - TryOnGarmentSlot.HAT
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
+                localInputStatus = "Đã nạp ảnh Mũ (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
+            }
+        }
+    }
+
+    val pickHatBackLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            importUriToLocalRef(
+                context = context,
+                uri = uri,
+                slotId = "local-picked-hat-back",
+                ownerId = demoEnvironment.hatItemId,
+                scope = MediaScope.GARMENT,
+                view = ImageView.BACK,
+            )?.let { imported ->
+                customHatBack = imported
+                val nextRemoved = removedSlots - TryOnGarmentSlot.HAT
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
+                localInputStatus = "Đã nạp ảnh Mũ (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
+            }
+        }
+    }
+
+    val pickShoesFrontLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            importUriToLocalRef(
+                context = context,
+                uri = uri,
+                slotId = "local-picked-shoes-front",
+                ownerId = demoEnvironment.shoesItemId,
+                scope = MediaScope.GARMENT,
+                view = ImageView.FRONT,
+            )?.let { imported ->
+                customShoesFront = imported
+                val nextRemoved = removedSlots - TryOnGarmentSlot.SHOES
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
+                localInputStatus = "Đã nạp ảnh Giày (Trước) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
+            }
+        }
+    }
+
+    val pickShoesBackLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            importUriToLocalRef(
+                context = context,
+                uri = uri,
+                slotId = "local-picked-shoes-back",
+                ownerId = demoEnvironment.shoesItemId,
+                scope = MediaScope.GARMENT,
+                view = ImageView.BACK,
+            )?.let { imported ->
+                customShoesBack = imported
+                val nextRemoved = removedSlots - TryOnGarmentSlot.SHOES
+                removedSlots = nextRemoved
+                syncGarmentStateAndNotify(nextRemoved)
+                localInputStatus = "Đã nạp ảnh Giày (Sau) cục bộ: ${imported.first.width}x${imported.first.height}px (${imported.first.byteCount / 1024} KB)."
             }
         }
     }
@@ -799,6 +904,11 @@ fun TryOnDemoWorkbench(
                                     customGarmentBack = generated.garmentBack
                                     customBottomFront = null
                                     customBottomBack = null
+                                    customHatFront = null
+                                    customHatBack = null
+                                    customShoesFront = null
+                                    customShoesBack = null
+                                    removedSlots = emptySet()
                                     localInputStatus = "Đã tạo & nạp bộ file .png cục bộ (${generated.personFront.first.width}x${generated.personFront.first.height}px) tại bộ nhớ riêng ứng dụng."
                                 },
                                 modifier = Modifier
@@ -867,6 +977,11 @@ fun TryOnDemoWorkbench(
                                         customGarmentBack = null
                                         customBottomFront = null
                                         customBottomBack = null
+                                        customHatFront = null
+                                        customHatBack = null
+                                        customShoesFront = null
+                                        customShoesBack = null
+                                        removedSlots = emptySet()
                                         sessionNonce += 1
                                         localInputStatus = "Đã thu hồi Consent & xóa toàn bộ ảnh/kết quả cục bộ (C-210)."
                                     }
@@ -907,6 +1022,7 @@ fun TryOnDemoWorkbench(
                         }
                     },
                     onSelectDifferentOutfit = {
+                        removedSlots = emptySet()
                         selectedOutfitPreset = when (selectedOutfitPreset) {
                             DemoOutfitPreset.WORK_THREE_ITEMS -> DemoOutfitPreset.CASUAL_SINGLE_TOP
                             DemoOutfitPreset.CASUAL_SINGLE_TOP -> DemoOutfitPreset.OUTERWEAR_NO_BACK
@@ -920,18 +1036,65 @@ fun TryOnDemoWorkbench(
                         }
                     },
                     onPickGarmentPhoto = { itemId, view ->
-                        val isBottom = itemId == demoEnvironment.secondaryBottomItemId
-                        if (isBottom) {
-                            when (view) {
+                        when (itemId) {
+                            demoEnvironment.secondaryBottomItemId,
+                            defaultSlotItemId(TryOnGarmentSlot.BOTTOM) -> when (view) {
                                 ImageView.FRONT -> pickBottomFrontLauncher.launch("image/*")
                                 ImageView.BACK -> pickBottomBackLauncher.launch("image/*")
                             }
-                        } else {
-                            when (view) {
+                            demoEnvironment.hatItemId,
+                            defaultSlotItemId(TryOnGarmentSlot.HAT) -> when (view) {
+                                ImageView.FRONT -> pickHatFrontLauncher.launch("image/*")
+                                ImageView.BACK -> pickHatBackLauncher.launch("image/*")
+                            }
+                            demoEnvironment.shoesItemId,
+                            defaultSlotItemId(TryOnGarmentSlot.SHOES) -> when (view) {
+                                ImageView.FRONT -> pickShoesFrontLauncher.launch("image/*")
+                                ImageView.BACK -> pickShoesBackLauncher.launch("image/*")
+                            }
+                            else -> when (view) {
                                 ImageView.FRONT -> pickGarmentFrontLauncher.launch("image/*")
                                 ImageView.BACK -> pickGarmentBackLauncher.launch("image/*")
                             }
                         }
+                    },
+                    onRemoveGarmentSlot = { slot ->
+                        val cacheDirPicked = File(context.cacheDir, "tryon_demo_picked")
+                        val prefixes = when (slot) {
+                            TryOnGarmentSlot.TOP -> {
+                                customGarmentFront = null
+                                customGarmentBack = null
+                                listOf(
+                                    "local-picked-garment-front",
+                                    "local-picked-garment-back",
+                                    "local-picked-top-front",
+                                    "local-picked-top-back",
+                                )
+                            }
+                            TryOnGarmentSlot.BOTTOM -> {
+                                customBottomFront = null
+                                customBottomBack = null
+                                listOf("local-picked-bottom-front", "local-picked-bottom-back")
+                            }
+                            TryOnGarmentSlot.HAT -> {
+                                customHatFront = null
+                                customHatBack = null
+                                listOf("local-picked-hat-front", "local-picked-hat-back")
+                            }
+                            TryOnGarmentSlot.SHOES -> {
+                                customShoesFront = null
+                                customShoesBack = null
+                                listOf("local-picked-shoes-front", "local-picked-shoes-back")
+                            }
+                        }
+                        for (prefix in prefixes) {
+                            for (ext in listOf("jpg", "png", "webp")) {
+                                File(cacheDirPicked, "$prefix.$ext").delete()
+                            }
+                        }
+                        removedSlots = removedSlots + slot
+                        demoEnvironment.viewModel.removeGarmentSlot(slot)
+                        localInputStatus = "Đã bỏ ảnh ở ô ${slot.name}."
                     },
                     onRefreshConnection = {
                         sessionNonce += 1
@@ -948,6 +1111,8 @@ private class DemoSessionEnvironment(
     val vmScope: CoroutineScope,
     val primaryItemId: String,
     val secondaryBottomItemId: String? = null,
+    val hatItemId: String,
+    val shoesItemId: String,
     private val filesDir: File,
     private val executionMode: DemoExecutionMode,
     private val outfitPreset: DemoOutfitPreset,
@@ -966,6 +1131,11 @@ private class DemoSessionEnvironment(
         customGarmentBack: Pair<MediaRef, ByteArray>?,
         customBottomFront: Pair<MediaRef, ByteArray>?,
         customBottomBack: Pair<MediaRef, ByteArray>?,
+        customHatFront: Pair<MediaRef, ByteArray>? = null,
+        customHatBack: Pair<MediaRef, ByteArray>? = null,
+        customShoesFront: Pair<MediaRef, ByteArray>? = null,
+        customShoesBack: Pair<MediaRef, ByteArray>? = null,
+        removedSlots: Set<TryOnGarmentSlot> = emptySet(),
     ) {
         val nextGarmentMap = resolveDemoGarmentMap(
             filesDir = filesDir,
@@ -975,12 +1145,19 @@ private class DemoSessionEnvironment(
             baseGarmentMap = baseGarmentMap,
             primaryItemId = primaryItemId,
             secondaryBottomItemId = secondaryBottomItemId,
+            hatItemId = hatItemId,
+            shoesItemId = shoesItemId,
             allowSampleBacks = allowSampleBacks,
             inMemoryMediaStore = inMemoryMediaStore,
             customGarmentFront = customGarmentFront,
             customGarmentBack = customGarmentBack,
             customBottomFront = customBottomFront,
             customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = removedSlots,
         )
         viewModel.updateGarmentImages(nextGarmentMap)
     }
@@ -993,6 +1170,11 @@ private class DemoSessionEnvironment(
         customGarmentBack: Pair<MediaRef, ByteArray>?,
         customBottomFront: Pair<MediaRef, ByteArray>?,
         customBottomBack: Pair<MediaRef, ByteArray>?,
+        customHatFront: Pair<MediaRef, ByteArray>? = null,
+        customHatBack: Pair<MediaRef, ByteArray>? = null,
+        customShoesFront: Pair<MediaRef, ByteArray>? = null,
+        customShoesBack: Pair<MediaRef, ByteArray>? = null,
+        removedSlots: Set<TryOnGarmentSlot> = emptySet(),
     ) {
         if (inMemoryMediaStore != null) {
             customPersonFront?.let { inMemoryMediaStore.putMedia(it.first, it.second) }
@@ -1006,7 +1188,11 @@ private class DemoSessionEnvironment(
                     customGarmentFront != null ||
                     customGarmentBack != null ||
                     customBottomFront != null ||
-                    customBottomBack != null,
+                    customBottomBack != null ||
+                    customHatFront != null ||
+                    customHatBack != null ||
+                    customShoesFront != null ||
+                    customShoesBack != null,
             )
         }
 
@@ -1036,6 +1222,11 @@ private class DemoSessionEnvironment(
             customGarmentBack = customGarmentBack,
             customBottomFront = customBottomFront,
             customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = removedSlots,
         )
     }
 
@@ -1111,29 +1302,65 @@ private fun resolveDemoGarmentMap(
     baseGarmentMap: Map<String, ImagePair>,
     primaryItemId: String,
     secondaryBottomItemId: String?,
+    hatItemId: String,
+    shoesItemId: String,
     allowSampleBacks: Boolean,
     inMemoryMediaStore: FakeInMemoryMediaStore?,
     customGarmentFront: Pair<MediaRef, ByteArray>?,
     customGarmentBack: Pair<MediaRef, ByteArray>?,
     customBottomFront: Pair<MediaRef, ByteArray>?,
     customBottomBack: Pair<MediaRef, ByteArray>?,
+    customHatFront: Pair<MediaRef, ByteArray>? = null,
+    customHatBack: Pair<MediaRef, ByteArray>? = null,
+    customShoesFront: Pair<MediaRef, ByteArray>? = null,
+    customShoesBack: Pair<MediaRef, ByteArray>? = null,
+    removedSlots: Set<TryOnGarmentSlot> = emptySet(),
 ): Map<String, ImagePair> {
+    val bottomItemId = secondaryBottomItemId ?: defaultSlotItemId(TryOnGarmentSlot.BOTTOM)
+
     if (executionMode == DemoExecutionMode.IN_MEMORY_FAKE) {
         val updatedGarmentMap = baseGarmentMap.toMutableMap()
-        val primaryPair = updatedGarmentMap[primaryItemId] ?: ImagePair()
-        val effectiveGarmentFront = customGarmentFront?.first ?: primaryPair.front
-        val effectiveGarmentBack = customGarmentBack?.first ?: primaryPair.back
-        customGarmentFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
-        customGarmentBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
-        updatedGarmentMap[primaryItemId] = ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
+        if (TryOnGarmentSlot.TOP in removedSlots) {
+            updatedGarmentMap[primaryItemId] = ImagePair()
+        } else {
+            val primaryPair = updatedGarmentMap[primaryItemId] ?: ImagePair()
+            val effectiveGarmentFront = customGarmentFront?.first ?: primaryPair.front
+            val effectiveGarmentBack = customGarmentBack?.first ?: primaryPair.back
+            customGarmentFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            customGarmentBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            updatedGarmentMap[primaryItemId] = ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
+        }
 
-        if (secondaryBottomItemId != null) {
-            val bottomPair = updatedGarmentMap[secondaryBottomItemId] ?: ImagePair()
+        if (TryOnGarmentSlot.BOTTOM in removedSlots) {
+            updatedGarmentMap[bottomItemId] = ImagePair()
+        } else if (secondaryBottomItemId != null || customBottomFront != null || customBottomBack != null) {
+            val bottomPair = updatedGarmentMap[bottomItemId] ?: ImagePair()
             val effectiveBottomFront = customBottomFront?.first ?: bottomPair.front
             val effectiveBottomBack = customBottomBack?.first ?: bottomPair.back
             customBottomFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
             customBottomBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
-            updatedGarmentMap[secondaryBottomItemId] = ImagePair(front = effectiveBottomFront, back = effectiveBottomBack)
+            updatedGarmentMap[bottomItemId] = ImagePair(front = effectiveBottomFront, back = effectiveBottomBack)
+        }
+
+        // HAT and SHOES are NEVER pre-populated with sample images; only user-picked photos appear.
+        if (TryOnGarmentSlot.HAT in removedSlots) {
+            updatedGarmentMap[hatItemId] = ImagePair()
+        } else {
+            customHatFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            customHatBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            if (customHatFront != null || customHatBack != null || updatedGarmentMap.containsKey(hatItemId)) {
+                updatedGarmentMap[hatItemId] = ImagePair(front = customHatFront?.first, back = customHatBack?.first)
+            }
+        }
+
+        if (TryOnGarmentSlot.SHOES in removedSlots) {
+            updatedGarmentMap[shoesItemId] = ImagePair()
+        } else {
+            customShoesFront?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            customShoesBack?.let { inMemoryMediaStore?.putMedia(it.first, it.second) }
+            if (customShoesFront != null || customShoesBack != null || updatedGarmentMap.containsKey(shoesItemId)) {
+                updatedGarmentMap[shoesItemId] = ImagePair(front = customShoesFront?.first, back = customShoesBack?.first)
+            }
         }
         return updatedGarmentMap
     }
@@ -1159,44 +1386,70 @@ private fun resolveDemoGarmentMap(
         customGarmentBack?.first
     }
 
-    return baseOutfit.items.associate { item ->
-        when (item.itemId) {
-            primaryItemId -> {
-                item.itemId to ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
-            }
-            secondaryBottomItemId -> {
-                val includeSampleBack = allowSampleBacks && outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK
-                val secondaryPair = generateSecondaryGarmentSamplePair(
-                    filesDir = filesDir,
-                    itemId = item.itemId,
-                    label = item.label,
-                    includeBack = includeSampleBack,
-                )
-                val frontRef = customBottomFront?.first
-                    ?: discoveredRealInputs?.bottomFront?.first
-                    ?: secondaryPair.front
-                val backRef = if (!allowSampleBacks) {
-                    customBottomBack?.first
-                } else if (!includeSampleBack && customBottomBack == null && discoveredRealInputs?.bottomBack == null) {
-                    null
+    val resolved = LinkedHashMap<String, ImagePair>()
+    baseOutfit.items.forEach { item ->
+        when (item.resolvedGarmentSlot()) {
+            TryOnGarmentSlot.TOP -> {
+                resolved[item.itemId] = if (TryOnGarmentSlot.TOP in removedSlots) {
+                    ImagePair()
                 } else {
-                    customBottomBack?.first
-                        ?: discoveredRealInputs?.bottomBack?.first
-                        ?: secondaryPair.back
+                    ImagePair(front = effectiveGarmentFront, back = effectiveGarmentBack)
                 }
-                item.itemId to ImagePair(front = frontRef, back = backRef)
             }
-            else -> {
-                val secondaryPair = generateSecondaryGarmentSamplePair(
-                    filesDir = filesDir,
-                    itemId = item.itemId,
-                    label = item.label,
-                    includeBack = allowSampleBacks && outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK,
-                )
-                item.itemId to secondaryPair
+            TryOnGarmentSlot.BOTTOM -> {
+                resolved[item.itemId] = if (TryOnGarmentSlot.BOTTOM in removedSlots) {
+                    ImagePair()
+                } else {
+                    val includeSampleBack = allowSampleBacks && outfitPreset != DemoOutfitPreset.OUTERWEAR_NO_BACK
+                    val secondaryPair = generateSecondaryGarmentSamplePair(
+                        filesDir = filesDir,
+                        itemId = item.itemId,
+                        label = item.label,
+                        includeBack = includeSampleBack,
+                    )
+                    val frontRef = customBottomFront?.first
+                        ?: discoveredRealInputs?.bottomFront?.first
+                        ?: secondaryPair.front
+                    val backRef = if (!allowSampleBacks) {
+                        customBottomBack?.first
+                    } else if (!includeSampleBack && customBottomBack == null && discoveredRealInputs?.bottomBack == null) {
+                        null
+                    } else {
+                        customBottomBack?.first
+                            ?: discoveredRealInputs?.bottomBack?.first
+                            ?: secondaryPair.back
+                    }
+                    ImagePair(front = frontRef, back = backRef)
+                }
             }
+            TryOnGarmentSlot.HAT -> {
+                resolved[item.itemId] = if (TryOnGarmentSlot.HAT in removedSlots) {
+                    ImagePair()
+                } else {
+                    ImagePair(front = customHatFront?.first, back = customHatBack?.first)
+                }
+            }
+            TryOnGarmentSlot.SHOES -> {
+                resolved[item.itemId] = if (TryOnGarmentSlot.SHOES in removedSlots) {
+                    ImagePair()
+                } else {
+                    ImagePair(front = customShoesFront?.first, back = customShoesBack?.first)
+                }
+            }
+            null -> Unit
         }
     }
+
+    if (secondaryBottomItemId == null && (customBottomFront != null || customBottomBack != null) && TryOnGarmentSlot.BOTTOM !in removedSlots) {
+        resolved[bottomItemId] = ImagePair(front = customBottomFront?.first, back = customBottomBack?.first)
+    }
+    if (!resolved.containsKey(hatItemId) && (customHatFront != null || customHatBack != null) && TryOnGarmentSlot.HAT !in removedSlots) {
+        resolved[hatItemId] = ImagePair(front = customHatFront?.first, back = customHatBack?.first)
+    }
+    if (!resolved.containsKey(shoesItemId) && (customShoesFront != null || customShoesBack != null) && TryOnGarmentSlot.SHOES !in removedSlots) {
+        resolved[shoesItemId] = ImagePair(front = customShoesFront?.first, back = customShoesBack?.first)
+    }
+    return resolved
 }
 
 private fun buildDemoSessionEnvironment(
@@ -1216,6 +1469,11 @@ private fun buildDemoSessionEnvironment(
     customGarmentBack: Pair<MediaRef, ByteArray>?,
     customBottomFront: Pair<MediaRef, ByteArray>?,
     customBottomBack: Pair<MediaRef, ByteArray>?,
+    customHatFront: Pair<MediaRef, ByteArray>? = null,
+    customHatBack: Pair<MediaRef, ByteArray>? = null,
+    customShoesFront: Pair<MediaRef, ByteArray>? = null,
+    customShoesBack: Pair<MediaRef, ByteArray>? = null,
+    removedSlots: Set<TryOnGarmentSlot> = emptySet(),
 ): DemoSessionEnvironment {
     val vmScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -1284,7 +1542,11 @@ private fun buildDemoSessionEnvironment(
     }
 
     val primaryItemId = baseOutfit.items.first().itemId
-    val secondaryBottomItemId = baseOutfit.items.firstOrNull { it.category == Category.BOTTOM }?.itemId
+    val secondaryBottomItemId = baseOutfit.items.firstOrNull { it.resolvedGarmentSlot() == TryOnGarmentSlot.BOTTOM }?.itemId
+    val hatItemId = baseOutfit.items.firstOrNull { it.resolvedGarmentSlot() == TryOnGarmentSlot.HAT }?.itemId
+        ?: defaultSlotItemId(TryOnGarmentSlot.HAT)
+    val shoesItemId = baseOutfit.items.firstOrNull { it.resolvedGarmentSlot() == TryOnGarmentSlot.SHOES }?.itemId
+        ?: defaultSlotItemId(TryOnGarmentSlot.SHOES)
 
     if (
         executionMode == DemoExecutionMode.BACKEND_FOSTA_E2E ||
@@ -1303,6 +1565,8 @@ private fun buildDemoSessionEnvironment(
             baseGarmentMap = baseGarmentMap,
             primaryItemId = primaryItemId,
             secondaryBottomItemId = secondaryBottomItemId,
+            hatItemId = hatItemId,
+            shoesItemId = shoesItemId,
             initialAllowSampleBacks = initialAllowSampleBacks,
             customPersonFront = customPersonFront,
             customPersonBack = customPersonBack,
@@ -1310,6 +1574,11 @@ private fun buildDemoSessionEnvironment(
             customGarmentBack = customGarmentBack,
             customBottomFront = customBottomFront,
             customBottomBack = customBottomBack,
+            customHatFront = customHatFront,
+            customHatBack = customHatBack,
+            customShoesFront = customShoesFront,
+            customShoesBack = customShoesBack,
+            removedSlots = removedSlots,
         )
     }
 
@@ -1334,12 +1603,19 @@ private fun buildDemoSessionEnvironment(
         baseGarmentMap = baseGarmentMap,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        hatItemId = hatItemId,
+        shoesItemId = shoesItemId,
         allowSampleBacks = true,
         inMemoryMediaStore = mediaStore,
         customGarmentFront = customGarmentFront,
         customGarmentBack = customGarmentBack,
         customBottomFront = customBottomFront,
         customBottomBack = customBottomBack,
+        customHatFront = customHatFront,
+        customHatBack = customHatBack,
+        customShoesFront = customShoesFront,
+        customShoesBack = customShoesBack,
+        removedSlots = removedSlots,
     )
 
     // When custom local files are loaded, generate a real local composite PNG clearly stamped FAKE
@@ -1352,7 +1628,11 @@ private fun buildDemoSessionEnvironment(
             customGarmentFront != null ||
             customGarmentBack != null ||
             customBottomFront != null ||
-            customBottomBack != null,
+            customBottomBack != null ||
+            customHatFront != null ||
+            customHatBack != null ||
+            customShoesFront != null ||
+            customShoesBack != null,
     )
 
     val personSnapshot = TryOnPersonProfileSnapshot(
@@ -1385,6 +1665,8 @@ private fun buildDemoSessionEnvironment(
         vmScope = vmScope,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        hatItemId = hatItemId,
+        shoesItemId = shoesItemId,
         filesDir = filesDir,
         executionMode = executionMode,
         outfitPreset = outfitPreset,
@@ -1409,6 +1691,8 @@ private fun buildBackendServerEnvironment(
     baseGarmentMap: Map<String, ImagePair>,
     primaryItemId: String,
     secondaryBottomItemId: String?,
+    hatItemId: String,
+    shoesItemId: String,
     initialAllowSampleBacks: Boolean,
     customPersonFront: Pair<MediaRef, ByteArray>?,
     customPersonBack: Pair<MediaRef, ByteArray>?,
@@ -1416,6 +1700,11 @@ private fun buildBackendServerEnvironment(
     customGarmentBack: Pair<MediaRef, ByteArray>?,
     customBottomFront: Pair<MediaRef, ByteArray>?,
     customBottomBack: Pair<MediaRef, ByteArray>?,
+    customHatFront: Pair<MediaRef, ByteArray>? = null,
+    customHatBack: Pair<MediaRef, ByteArray>? = null,
+    customShoesFront: Pair<MediaRef, ByteArray>? = null,
+    customShoesBack: Pair<MediaRef, ByteArray>? = null,
+    removedSlots: Set<TryOnGarmentSlot> = emptySet(),
 ): DemoSessionEnvironment {
     val initialPersonImages = resolveDemoPersonImages(
         filesDir = filesDir,
@@ -1434,12 +1723,19 @@ private fun buildBackendServerEnvironment(
         baseGarmentMap = baseGarmentMap,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        hatItemId = hatItemId,
+        shoesItemId = shoesItemId,
         allowSampleBacks = initialAllowSampleBacks,
         inMemoryMediaStore = null,
         customGarmentFront = customGarmentFront,
         customGarmentBack = customGarmentBack,
         customBottomFront = customBottomFront,
         customBottomBack = customBottomBack,
+        customHatFront = customHatFront,
+        customHatBack = customHatBack,
+        customShoesFront = customShoesFront,
+        customShoesBack = customShoesBack,
+        removedSlots = removedSlots,
     )
 
     val mediaStore = LocalDiskTryOnMediaStore(
@@ -1518,6 +1814,8 @@ private fun buildBackendServerEnvironment(
         vmScope = vmScope,
         primaryItemId = primaryItemId,
         secondaryBottomItemId = secondaryBottomItemId,
+        hatItemId = hatItemId,
+        shoesItemId = shoesItemId,
         filesDir = filesDir,
         executionMode = executionMode,
         outfitPreset = outfitPreset,

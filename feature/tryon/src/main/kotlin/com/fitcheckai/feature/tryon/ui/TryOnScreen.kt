@@ -84,6 +84,7 @@ import com.fitcheckai.feature.tryon.contract.ImageView
 import com.fitcheckai.feature.tryon.contract.MediaRef
 import com.fitcheckai.feature.tryon.contract.QualityReviewState
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
 import com.fitcheckai.feature.tryon.contract.TryOnPresentationMode
@@ -124,12 +125,26 @@ object TryOnTestTags {
     const val PICK_GARMENT_TOP_BACK_INLINE = "tryon_pick_garment_top_back_inline"
     const val PICK_GARMENT_BOTTOM_INLINE = "tryon_pick_garment_bottom_inline"
     const val PICK_GARMENT_BOTTOM_BACK_INLINE = "tryon_pick_garment_bottom_back_inline"
+    const val PICK_GARMENT_HAT_INLINE = "tryon_pick_garment_hat_inline"
+    const val PICK_GARMENT_HAT_BACK_INLINE = "tryon_pick_garment_hat_back_inline"
+    const val PICK_GARMENT_SHOES_INLINE = "tryon_pick_garment_shoes_inline"
+    const val PICK_GARMENT_SHOES_BACK_INLINE = "tryon_pick_garment_shoes_back_inline"
+    const val REMOVE_GARMENT_TOP_INLINE = "tryon_remove_garment_top_inline"
+    const val REMOVE_GARMENT_BOTTOM_INLINE = "tryon_remove_garment_bottom_inline"
+    const val REMOVE_GARMENT_HAT_INLINE = "tryon_remove_garment_hat_inline"
+    const val REMOVE_GARMENT_SHOES_INLINE = "tryon_remove_garment_shoes_inline"
     const val PREVIEW_PERSON_FRONT = "tryon_preview_person_front"
     const val PREVIEW_PERSON_BACK = "tryon_preview_person_back"
     const val PREVIEW_GARMENT_TOP_FRONT = "tryon_preview_garment_top_front"
     const val PREVIEW_GARMENT_TOP_BACK = "tryon_preview_garment_top_back"
     const val PREVIEW_GARMENT_BOTTOM_FRONT = "tryon_preview_garment_bottom_front"
     const val PREVIEW_GARMENT_BOTTOM_BACK = "tryon_preview_garment_bottom_back"
+    const val PREVIEW_GARMENT_HAT_FRONT = "tryon_preview_garment_hat_front"
+    const val PREVIEW_GARMENT_HAT_BACK = "tryon_preview_garment_hat_back"
+    const val PREVIEW_GARMENT_SHOES_FRONT = "tryon_preview_garment_shoes_front"
+    const val PREVIEW_GARMENT_SHOES_BACK = "tryon_preview_garment_shoes_back"
+    const val TRYON_SUMMARY_TEXT = "tryon_summary_text"
+    const val SHOES_FOOT_HINT = "tryon_shoes_foot_hint"
     const val REFRESH_CONNECTION_BUTTON = "tryon_refresh_connection_button"
 }
 
@@ -146,6 +161,7 @@ fun TryOnRoute(
     modifier: Modifier = Modifier,
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = viewModel::removeGarmentSlot,
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -168,6 +184,7 @@ fun TryOnRoute(
         modifier = modifier,
         onPickPersonPhoto = onPickPersonPhoto,
         onPickGarmentPhoto = onPickGarmentPhoto,
+        onRemoveGarmentSlot = onRemoveGarmentSlot,
         onRefreshConnection = onRefreshConnection,
     )
 }
@@ -192,6 +209,7 @@ fun TryOnScreen(
     onSelectGarmentCombo: (TryOnGarmentCombo) -> Unit = {},
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     TryOnEditorialTheme {
@@ -246,6 +264,7 @@ fun TryOnScreen(
                                 onPrepareFreshAttempt = onPrepareFreshAttempt,
                                 onPickPersonPhoto = onPickPersonPhoto,
                                 onPickGarmentPhoto = onPickGarmentPhoto,
+                                onRemoveGarmentSlot = onRemoveGarmentSlot,
                                 onRefreshConnection = onRefreshConnection,
                             )
                         } else {
@@ -267,6 +286,7 @@ fun TryOnScreen(
                                 onPrepareFreshAttempt = onPrepareFreshAttempt,
                                 onPickPersonPhoto = onPickPersonPhoto,
                                 onPickGarmentPhoto = onPickGarmentPhoto,
+                                onRemoveGarmentSlot = onRemoveGarmentSlot,
                                 onRefreshConnection = onRefreshConnection,
                             )
                         }
@@ -296,6 +316,7 @@ private fun CompactSingleColumnLayout(
     onPrepareFreshAttempt: () -> Unit,
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
@@ -367,14 +388,6 @@ private fun CompactSingleColumnLayout(
                 }
             }
 
-            // Image-First Priority Order (Section 3.B):
-            // 1. Ảnh người dùng
-            // 2. Ảnh trang phục đã chọn
-            // 3. Chọn áo / quần / cả hai
-            // 4. Chọn chế độ Original Photo / Studio White
-            // 5. Chọn Front / Back
-            // 6. Xác nhận quyền xử lý ảnh
-            // 7. Nút tạo ảnh
             if (currentResult == null) {
                 PersonPhotosPanel(
                     state = state,
@@ -386,9 +399,8 @@ private fun CompactSingleColumnLayout(
 
             SelectedGarmentsPanel(
                 state = state,
-                onSelectGarmentCombo = onSelectGarmentCombo,
-                onToggleItem = onToggleItem,
                 onPickGarmentPhoto = onPickGarmentPhoto,
+                onRemoveGarmentSlot = onRemoveGarmentSlot,
                 modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
 
@@ -430,6 +442,7 @@ private fun TwoPaneEditorialLayout(
     onPrepareFreshAttempt: () -> Unit,
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -445,7 +458,6 @@ private fun TwoPaneEditorialLayout(
                 .padding(horizontal = TryOnScreenHorizontalPadding),
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            // Left Pane: Image-First Inputs (1. Person -> 2-3. Garments & Combo -> 4-5. Mode & View -> 6-7. Consent & Submit)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -473,9 +485,8 @@ private fun TwoPaneEditorialLayout(
                 }
                 SelectedGarmentsPanel(
                     state = state,
-                    onSelectGarmentCombo = onSelectGarmentCombo,
-                    onToggleItem = onToggleItem,
                     onPickGarmentPhoto = onPickGarmentPhoto,
+                    onRemoveGarmentSlot = onRemoveGarmentSlot,
                 )
                 if (state.isCapabilityAvailable) {
                     TryOnConfigurationPanel(
@@ -750,6 +761,8 @@ private fun TryOnPhotoSlotColumn(
     onPickPhoto: (() -> Unit)? = null,
     pickButtonTag: String? = null,
     previewTag: String? = null,
+    pickEmptyLabel: String = "Chọn ảnh",
+    pickReplaceLabel: String = "Thay ảnh",
 ) {
     Column(
         modifier = modifier,
@@ -793,7 +806,7 @@ private fun TryOnPhotoSlotColumn(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = if (mediaRef == null) "Chọn ảnh" else "Thay ảnh",
+                    text = if (mediaRef == null) pickEmptyLabel else pickReplaceLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -803,165 +816,148 @@ private fun TryOnPhotoSlotColumn(
 }
 
 /**
- * Priority 2 & 3: Ảnh trang phục đã chọn (1 TryOnPanel mỗi món -> 2 TryOnPhotoFrame) + Tổ hợp thay đồ.
+ * Priority 2 & 3: 4 ô trang phục (Áo, Quần, Mũ, Giày) + Tóm tắt "Có ảnh thì ghép".
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SelectedGarmentsPanel(
     state: TryOnUiState,
-    onSelectGarmentCombo: (TryOnGarmentCombo) -> Unit,
-    onToggleItem: (String) -> Unit,
-    modifier: Modifier = Modifier,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
+    onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     val outfit = state.outfitSnapshot ?: return
-    val cap = state.capability
+    val controlsEnabled = !state.isJobActive && !state.isSubmitting
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         TryOnSectionHeading(
-            title = "Trang phục đã chọn",
+            title = "Trang phục muốn thử",
             subtitle = outfit.explanation.takeIf { it.isNotBlank() },
         )
 
-        // Visual Garment Cards (Priority 2) — max 2 layers: TryOnPanel -> 2 borderless TryOnPhotoFrames
-        if (state.supportedOutfitItems.isNotEmpty()) {
-            state.supportedOutfitItems.forEach { item ->
-                val selected = item.itemId in state.selectedItemIds
-                val pair = state.garmentImages[item.itemId]
-                val isPrimaryTop = item.itemId == state.availableTopItem?.itemId
-                val isPrimaryBottom = item.itemId == state.availableBottomItem?.itemId
-                val frontPickTag = when {
-                    isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE
-                    isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_INLINE
-                    else -> null
-                }
-                val backPickTag = when {
-                    isPrimaryBottom -> TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE
-                    isPrimaryTop -> TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE
-                    else -> null
-                }
-                val frontPreviewTag = when {
-                    isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT
-                    isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT
-                    else -> null
-                }
-                val backPreviewTag = when {
-                    isPrimaryBottom -> TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK
-                    isPrimaryTop -> TryOnTestTags.PREVIEW_GARMENT_TOP_BACK
-                    else -> null
-                }
-                GarmentThumbnailCard(
-                    item = item,
-                    imagePair = pair,
-                    selected = selected,
-                    enabled = !state.isJobActive && !state.isSubmitting,
-                    onClick = { onToggleItem(item.itemId) },
-                    onPickFrontPhoto = onPickGarmentPhoto?.let { picker ->
-                        { picker(item.itemId, ImageView.FRONT) }
-                    },
-                    onPickBackPhoto = onPickGarmentPhoto?.let { picker ->
-                        { picker(item.itemId, ImageView.BACK) }
-                    },
-                    frontPickButtonTag = frontPickTag,
-                    backPickButtonTag = backPickTag,
-                    frontPreviewTag = frontPreviewTag,
-                    backPreviewTag = backPreviewTag,
+        state.garmentSlots.forEach { slotUi ->
+            val selected = slotUi.itemSummary.itemId in state.selectedItemIds
+            val (frontPickTag, backPickTag, frontPreviewTag, backPreviewTag, removeTag) =
+                slotTestTags(slotUi.slot)
+            GarmentThumbnailCard(
+                slotUi = slotUi,
+                selected = selected,
+                enabled = controlsEnabled,
+                onPickFrontPhoto = onPickGarmentPhoto?.let { picker ->
+                    { picker(slotUi.itemSummary.itemId, ImageView.FRONT) }
+                },
+                onPickBackPhoto = onPickGarmentPhoto?.let { picker ->
+                    { picker(slotUi.itemSummary.itemId, ImageView.BACK) }
+                },
+                onRemoveSlotPhoto = { onRemoveGarmentSlot(slotUi.slot) },
+                frontPickButtonTag = frontPickTag,
+                backPickButtonTag = backPickTag,
+                frontPreviewTag = frontPreviewTag,
+                backPreviewTag = backPreviewTag,
+                removeButtonTag = removeTag,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        // Priority 3: Tự động tóm tắt "Có ảnh thì ghép" (thay thế cụm chọn tay Áo/Quần)
+        TryOnPanel(modifier = Modifier.fillMaxWidth()) {
+            TryOnSectionHeading(
+                title = "Phạm vi thử đồ",
+                subtitle = "Ô nào có ảnh sẽ tự động được ghép trong một lượt.",
+            )
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = NoticeCornerShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Text(
+                    text = state.tryOnSummaryText,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .testTag(TryOnTestTags.TRYON_SUMMARY_TEXT),
+                )
+            }
+
+            if (state.hasShoesImage) {
+                TryOnInfoNotice(
+                    text = "Ảnh người cần thấy rõ chân để ghép giày đẹp hơn",
+                    tone = TryOnNoticeTone.NEUTRAL,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TryOnTestTags.SHOES_FOOT_HINT),
+                )
+            }
+
+            if (state.missingFrontSlotLabels.isNotEmpty()) {
+                TryOnInfoNotice(
+                    text = "Cần chọn thêm ảnh mặt trước cho: ${state.missingFrontSlotLabels.joinToString(", ")}.",
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
 
-        // Priority 3: Chọn áo / quần / cả hai
-        if (
-            state.canChooseGarmentCombos ||
-            state.isSubsetSimulation ||
-            state.hasExperimentalSelection ||
-            state.excludedOutfitItems.isNotEmpty()
-        ) {
-            TryOnPanel(modifier = Modifier.fillMaxWidth()) {
-                if (state.canChooseGarmentCombos) {
-                    TryOnSectionHeading(
-                        title = "Phối món muốn thử",
-                        subtitle = "Chọn thử riêng từng món hoặc phối cả bộ.",
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                    ) {
-                        TryOnChoiceChip(
-                            label = "Chỉ áo",
-                            selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_ONLY,
-                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_ONLY) },
-                            enabled = !state.isJobActive && !state.isSubmitting,
-                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_TOP),
-                        )
-                        TryOnChoiceChip(
-                            label = "Chỉ quần",
-                            selected = state.activeGarmentCombo == TryOnGarmentCombo.BOTTOM_ONLY,
-                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.BOTTOM_ONLY) },
-                            enabled = !state.isJobActive && !state.isSubmitting,
-                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_BOTTOM),
-                        )
-                        TryOnChoiceChip(
-                            label = "Cả áo và quần",
-                            selected = state.activeGarmentCombo == TryOnGarmentCombo.TOP_AND_BOTTOM,
-                            onClick = { onSelectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM) },
-                            enabled = !state.isJobActive && !state.isSubmitting,
-                            modifier = Modifier.testTag(TryOnTestTags.GARMENT_COMBO_TOP_BOTTOM),
-                        )
-                    }
-                } else {
-                    TryOnSectionHeading(title = "Trang phục áp dụng")
-                }
-
-                if (state.isSubsetSimulation) {
-                    TryOnInfoNotice(
-                        text = "Đang thử ${state.selectedItemIds.size}/${outfit.items.size} món, các món còn lại giữ nguyên theo ảnh gốc.",
-                        tone = TryOnNoticeTone.NEUTRAL,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                if (state.hasExperimentalSelection) {
-                    TryOnInfoNotice(
-                        text = "Chế độ thử nghiệm: Thử mặt sau hoặc thử quần đang hoàn thiện, kết quả có thể chưa ổn định.",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(TryOnTestTags.EXPERIMENTAL_NOTICE),
-                    )
-                }
-
-                if (state.excludedOutfitItems.isNotEmpty()) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Text(
-                        text = "Giữ nguyên trên ảnh gốc",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    state.excludedOutfitItems.forEach { excluded ->
-                        val reason = if (cap != null && excluded.category !in cap.supportedCategories) {
-                            "Danh mục ${categoryLabelVi(excluded.category)} chưa hỗ trợ"
-                        } else {
-                            "Không chọn thay"
-                        }
-                        OutfitItemSwatchRow(item = excluded, statusLabel = reason)
-                    }
-                }
+            if (state.hasExperimentalSelection) {
+                TryOnInfoNotice(
+                    text = "Chế độ thử nghiệm: Thử mặt sau, thử nhiều món hoặc Mũ/Giày đang hoàn thiện, kết quả có thể chưa ổn định.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TryOnTestTags.EXPERIMENTAL_NOTICE),
+                )
             }
         }
     }
 }
 
+private data class GarmentSlotTags(
+    val frontPickTag: String,
+    val backPickTag: String,
+    val frontPreviewTag: String,
+    val backPreviewTag: String,
+    val removeTag: String,
+)
+
+private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) {
+    TryOnGarmentSlot.TOP -> GarmentSlotTags(
+        frontPickTag = TryOnTestTags.PICK_GARMENT_TOP_INLINE,
+        backPickTag = TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE,
+        frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT,
+        backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_TOP_BACK,
+        removeTag = TryOnTestTags.REMOVE_GARMENT_TOP_INLINE,
+    )
+    TryOnGarmentSlot.BOTTOM -> GarmentSlotTags(
+        frontPickTag = TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE,
+        backPickTag = TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE,
+        frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT,
+        backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK,
+        removeTag = TryOnTestTags.REMOVE_GARMENT_BOTTOM_INLINE,
+    )
+    TryOnGarmentSlot.HAT -> GarmentSlotTags(
+        frontPickTag = TryOnTestTags.PICK_GARMENT_HAT_INLINE,
+        backPickTag = TryOnTestTags.PICK_GARMENT_HAT_BACK_INLINE,
+        frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_HAT_FRONT,
+        backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_HAT_BACK,
+        removeTag = TryOnTestTags.REMOVE_GARMENT_HAT_INLINE,
+    )
+    TryOnGarmentSlot.SHOES -> GarmentSlotTags(
+        frontPickTag = TryOnTestTags.PICK_GARMENT_SHOES_INLINE,
+        backPickTag = TryOnTestTags.PICK_GARMENT_SHOES_BACK_INLINE,
+        frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_SHOES_FRONT,
+        backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_SHOES_BACK,
+        removeTag = TryOnTestTags.REMOVE_GARMENT_SHOES_INLINE,
+    )
+}
+
 @Composable
 private fun GarmentThumbnailCard(
-    item: TryOnItemSummary,
-    imagePair: ImagePair?,
+    slotUi: TryOnGarmentSlotUi,
     selected: Boolean,
     enabled: Boolean,
-    onClick: () -> Unit,
+    onRemoveSlotPhoto: () -> Unit,
     modifier: Modifier = Modifier,
     onPickFrontPhoto: (() -> Unit)? = null,
     onPickBackPhoto: (() -> Unit)? = null,
@@ -969,7 +965,10 @@ private fun GarmentThumbnailCard(
     backPickButtonTag: String? = null,
     frontPreviewTag: String? = null,
     backPreviewTag: String? = null,
+    removeButtonTag: String? = null,
 ) {
+    val item = slotUi.itemSummary
+    val imagePair = slotUi.images
     val dotColor = parseSafeHex(item.accentHex) ?: MaterialTheme.colorScheme.secondary
     val panelBorder = if (selected) {
         BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
@@ -980,8 +979,7 @@ private fun GarmentThumbnailCard(
     TryOnPanel(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clip(RoundedCornerShape(22.dp)),
         border = panelBorder,
     ) {
         Row(
@@ -1003,32 +1001,60 @@ private fun GarmentThumbnailCard(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = item.label,
+                        text = slotUi.titleVi,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val subtitle = if (item.label != slotUi.titleVi) {
+                        item.label
+                    } else if (slotUi.hasAnyPhoto) {
+                        "Sẵn sàng ghép"
+                    } else {
+                        "Chưa chọn ảnh (không ghép)"
+                    }
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = categoryLabelVi(item.category),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
-            if (selected) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Check,
-                        contentDescription = "Đang chọn",
-                        tint = MaterialTheme.colorScheme.onPrimary,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (slotUi.hasAnyPhoto) {
+                    TextButton(
+                        onClick = onRemoveSlotPhoto,
+                        enabled = enabled,
                         modifier = Modifier
-                            .padding(4.dp)
-                            .size(14.dp),
-                    )
+                            .heightIn(min = 48.dp)
+                            .let { mod -> if (removeButtonTag != null) mod.testTag(removeButtonTag) else mod },
+                    ) {
+                        Text(
+                            text = "Bỏ ảnh",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+                if (selected) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "Đang chọn",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(14.dp),
+                        )
+                    }
                 }
             }
         }
@@ -1039,7 +1065,7 @@ private fun GarmentThumbnailCard(
         ) {
             TryOnPhotoSlotColumn(
                 title = "Mặt trước",
-                mediaRef = imagePair?.front,
+                mediaRef = imagePair.front,
                 missingText = "Chưa có ảnh",
                 caption = "${item.label} (Trước)",
                 placeholderIcon = Icons.Outlined.Checkroom,
@@ -1047,11 +1073,13 @@ private fun GarmentThumbnailCard(
                 onPickPhoto = onPickFrontPhoto,
                 pickButtonTag = frontPickButtonTag,
                 previewTag = frontPreviewTag,
+                pickEmptyLabel = "Chọn ảnh",
+                pickReplaceLabel = "Thay ảnh",
                 modifier = Modifier.weight(1f),
             )
             TryOnPhotoSlotColumn(
                 title = "Mặt sau",
-                mediaRef = imagePair?.back,
+                mediaRef = imagePair.back,
                 missingText = "Chưa có ảnh",
                 caption = "${item.label} (Sau)",
                 placeholderIcon = Icons.Outlined.Checkroom,
@@ -1059,6 +1087,8 @@ private fun GarmentThumbnailCard(
                 onPickPhoto = onPickBackPhoto,
                 pickButtonTag = backPickButtonTag,
                 previewTag = backPreviewTag,
+                pickEmptyLabel = "Chọn ảnh sau",
+                pickReplaceLabel = "Thay ảnh sau",
                 modifier = Modifier.weight(1f),
             )
         }
@@ -1189,20 +1219,10 @@ private fun TryOnConfigurationPanel(
         }
 
         state.backViewUnavailableReason?.let { reason ->
-            val selectedSet = state.selectedItemIds.toSet()
-            val missingBackTargets = buildList {
-                if (!state.hasPersonBack) {
-                    add("Ảnh người dùng (mặt sau)")
-                }
-                state.supportedOutfitItems
-                    .filter { it.itemId in selectedSet && state.garmentImages[it.itemId]?.back == null }
-                    .forEach { item ->
-                        add("${categoryLabelVi(item.category)}: ${item.label} (mặt sau)")
-                    }
-            }
+            val missingBackTargets = state.missingBackSlotLabels
             val cleanReason = sanitizeUserFacingText(reason)
-            val hintText = if (missingBackTargets.isNotEmpty()) {
-                "$cleanReason Cần chọn thêm cho: ${missingBackTargets.joinToString("; ")}. Bạn vẫn có thể thử riêng mặt trước."
+            val hintText = if (state.selectedItemIds.isNotEmpty() && missingBackTargets.isNotEmpty()) {
+                "$cleanReason Cần chọn thêm cho: ${missingBackTargets.joinToString(", ")}. Bạn vẫn có thể thử riêng mặt trước."
             } else {
                 "$cleanReason Bạn vẫn có thể thử riêng mặt trước."
             }
@@ -1247,7 +1267,7 @@ private fun PrivacyAndConsentSection(
         } else {
             when {
                 state.selectedItemIds.isEmpty() ->
-                    "Chọn ít nhất một món trang phục ở trên để tiếp tục."
+                    "Chọn ít nhất một món trang phục (Áo, Quần, Mũ hoặc Giày) để tiếp tục."
                 ImageView.FRONT in state.requestedViews && !state.hasPersonFront ->
                     "Chọn ảnh người dùng mặt trước để bắt đầu thử đồ."
                 ImageView.FRONT in state.requestedViews && !state.hasAllSelectedGarmentFronts ->
