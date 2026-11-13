@@ -3,10 +3,24 @@ plugins {
     alias(libs.plugins.fitcheck.android.feature)
 }
 
+// Mock wardrobe = real CC0/Wikimedia clothing photos in data/fixtures, seeded on first launch.
+// Toggle with FITCHECK_MOCK_WARDROBE=true|false in the root .env (see .env.example); -Pfitcheck.mockWardrobe overrides.
+// Off by default: assets are not even packaged when disabled.
+val dotEnv: Map<String, String> = providers.fileContents(rootProject.layout.projectDirectory.file(".env")).asText
+    .orNull.orEmpty().lineSequence().map(String::trim)
+    .filter { it.isNotEmpty() && !it.startsWith("#") && "=" in it }
+    .associate { line -> line.substringBefore("=").trim() to line.substringAfter("=").trim().trim('"', '\'') }
+val mockWardrobe: Boolean = (providers.gradleProperty("fitcheck.mockWardrobe").orNull
+    ?: dotEnv["FITCHECK_MOCK_WARDROBE"] ?: "false").lowercase().let { value ->
+    require(value == "true" || value == "false") { "FITCHECK_MOCK_WARDROBE must be true or false, got '$value'" }
+    value == "true"
+}
+
 android {
     testOptions.unitTests.isIncludeAndroidResources = true
     buildFeatures.buildConfig = true
-    sourceSets.getByName("debug").assets.srcDir(rootProject.file("data/fixtures"))
+    defaultConfig.buildConfigField("boolean", "MOCK_WARDROBE", mockWardrobe.toString())
+    if (mockWardrobe) sourceSets.getByName("main").assets.srcDir(rootProject.file("data/fixtures"))
 }
 
 dependencies {

@@ -71,7 +71,7 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
                 state.error != null -> WardrobeEmpty("Chưa tải được tủ đồ", state.error, "Thử lại", onRetry)
                 state.total == 0 -> {
                     Column(Modifier.weight(1f)) { WardrobeEmpty("Tủ đồ trống", "Thêm ảnh mặt trước của món đồ. Ảnh mặt sau có thể bổ sung sau.", "Thêm món đầu tiên", onAdd) }
-                    if (BuildConfig.DEBUG) TextButton(onDataset, Modifier.align(Alignment.CenterHorizontally)) { Text("Bộ ảnh thật để kiểm thử") }
+                    if (BuildConfig.MOCK_WARDROBE) TextButton(onDataset, Modifier.align(Alignment.CenterHorizontally)) { Text("Bộ ảnh thật để kiểm thử") }
                 }
                 else -> {
                     Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -97,7 +97,7 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${state.cards.size} món đang hiển thị", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                         if (filter.active) TextButton({ focus.clearFocus(); applyFilter(Filter()) }) { Text("Xóa lọc") }
-                        else if (BuildConfig.DEBUG) TextButton(onDataset) { Text("Ảnh kiểm thử") }
+                        else if (BuildConfig.MOCK_WARDROBE) TextButton(onDataset) { Text("Ảnh kiểm thử") }
                     }
                     if (state.cards.isEmpty()) WardrobeEmpty("Chưa có món phù hợp", "Thử từ khóa khác hoặc bớt một bộ lọc.", "Xóa bộ lọc", { applyFilter(Filter()) })
                     else LazyVerticalGrid(GridCells.Adaptive(148.dp), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 104.dp),
