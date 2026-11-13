@@ -2,10 +2,10 @@ name: Proxy CI
 
 on:
   pull_request:
-    paths: ["proxy/**"]
+    paths: ["proxy/**", "data/sources/garment-types.json"]
   push:
     branches: [main]
-    paths: ["proxy/**"]
+    paths: ["proxy/**", "data/sources/garment-types.json"]
 
 jobs:
   test:

@@ -11,7 +11,7 @@ import {
   type Season,
   type View,
 } from "../shared/domain";
-import type { ModelRecognition } from "./schema";
+import { garmentTypesById, type ModelRecognition } from "./schema";
 
 export interface SuggestedAttributes {
   category: Category;
@@ -21,6 +21,7 @@ export interface SuggestedAttributes {
   material: string | null;
   formality: number | null;
   seasonTags: Season[];
+  garmentType?: string | null;
 }
 
 export type RecognitionWarning = "VIEWS_LOOK_LIKE_DIFFERENT_ITEMS" | "CATEGORY_UNKNOWN";
@@ -57,7 +58,7 @@ function cleanTags(tags: readonly string[], max: number): { tags: string[]; trim
 
 export function buildRecognitionResult(
   output: ModelRecognition,
-  meta: { requestId: string; itemId: string; inputRevision: number; hasBack: boolean; source: "AI_LIVE" | "FAKE" },
+  meta: { requestId: string; itemId: string; inputRevision: number; hasBack: boolean; source: "AI_LIVE" | "FAKE"; detailed: boolean },
 ): RecognitionResultDto {
   const review = new Set<AttributeField>();
   const warnings: RecognitionWarning[] = [];
@@ -107,6 +108,16 @@ export function buildRecognitionResult(
     viewEvidence[entry.field] = (["FRONT", "BACK"] as const).filter((v) => merged.has(v));
   }
 
+  const type = "garmentType" in a ? a.garmentType : null;
+  const garmentType = meta.detailed && type && garmentTypesById.get(type)?.category === a.category &&
+    viewEvidence.garmentType && !review.has("garmentType") && !(meta.hasBack && output.sameItem === false)
+    ? type : null;
+  if (garmentType === null) {
+    delete viewEvidence.garmentType;
+    if (meta.detailed) review.add("garmentType");
+    else review.delete("garmentType");
+  }
+
   return {
     requestId: meta.requestId,
     itemId: meta.itemId,
@@ -119,6 +130,7 @@ export function buildRecognitionResult(
       material,
       formality,
       seasonTags: seasons,
+      ...(meta.detailed ? { garmentType } : {}),
     },
     needsReviewFields: ATTRIBUTE_FIELDS.filter((f) => review.has(f)),
     viewEvidence,

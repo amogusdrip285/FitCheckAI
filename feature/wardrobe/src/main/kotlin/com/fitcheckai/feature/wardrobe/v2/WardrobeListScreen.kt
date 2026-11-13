@@ -43,8 +43,9 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
     onOpen: (String) -> Unit, onDataset: () -> Unit, onRetry: () -> Unit = {}) {
     // Text input must update synchronously; the derived list runs on IO and may lag keystrokes.
     var filter by rememberSaveable(stateSaver = listSaver<Filter, String>(
-        save = { listOf(it.query, it.category?.name.orEmpty(), it.color?.name.orEmpty()) },
-        restore = { Filter(it[0], it[1].takeIf(String::isNotEmpty)?.let(Category::valueOf), it[2].takeIf(String::isNotEmpty)?.let(GarmentColor::valueOf)) },
+        save = { listOf(it.query, it.category?.name.orEmpty(), it.color?.name.orEmpty(), it.garmentType.orEmpty()) },
+        restore = { Filter(it[0], it[1].takeIf(String::isNotEmpty)?.let(Category::valueOf),
+            it[2].takeIf(String::isNotEmpty)?.let(GarmentColor::valueOf), GarmentType.find(it.getOrNull(3))?.id) },
     )) { mutableStateOf(state.filter) }
     val applyFilter: (Filter) -> Unit = { filter = it; onFilter(it) }
     var filterSheet by remember { mutableStateOf(false) }
@@ -76,7 +77,7 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
                     Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(filter.query, { applyFilter(filter.copy(query = it)) },
                             Modifier.weight(1f).semantics { contentDescription = "Tìm kiếm tủ đồ" }, singleLine = true,
-                            placeholder = { Text("Tìm tên, chất liệu…") }, shape = MaterialTheme.shapes.medium,
+                            placeholder = { Text("Tìm tên, loại đồ, chất liệu…") }, shape = MaterialTheme.shapes.medium,
                             leadingIcon = { Icon(Icons.Outlined.Search, null) },
                             trailingIcon = if (filter.query.isNotBlank()) ({ IconButton({ applyFilter(filter.copy(query = "")) }) { Icon(Icons.Outlined.Close, "Xóa tìm kiếm") } }) else null)
                         FilledTonalIconButton({ focus.clearFocus(); filterSheet = true }, Modifier.size(54.dp), shape = MaterialTheme.shapes.medium) {
@@ -85,8 +86,13 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
                     }
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { ChoiceChip("Tất cả", filter.category == null, { applyFilter(filter.copy(category = null)) }) }
-                        items(Category.entries) { category -> ChoiceChip(category.label, filter.category == category,
-                            { applyFilter(filter.copy(category = if (filter.category == category) null else category)) }) }
+                        items(Category.entries) { category ->
+                            ChoiceChip(category.label, filter.category == category, {
+                                val next = category.takeUnless { it == filter.category }
+                                val type = filter.garmentType.takeIf { next == null || GarmentType.find(it)?.category == next }
+                                applyFilter(filter.copy(category = next, garmentType = type))
+                            })
+                        }
                     }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${state.cards.size} món đang hiển thị", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
@@ -102,7 +108,9 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
                                 Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                                     GarmentPhoto(card.frontPath, "Ảnh mặt trước ${card.item.name}", Modifier.fillMaxWidth().aspectRatio(.88f))
                                     Column(Modifier.padding(horizontal = 5.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                                        Text(card.item.attributes.category.label.uppercase(), style = MaterialTheme.typography.labelSmall)
+                                        val attrs = card.item.attributes
+                                        Text((GarmentType.find(attrs.garmentType)?.label ?: attrs.category.label).uppercase(),
+                                            style = MaterialTheme.typography.labelSmall)
                                         Text(card.item.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -122,6 +130,12 @@ internal fun WardrobeListContent(state: ListState, onFilter: (Filter) -> Unit, o
     }
     if (filterSheet) ModalBottomSheet(onDismissRequest = { filterSheet = false }, containerColor = MaterialTheme.colorScheme.surface) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            val types = remember(filter.category) { GarmentType.entries.filter { filter.category == null || it.category == filter.category } }
+            val allTypes = "Mọi loại"
+            SelectField("Loại chi tiết", GarmentType.find(filter.garmentType)?.label ?: allTypes,
+                listOf(allTypes) + types.map { it.label }, true) { index ->
+                applyFilter(filter.copy(garmentType = types.getOrNull(index - 1)?.id))
+            }
             SectionHeading("Màu sắc", "Chọn một màu có trong món đồ.")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ChoiceChip("Tất cả màu", filter.color == null, { applyFilter(filter.copy(color = null)) })

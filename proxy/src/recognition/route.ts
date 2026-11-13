@@ -6,8 +6,14 @@ import { json, parseOrThrow } from "../shared/http";
 import type { ContentPart } from "../shared/model";
 import type { RouteDef } from "../shared/registry";
 import { checkImage } from "./images";
-import { RECOGNITION_PROMPT_VERSION, RECOGNITION_SYSTEM_PROMPT, buildRecognitionUserText } from "./prompt";
-import { ModelRecognitionSchema, type RecognitionRequest, RecognitionRequestSchema } from "./schema";
+import {
+  DETAILED_RECOGNITION_PROMPT_VERSION,
+  DETAILED_RECOGNITION_SYSTEM_PROMPT,
+  RECOGNITION_PROMPT_VERSION,
+  RECOGNITION_SYSTEM_PROMPT,
+  buildRecognitionUserText,
+} from "./prompt";
+import { DetailedModelRecognitionSchema, ModelRecognitionSchema, type RecognitionRequest, RecognitionRequestSchema } from "./schema";
 import { buildRecognitionResult } from "./validate";
 
 export const RECOGNITION_MAX_TOKENS = 4_000;
@@ -56,8 +62,12 @@ export const recognitionRoute: RouteDef = {
     const model = ctx.deps.modelFor(ctx.env, "recognition");
     if (model === null) throw new ApiError("UNSUPPORTED_CAPABILITY", "AI provider chưa được cấu hình", { status: 503 });
 
+    const detailed = request.garmentTypeVersion !== undefined;
     ctx.reserveUpstreamCall();
-    ctx.annotate({ promptVersion: RECOGNITION_PROMPT_VERSION, model: model.model });
+    ctx.annotate({
+      promptVersion: detailed ? DETAILED_RECOGNITION_PROMPT_VERSION : RECOGNITION_PROMPT_VERSION,
+      model: model.model,
+    });
 
     const content: ContentPart[] = [
       { type: "text", text: "FRONT:" },
@@ -69,9 +79,9 @@ export const recognitionRoute: RouteDef = {
     content.push({ type: "text", text: buildRecognitionUserText(back !== null) });
 
     const outcome = await model.generate({
-      system: RECOGNITION_SYSTEM_PROMPT,
+      system: detailed ? DETAILED_RECOGNITION_SYSTEM_PROMPT : RECOGNITION_SYSTEM_PROMPT,
       content,
-      schema: ModelRecognitionSchema,
+      schema: detailed ? DetailedModelRecognitionSchema : ModelRecognitionSchema,
       maxTokens: RECOGNITION_MAX_TOKENS,
       effort: "low",
       signal: ctx.signal,
@@ -93,6 +103,7 @@ export const recognitionRoute: RouteDef = {
         inputRevision: request.inputRevision,
         hasBack: back !== null,
         source: model.source,
+        detailed,
       }),
     );
   },

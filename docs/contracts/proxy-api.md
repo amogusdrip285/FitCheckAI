@@ -147,6 +147,7 @@ Request
 ```
 
 - `back` tùy chọn (`null`/bỏ qua). Ảnh sau phải khác ảnh trước (khác `mediaId` và khác bytes) — không nhân đôi ảnh trước.
+- `garmentTypeVersion: 1` là trường tùy chọn. Gửi khi `GET /health` có `recognitionGarmentTypeVersion: 1`. Mỗi lượt vẫn gọi model một lần. Worker dùng prompt `recognition-v2.2-garment-types` cho request có version này.
 - `consentGrant` phải: `purpose = RECOGNITION`, `userConfirmed = true`, `revokedAt = null`, `mediaIds` phủ mọi ảnh gửi lên. Sai ⇒ `403 CONSENT_REQUIRED`, không gọi AI.
 - Server ở chế độ `FRONT_ONLY` (xem `/health`) mà gửi `back` ⇒ `400 UNSUPPORTED_CAPABILITY` trước khi tính tiền; client gửi lại chỉ ảnh trước và báo người dùng.
 
@@ -161,6 +162,8 @@ Response `200`
   "warnings": [],
   "source": "AI_LIVE" }
 ```
+
+Với `garmentTypeVersion: 1`, `suggestedAttributes` có thêm `garmentType` như `"SHIRT"`, `"POLO"` hoặc `"T_SHIRT"`. Giá trị là `null` và `needsReviewFields` có `"garmentType"` nếu thiếu bằng chứng, sai nhóm, chưa chắc hoặc hai ảnh có thể là hai món khác nhau. Đề xuất hợp lệ có `viewEvidence.garmentType` như `["FRONT"]`. Android cũ có thể tiếp tục gọi endpoint mà bỏ version để nhận response như ví dụ trên. [Từ điển dùng chung](../../data/sources/garment-types.json).
 
 - Đây là **gợi ý**, server không lưu. Client (A — BACK-005) chỉ áp lên field người dùng chưa sửa và bỏ kết quả nếu `inputRevision` đã cũ.
 - `needsReviewFields`: field AI không chắc, front/back mâu thuẫn, hoặc giá trị bị chuẩn hóa (vd. >3 màu, formality ngoài 1–5).

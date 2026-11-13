@@ -10,7 +10,7 @@ enum class Pattern { SOLID, STRIPED, CHECKED, PRINTED, OTHER, UNKNOWN }
 enum class MediaScope { GARMENT, PERSON, TRYON_RESULT }
 enum class ImageView { FRONT, BACK }
 enum class AttributeSource { MANUAL, AI }
-enum class AttributeField { CATEGORY, COLORS, PATTERN, MATERIAL, FORMALITY, SEASONS, STYLES }
+enum class AttributeField { CATEGORY, COLORS, PATTERN, MATERIAL, FORMALITY, SEASONS, STYLES, GARMENT_TYPE }
 enum class RecognitionState { NOT_REQUESTED, PENDING, REVIEW, CONFIRMED, FAILED }
 enum class ResultSource { AI_LIVE, FAKE }
 enum class ErrorCode { INVALID_REQUEST, IO, CONFLICT, STALE_INPUT, NEEDS_INPUT, CONSENT_REQUIRED, UNSUPPORTED_CAPABILITY,
@@ -79,8 +79,12 @@ data class ClothingAttributes(
     val styleTags: List<String> = emptyList(),
     val attributeSources: Map<AttributeField, AttributeSource> = emptyMap(),
     val needsReviewFields: Set<AttributeField> = emptySet(),
+    val garmentType: String? = null,
 ) {
     fun validate() {
+        require(garmentType == null || GarmentType.find(garmentType)?.category == category) {
+            "Loại chi tiết phải thuộc nhóm đồ đã chọn."
+        }
         require(colors.size <= 3 && colors.distinct().size == colors.size) { "Chọn tối đa 3 màu." }
         require(styleTags.size <= 5 && styleTags.all { it.isNotBlank() && it.length <= 32 }) { "Tối đa 5 nhãn, mỗi nhãn 32 ký tự." }
         require(material == null || (material.isNotBlank() && material.length in 1..100))
@@ -156,7 +160,13 @@ data class ConsentGrant(
     val requestGeneration: Long = 1,
     val confirmedByUser: Boolean = false,
 )
-data class RecognitionCapability(val provider: String, val configVersion: String, val available: Boolean, val supportsBack: Boolean)
+data class RecognitionCapability(
+    val provider: String,
+    val configVersion: String,
+    val available: Boolean,
+    val supportsBack: Boolean,
+    val supportsGarmentType: Boolean = false,
+)
 data class RecognitionRequest(
     val requestId: String,
     val itemId: String,

@@ -33,6 +33,8 @@ Tất cả domain entity dùng UUID string do client sinh; không dùng Room aut
 
 **ClothingAttributes**: `category: TOP|BOTTOM|DRESS|OUTERWEAR|SHOES|ACCESSORY|UNKNOWN`, `colors: List<BLACK|WHITE|GRAY|BEIGE|BROWN|BLUE|GREEN|RED|YELLOW|PINK|PURPLE|OTHER>` tối đa 3, `pattern: SOLID|STRIPED|CHECKED|PRINTED|OTHER|UNKNOWN`, `styleTags: List<String>` tối đa 5×32 ký tự. `material: String?`, `formality: Int?` 1–5, `seasonTags: List<String>` optional quality fields; thiếu bằng chứng để null/empty, không ép model đoán. Tách `attributeSources: Map<field,MANUAL|AI>` và `needsReviewFields` để sửa không mất provenance.
 
+`garmentType: String?` là mã loại chi tiết thuộc `category`, mặc định `null` khi đọc dữ liệu cũ. Tag có provenance và review theo field `GARMENT_TYPE`. Các mã và nhóm dùng chung nằm trong [từ điển loại đồ](../../data/sources/garment-types.json). Slot phối đồ tiếp tục dựa vào `category`.
+
 **ClothingItem**: các identity/revision/timestamps trên + `images: ImagePair`, `attributes: ClothingAttributes`, `recognitionState: NOT_REQUESTED|PENDING|REVIEW|CONFIRMED|FAILED`. Front bắt buộc khi save item active; back tùy chọn. Category UNKNOWN có thể lưu nháp nhưng không được recommendation dùng như TOP. Không wearCount/lastWornAt trong contract active.
 
 **WardrobeRepository (A)**:
@@ -64,6 +66,8 @@ Default projection cho recommendation chỉ `heightCm?`, styles, preferredCatego
 **RecognitionResult**: `requestId`, `itemId`, `inputRevision`, `suggestedAttributes`, `needsReviewFields`, `viewEvidence: Map<field,List<FRONT|BACK>>`, `warnings`, `source: AI_LIVE|FAKE`. Unknown giữ null/UNKNOWN; confidence optional không phải xác suất đã calibrated. Front/back mâu thuẫn trả REVIEW thay vì ưu tiên tùy tiện. Không tự save từ service.
 
 **ClothingRecognition (B)**: `recognize(request) → Result<RecognitionResult>` suspend cancellable. B-005 fake, B-007 Android client, BACK-004 proxy `POST /v2/recognition`. A BACK-005 giữ draft revisions, chỉ áp suggestion lên fields user chưa sửa. Response stale bị bỏ hoặc yêu cầu review, không overwrite ảnh mới.
+
+`POST /v2/recognition` nhận `garmentTypeVersion: 1` khi `/health` quảng bá cùng version. Response chi tiết thêm `suggestedAttributes.garmentType` và có thể thêm `garmentType` trong review/evidence. Client cũ nhận định dạng nhóm như trước. Khi mở rộng từ điển cần kiểm tra mã cũ và chính sách tương thích client. [Chi tiết wire](../contracts/proxy-api.md).
 
 ## CT-02 — OutfitRequest, Outfit và Recommendation
 

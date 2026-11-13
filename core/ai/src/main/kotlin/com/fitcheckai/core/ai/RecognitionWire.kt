@@ -5,6 +5,7 @@ import com.fitcheckai.core.model.wardrobe.Category
 import com.fitcheckai.core.model.wardrobe.ClothingAttributes
 import com.fitcheckai.core.model.wardrobe.ErrorCode
 import com.fitcheckai.core.model.wardrobe.GarmentColor
+import com.fitcheckai.core.model.wardrobe.GarmentType
 import com.fitcheckai.core.model.wardrobe.ImageView
 import com.fitcheckai.core.model.wardrobe.Pattern
 import com.fitcheckai.core.model.wardrobe.RecognitionRequest
@@ -24,6 +25,7 @@ internal data class ProxyHealth(
     val providerConfigured: Boolean,
     /** Provider thật từng service (proxy có thể dùng Gemini cho recognition, GPT cho outfits). */
     val providers: Map<String, ServiceProvider> = emptyMap(),
+    val recognitionGarmentTypeVersion: Int? = null,
 )
 
 @Serializable
@@ -64,6 +66,7 @@ internal data class RecognitionPayload(
     val front: RecognitionImagePayload,
     val back: RecognitionImagePayload?,
     val consentGrant: RecognitionConsentPayload,
+    val garmentTypeVersion: Int? = null,
 )
 
 @Serializable
@@ -75,6 +78,7 @@ internal data class RecognitionAttributesResponse(
     val formality: Int?,
     val seasonTags: List<String>,
     val styleTags: List<String>,
+    val garmentType: String? = null,
 )
 
 @Serializable
@@ -105,6 +109,7 @@ internal data class RecognitionResponse(
                     category = Category.valueOf(category), colors = colors.map(GarmentColor::valueOf),
                     pattern = Pattern.valueOf(pattern), material = material, formality = formality,
                     seasonTags = seasonTags, styleTags = styleTags,
+                    garmentType = garmentType?.also { require(GarmentType.find(it) != null) },
                 ).also { it.validate() }
             }
             return RecognitionResult(
@@ -131,6 +136,7 @@ internal data class RecognitionResponse(
         "formality" -> AttributeField.FORMALITY
         "seasonTags" -> AttributeField.SEASONS
         "styleTags" -> AttributeField.STYLES
+        "garmentType" -> AttributeField.GARMENT_TYPE
         else -> throw IllegalArgumentException("Unknown recognition field")
     }
 }

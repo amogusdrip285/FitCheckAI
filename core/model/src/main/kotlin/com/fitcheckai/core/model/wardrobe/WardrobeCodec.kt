@@ -40,6 +40,7 @@ object WardrobeCodec {
         o.long("byteCount"), o.string("contentHash"), o.long("revision"), o["derivedFromMediaId"]?.jsonPrimitive?.contentOrNull)
     fun attributes(a: ClothingAttributes): JsonObject = buildJsonObject {
         put("category", a.category.name); put("colors", strings(a.colors.map { it.name })); put("pattern", a.pattern.name)
+        a.garmentType?.let { put("garmentType", it) }
         a.material?.let { put("material", it) }; a.formality?.let { put("formality", it) }
         put("seasonTags", strings(a.seasonTags)); put("styleTags", strings(a.styleTags))
         put("attributeSources", buildJsonObject { a.attributeSources.forEach { (key, value) -> put(key.name, value.name) } })
@@ -50,7 +51,8 @@ object WardrobeCodec {
         o["material"]?.jsonPrimitive?.contentOrNull, o["formality"]?.jsonPrimitive?.intOrNull,
         o.list("seasonTags"), o.list("styleTags"),
         o["attributeSources"]?.jsonObject?.map { (key, value) -> AttributeField.valueOf(key) to AttributeSource.valueOf(value.jsonPrimitive.content) }?.toMap().orEmpty(),
-        o.list("needsReviewFields").map(AttributeField::valueOf).toSet())
+        o.list("needsReviewFields").map(AttributeField::valueOf).toSet(),
+        o["garmentType"]?.jsonPrimitive?.contentOrNull)
     fun strings(values: Iterable<String>) = JsonArray(values.map(::JsonPrimitive))
     private fun JsonObject.string(key: String) = getValue(key).jsonPrimitive.content
     private fun JsonObject.long(key: String) = getValue(key).jsonPrimitive.long

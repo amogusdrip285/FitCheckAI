@@ -15,6 +15,7 @@ describe("B-001 proxy bootstrap", () => {
       schemaVersion: 2,
       services: { recognition: false, outfits: true, tryon: false },
       recognitionViews: "DUAL",
+      recognitionGarmentTypeVersion: 1,
       provider: "anthropic",
       providerConfigured: true,
       providers: {

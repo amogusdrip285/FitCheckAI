@@ -40,7 +40,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -57,8 +58,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "JACKET"
     },
     {
       "id": "9e8a5c51-7ff1-56fd-9ae5-30377c174e1c",
@@ -96,7 +101,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -112,8 +118,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "SHIRT"
     },
     {
       "id": "914979a5-24cc-5af7-a0b4-50628d23e122",
@@ -151,7 +161,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -168,8 +179,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "T_SHIRT"
     },
     {
       "id": "2b7c2338-7c4f-5a8f-b996-6537ba80b64b",
@@ -207,7 +222,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -223,8 +239,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "JEANS"
     },
     {
       "id": "8cca0e89-76f2-53bd-981a-3abd3c7bc9d5",
@@ -262,7 +282,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -278,8 +299,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "TROUSERS"
     },
     {
       "id": "4d0ffc98-c648-5150-89e4-467902677386",
@@ -318,7 +343,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -336,8 +362,12 @@
         "pattern": {
           "method": "track_a_visual_review",
           "note": "Hai dải sọc trắng dọc ống đủ rõ để dùng STRIPED."
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "TRACK_PANTS"
     },
     {
       "id": "ae39f6ec-2220-570e-965c-a098feb8fdcb",
@@ -377,7 +407,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -394,8 +425,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "DRESS"
     },
     {
       "id": "a06aab12-9fbb-5fd9-9c7a-1af5cd789242",
@@ -433,7 +468,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -449,8 +485,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "DRESS"
     },
     {
       "id": "40d61e48-eb69-5b29-8d5f-f677a3310a4e",
@@ -488,7 +528,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -504,8 +545,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "DRESS"
     },
     {
       "id": "4a93098c-cb1a-507a-bede-311b6b9027ea",
@@ -543,7 +588,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -559,8 +605,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "JACKET"
     },
     {
       "id": "12f79b37-045d-509c-8458-1b65c2abdc6f",
@@ -599,7 +649,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -616,8 +667,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "JACKET"
     },
     {
       "id": "8fff6408-b532-5c5b-b21e-eadccea35fb6",
@@ -655,7 +710,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -671,8 +727,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "JACKET"
     },
     {
       "id": "d05f08c5-2560-5ae4-952b-86857583722e",
@@ -711,7 +771,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -727,8 +788,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "SNEAKERS"
     },
     {
       "id": "fd8339a5-a377-5390-b240-e5b7866d5acc",
@@ -766,7 +831,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -782,8 +848,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "SNEAKERS"
     },
     {
       "id": "287f9233-6405-599f-9509-4942425579f4",
@@ -821,7 +891,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -838,8 +909,12 @@
         "pattern": {
           "method": "track_a_visual_review",
           "note": "Bề mặt trắng trơn là chủ đạo, đính đá tập trung ở mũi."
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "FLATS"
     },
     {
       "id": "77fa7ad0-4aaa-5da2-a061-7eccb5006cbc",
@@ -877,7 +952,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -893,8 +969,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "HAT"
     },
     {
       "id": "a3b267a2-2aef-55ba-9679-e82c9db039e9",
@@ -933,7 +1013,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -949,8 +1030,12 @@
         },
         "pattern": {
           "method": "assistant_visual_review"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "CAP"
     },
     {
       "id": "64d3d6f7-25bf-5cec-a8b9-1f0d9cead259",
@@ -988,7 +1073,8 @@
       "referenceFields": [
         "category",
         "colors",
-        "pattern"
+        "pattern",
+        "garmentType"
       ],
       "independentReviewStatus": "PENDING",
       "fieldProvenance": {
@@ -1005,8 +1091,12 @@
         "pattern": {
           "method": "track_a_visual_review",
           "note": "Logo chữ là họa tiết đồ họa thấy rõ. Không suy ra kỹ thuật tạo logo."
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "HAT"
     },
     {
       "id": "90c35860-7e9d-5e80-a2ab-8642cebce60f",
@@ -1065,6 +1155,7 @@
         "category",
         "colors",
         "pattern",
+        "garmentType",
         "pairIdentity"
       ],
       "independentReviewStatus": "PENDING",
@@ -1083,8 +1174,12 @@
         },
         "pairIdentity": {
           "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "T_SHIRT"
     },
     {
       "id": "097c68f1-452f-5626-b75a-b1f89db7cb75",
@@ -1144,6 +1239,7 @@
         "category",
         "colors",
         "pattern",
+        "garmentType",
         "pairIdentity"
       ],
       "independentReviewStatus": "PENDING",
@@ -1162,8 +1258,12 @@
         },
         "pairIdentity": {
           "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "T_SHIRT"
     },
     {
       "id": "1df9ecb9-22ed-5bd3-b5db-188eebfe1041",
@@ -1223,6 +1323,7 @@
         "category",
         "colors",
         "pattern",
+        "garmentType",
         "pairIdentity"
       ],
       "independentReviewStatus": "PENDING",
@@ -1241,8 +1342,12 @@
         },
         "pairIdentity": {
           "method": "source_view_descriptions_plus_assistant_visual_comparison"
+        },
+        "garmentType": {
+          "method": "assistant_visual_review"
         }
-      }
+      },
+      "garmentType": "T_SHIRT"
     }
   ],
   "pendingVerifiedPairs": [],

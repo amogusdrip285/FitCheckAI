@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dataset": "paramaggarwal/fashion-product-images-small",
     "version": 1,
@@ -13,67 +13,403 @@
   "mirroredPhotoFiles": 44441,
   "photosWithoutCatalogRow": 0,
   "csvTitlesRepaired": 22,
-  "usableUniquePhotos": 24856,
+  "usableUniquePhotos": 36997,
   "categories": {
-    "ACCESSORY": 292,
-    "BOTTOM": 2383,
-    "DRESS": 438,
+    "ACCESSORY": 10345,
+    "BOTTOM": 2382,
+    "DRESS": 454,
     "OUTERWEAR": 302,
-    "SHOES": 9214,
-    "TOP": 12227
+    "SHOES": 9213,
+    "TOP": 14301
   },
   "articleTypes": {
+    "Backpacks": 722,
+    "Bangle": 85,
+    "Belts": 809,
     "Blazers": 8,
+    "Bracelet": 66,
     "Capris": 149,
     "Caps": 282,
-    "Casual Shoes": 2845,
+    "Casual Shoes": 2844,
+    "Clutches": 289,
     "Dresses": 438,
+    "Earrings": 415,
     "Flats": 500,
     "Flip Flops": 916,
     "Formal Shoes": 636,
+    "Handbags": 1755,
     "Hat": 3,
     "Headband": 7,
     "Heels": 1320,
     "Jackets": 255,
     "Jeans": 587,
     "Jeggings": 34,
+    "Jumpsuit": 16,
+    "Kurtas": 1844,
+    "Kurtis": 234,
     "Leggings": 167,
+    "Mufflers": 38,
+    "Necklace and Chains": 160,
     "Rain Jacket": 18,
     "Rain Trousers": 2,
+    "Ring": 118,
+    "Rucksacks": 11,
     "Sandals": 896,
+    "Scarves": 118,
     "Shirts": 2906,
-    "Shorts": 498,
+    "Shorts": 497,
     "Shrug": 6,
     "Skirts": 114,
+    "Socks": 684,
     "Sports Sandals": 67,
     "Sports Shoes": 2034,
+    "Sunglasses": 1053,
     "Sweaters": 277,
     "Sweatshirts": 282,
-    "Tops": 1666,
+    "Ties": 258,
+    "Tops": 1665,
     "Track Pants": 304,
     "Trousers": 528,
-    "Tshirts": 6867,
+    "Tshirts": 6864,
     "Tunics": 229,
-    "Waistcoat": 15
+    "Waistcoat": 15,
+    "Wallets": 933,
+    "Watches": 2539
+  },
+  "garmentTypes": {
+    "SHIRT": {
+      "label": "Áo sơ mi",
+      "category": "TOP",
+      "count": 2906
+    },
+    "POLO": {
+      "label": "Áo polo",
+      "category": "TOP",
+      "count": 1130
+    },
+    "T_SHIRT": {
+      "label": "Áo thun",
+      "category": "TOP",
+      "count": 5719
+    },
+    "SWEATER": {
+      "label": "Áo len",
+      "category": "TOP",
+      "count": 275
+    },
+    "CARDIGAN": {
+      "label": "Áo cardigan",
+      "category": "TOP",
+      "count": 2
+    },
+    "HOODIE": {
+      "label": "Áo hoodie",
+      "category": "TOP",
+      "count": 13
+    },
+    "SWEATSHIRT": {
+      "label": "Áo nỉ",
+      "category": "TOP",
+      "count": 269
+    },
+    "TANK_TOP": {
+      "label": "Áo ba lỗ / hai dây",
+      "category": "TOP",
+      "count": 52
+    },
+    "FASHION_TOP": {
+      "label": "Áo kiểu",
+      "category": "TOP",
+      "count": 1628
+    },
+    "TUNIC": {
+      "label": "Áo dáng dài",
+      "category": "TOP",
+      "count": 229
+    },
+    "KURTA": {
+      "label": "Áo kurta",
+      "category": "TOP",
+      "count": 2078
+    },
+    "JEANS": {
+      "label": "Quần jeans",
+      "category": "BOTTOM",
+      "count": 587
+    },
+    "DRESS_PANTS": {
+      "label": "Quần âu",
+      "category": "BOTTOM",
+      "count": 238
+    },
+    "CHINOS": {
+      "label": "Quần chino",
+      "category": "BOTTOM",
+      "count": 18
+    },
+    "TROUSERS": {
+      "label": "Quần dài",
+      "category": "BOTTOM",
+      "count": 274
+    },
+    "SHORTS": {
+      "label": "Quần short",
+      "category": "BOTTOM",
+      "count": 497
+    },
+    "SKIRT": {
+      "label": "Chân váy",
+      "category": "BOTTOM",
+      "count": 114
+    },
+    "TRACK_PANTS": {
+      "label": "Quần thể thao",
+      "category": "BOTTOM",
+      "count": 304
+    },
+    "LEGGINGS": {
+      "label": "Quần legging",
+      "category": "BOTTOM",
+      "count": 201
+    },
+    "CAPRIS": {
+      "label": "Quần lửng",
+      "category": "BOTTOM",
+      "count": 149
+    },
+    "DRESS": {
+      "label": "Đầm / váy liền",
+      "category": "DRESS",
+      "count": 438
+    },
+    "JUMPSUIT": {
+      "label": "Đồ liền quần",
+      "category": "DRESS",
+      "count": 16
+    },
+    "JACKET": {
+      "label": "Áo khoác",
+      "category": "OUTERWEAR",
+      "count": 279
+    },
+    "BLAZER": {
+      "label": "Áo blazer",
+      "category": "OUTERWEAR",
+      "count": 8
+    },
+    "COAT": {
+      "label": "Áo khoác dài",
+      "category": "OUTERWEAR",
+      "count": 0
+    },
+    "VEST": {
+      "label": "Áo gile",
+      "category": "OUTERWEAR",
+      "count": 15
+    },
+    "SNEAKERS": {
+      "label": "Giày thể thao",
+      "category": "SHOES",
+      "count": 2050
+    },
+    "LEATHER_SHOES": {
+      "label": "Giày da",
+      "category": "SHOES",
+      "count": 77
+    },
+    "FORMAL_SHOES": {
+      "label": "Giày tây",
+      "category": "SHOES",
+      "count": 556
+    },
+    "CASUAL_SHOES": {
+      "label": "Giày thường ngày",
+      "category": "SHOES",
+      "count": 2819
+    },
+    "SANDALS": {
+      "label": "Sandal",
+      "category": "SHOES",
+      "count": 963
+    },
+    "FLIP_FLOPS": {
+      "label": "Dép xỏ ngón",
+      "category": "SHOES",
+      "count": 916
+    },
+    "HEELS": {
+      "label": "Giày cao gót",
+      "category": "SHOES",
+      "count": 1320
+    },
+    "FLATS": {
+      "label": "Giày bệt",
+      "category": "SHOES",
+      "count": 500
+    },
+    "BOOTS": {
+      "label": "Bốt",
+      "category": "SHOES",
+      "count": 12
+    },
+    "CAP": {
+      "label": "Mũ lưỡi trai",
+      "category": "ACCESSORY",
+      "count": 282
+    },
+    "HAT": {
+      "label": "Mũ",
+      "category": "ACCESSORY",
+      "count": 3
+    },
+    "HEADBAND": {
+      "label": "Băng đô",
+      "category": "ACCESSORY",
+      "count": 7
+    },
+    "HANDBAG": {
+      "label": "Túi xách",
+      "category": "ACCESSORY",
+      "count": 2044
+    },
+    "BACKPACK": {
+      "label": "Ba lô",
+      "category": "ACCESSORY",
+      "count": 733
+    },
+    "BELT": {
+      "label": "Thắt lưng",
+      "category": "ACCESSORY",
+      "count": 809
+    },
+    "WATCH": {
+      "label": "Đồng hồ đeo tay",
+      "category": "ACCESSORY",
+      "count": 2539
+    },
+    "SUNGLASSES": {
+      "label": "Kính râm",
+      "category": "ACCESSORY",
+      "count": 1053
+    },
+    "WALLET": {
+      "label": "Ví",
+      "category": "ACCESSORY",
+      "count": 933
+    },
+    "SOCKS": {
+      "label": "Tất / vớ",
+      "category": "ACCESSORY",
+      "count": 684
+    },
+    "TIE": {
+      "label": "Cà vạt",
+      "category": "ACCESSORY",
+      "count": 258
+    },
+    "SCARF": {
+      "label": "Khăn quàng",
+      "category": "ACCESSORY",
+      "count": 156
+    },
+    "EARRINGS": {
+      "label": "Khuyên tai",
+      "category": "ACCESSORY",
+      "count": 415
+    },
+    "NECKLACE": {
+      "label": "Vòng cổ",
+      "category": "ACCESSORY",
+      "count": 160
+    },
+    "BRACELET": {
+      "label": "Vòng tay",
+      "category": "ACCESSORY",
+      "count": 151
+    },
+    "RING": {
+      "label": "Nhẫn",
+      "category": "ACCESSORY",
+      "count": 118
+    }
   },
   "exclusions": {
-    "conflicting_exact_duplicate_labels": 58,
-    "exact_duplicate": 709,
+    "conflicting_exact_duplicate_labels": 81,
+    "exact_duplicate": 724,
     "missing_image": 5,
-    "out_of_scope": 18818
+    "out_of_scope": 6639
   },
   "imageSizes": {
-    "53x80": 1,
-    "60x60": 3,
+    "53x80": 5,
+    "60x60": 5,
+    "60x75": 1,
     "60x76": 1,
-    "60x80": 24851
+    "60x77": 2,
+    "60x80": 36983
   },
   "catalogYearRange": [
     2007,
     2018
   ],
-  "rowsWithMappedColor": 24731,
-  "rowsWithCatalogSeason": 24835,
+  "rowsWithMappedColor": 36724,
+  "rowsWithCatalogSeason": 36976,
+  "referenceSample": {
+    "requestedPerType": 10,
+    "exportedPhotos": 480,
+    "counts": {
+      "SHIRT": 10,
+      "POLO": 10,
+      "T_SHIRT": 10,
+      "SWEATER": 10,
+      "CARDIGAN": 2,
+      "HOODIE": 10,
+      "SWEATSHIRT": 10,
+      "TANK_TOP": 10,
+      "FASHION_TOP": 10,
+      "TUNIC": 10,
+      "KURTA": 10,
+      "JEANS": 10,
+      "DRESS_PANTS": 10,
+      "CHINOS": 10,
+      "TROUSERS": 10,
+      "SHORTS": 10,
+      "SKIRT": 10,
+      "TRACK_PANTS": 10,
+      "LEGGINGS": 10,
+      "CAPRIS": 10,
+      "DRESS": 10,
+      "JUMPSUIT": 10,
+      "JACKET": 10,
+      "BLAZER": 8,
+      "COAT": 0,
+      "VEST": 10,
+      "SNEAKERS": 10,
+      "LEATHER_SHOES": 10,
+      "FORMAL_SHOES": 10,
+      "CASUAL_SHOES": 10,
+      "SANDALS": 10,
+      "FLIP_FLOPS": 10,
+      "HEELS": 10,
+      "FLATS": 10,
+      "BOOTS": 10,
+      "CAP": 10,
+      "HAT": 3,
+      "HEADBAND": 7,
+      "HANDBAG": 10,
+      "BACKPACK": 10,
+      "BELT": 10,
+      "WATCH": 10,
+      "SUNGLASSES": 10,
+      "WALLET": 10,
+      "SOCKS": 10,
+      "TIE": 10,
+      "SCARF": 10,
+      "EARRINGS": 10,
+      "NECKLACE": 10,
+      "BRACELET": 10,
+      "RING": 10
+    }
+  },
   "archiveSha256": "e223d09ba5fb5829892e507989dba11b2549a31fabed994ad5353e4b6ef87b7a",
   "archiveBytes": 592614936
 }

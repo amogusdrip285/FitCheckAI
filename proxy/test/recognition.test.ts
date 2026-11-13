@@ -1,4 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { RECOGNITION_PROMPT_VERSION, RECOGNITION_SYSTEM_PROMPT } from "../src/recognition/prompt";
+
+describe("prompt recognition-v2.2", () => {
+  it("tag đầu là kiểu món theo dấu hiệu nhìn thấy, sơ mi không bị gọi là áo thun", () => {
+    expect(RECOGNITION_PROMPT_VERSION).toBe("recognition-v2.2");
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('Tag ĐẦU TIÊN là kiểu món');
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('"áo sơ mi" (kể cả vải flannel/kẻ caro');
+    expect(RECOGNITION_SYSTEM_PROMPT).toContain('Không bao giờ gọi áo sơ mi là "áo thun"/"áo phông"');
+  });
+});
 import { sha256Hex, sniffImageType } from "../src/recognition/images";
 import type { RecognitionResultDto } from "../src/recognition/validate";
 import modelRecognition from "./fixtures/v2/model-recognition.json";
@@ -54,9 +64,42 @@ describe("POST /v2/recognition", () => {
       needsReviewFields: ["material"],
     });
     expect(body.viewEvidence).toEqual({ category: ["FRONT"], colors: ["FRONT"] });
+    expect(body.suggestedAttributes).not.toHaveProperty("garmentType");
     const call = t.model.calls[0]!;
     expect(call.content.filter((p) => p.type === "image")).toHaveLength(1);
     expect(call.effort).toBe("low");
+  });
+
+  it.each(["SHIRT", "POLO", "T_SHIRT"])("gợi ý %s với bằng chứng ảnh và giữ nhóm TOP", async (garmentType) => {
+    const t = setup();
+    t.model.respond({
+      ...modelRecognition.frontOnly,
+      attributes: { ...modelRecognition.frontOnly.attributes, garmentType },
+      evidence: [{ field: "garmentType", views: ["FRONT"] }],
+    });
+    const res = await t.post("/v2/recognition", recognitionRequest({ garmentTypeVersion: 1 }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as RecognitionResultDto;
+    expect(body.suggestedAttributes).toMatchObject({ category: "TOP", garmentType });
+    expect(body.viewEvidence.garmentType).toEqual(["FRONT"]);
+    expect(t.model.calls[0]!.system).toContain("SHIRT (TOP) · Áo sơ mi");
+    expect(t.model.calls[0]!.system).toContain("POLO (TOP) · Áo polo");
+  });
+
+  it.each([
+    { garmentType: "JEANS", view: "FRONT" },
+    { garmentType: "SHIRT", view: "BACK" },
+  ])("bỏ nhãn sai nhóm hoặc không có bằng chứng trong ảnh gửi: $garmentType/$view", async ({ garmentType, view }) => {
+    const t = setup();
+    t.model.respond({
+      ...modelRecognition.frontOnly,
+      attributes: { ...modelRecognition.frontOnly.attributes, garmentType },
+      evidence: [{ field: "garmentType", views: [view] }],
+    });
+    const res = await t.post("/v2/recognition", recognitionRequest({ garmentTypeVersion: 1 }));
+    const body = (await res.json()) as RecognitionResultDto;
+    expect(body.suggestedAttributes.garmentType).toBeNull();
+    expect(body.needsReviewFields).toContain("garmentType");
   });
 
   it("cặp khớp: gửi FRONT rồi BACK theo đúng thứ tự", async () => {

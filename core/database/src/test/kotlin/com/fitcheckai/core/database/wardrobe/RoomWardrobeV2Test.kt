@@ -97,7 +97,8 @@ class RoomWardrobeV2Test {
         db.close()
         db = Room.databaseBuilder(context, AppDatabase::class.java, "v2-test").build()
         repo = RoomWardrobeRepository(db, media)
-        val one = repo.upsert(sixFixtures()[0]).getOrThrow()
+        val shirt = sixFixtures()[0].let { it.copy(attributes = it.attributes.copy(category = Category.TOP, garmentType = "SHIRT")) }
+        val one = repo.upsert(shirt).getOrThrow()
         val two = repo.upsert(sixFixtures()[1]).getOrThrow()
         repo.delete(two.id, 1).getOrThrow()
         val before = repo.getSnapshot().getOrThrow()

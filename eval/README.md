@@ -47,4 +47,4 @@ Provider chậm: script cắt mỗi request ở 20s như app; nới bằng `FITC
 | 11/11/2026 | Gemini `gemini-3.5-flash-lite` (free tier) | 8/10 case, invariant 0 lỗi | [25 case](ai/results/2026-11-11-B-006-summary.md): 25/25/25 sau review nhãn |
 | 12/11/2026 | `gpt-6-luna` qua gateway FOSTA, deadline nới | 8/10 case, invariant 0 lỗi; **A và B chấm 17/17 bộ ≥3/5** | 24/25 category, 23/25 màu, 21/25 pattern |
 
-Tổng hợp: [luna 12/11](ai/results/2026-11-12-luna-summary.md). Chưa có lượt chạy trên OpenAI chính chủ (chờ key, PRE-003) và trên prompt `outfits-v2.1`.
+Tổng hợp: [luna 12/11](ai/results/2026-11-12-luna-summary.md). Chưa có lượt chạy trên OpenAI chính chủ (chờ key, PRE-003) và trên prompt `outfits-v2.2` / `recognition-v2.2`. Lưu ý: case eval dùng ID ngắn (`t1`…); app gửi UUID — lỗi UUID của luna chỉ lộ khi chạy với UUID (đã sửa ở v2.2), nên lượt eval sau nên thêm case ID là UUID.

@@ -19,6 +19,7 @@ import {
   serviceEnabled,
 } from "./env";
 import { GeminiModelClient } from "./shared/gemini";
+import { GARMENT_TYPE_CONTRACT_VERSION } from "./recognition/schema";
 import { OpenAICompatibleModelClient, normalizeBaseUrl } from "./shared/openai";
 import { accessCodeMatches, bearerToken, issueSessionToken, verifySessionToken } from "./shared/auth";
 import { ApiError, errorResponse } from "./shared/errors";
@@ -124,6 +125,7 @@ export function createApp(routes: readonly RouteDef[], overrides: Partial<AppDep
       schemaVersion: 2,
       services,
       recognitionViews: recognitionViews(env),
+      recognitionGarmentTypeVersion: GARMENT_TYPE_CONTRACT_VERSION,
       provider: providerLabel(env),
       providerConfigured: deps.modelFor(env) !== null,
       // Theo từng service: consent recognition phải hiện đúng nơi ảnh được gửi.
