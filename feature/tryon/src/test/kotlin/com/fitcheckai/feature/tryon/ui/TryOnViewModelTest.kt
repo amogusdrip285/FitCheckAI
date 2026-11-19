@@ -111,11 +111,17 @@ class TryOnViewModelTest {
         // Changing view scope MUST reset consentConfirmed so user explicitly consents to back upload!
         assertFalse(vm.uiState.value.consentConfirmed)
 
-        // If user deletes person back photo from ProfileStorage, ViewModel falls back to FRONT_ONLY
+        // If user deletes person back photo from ProfileStorage, ViewModel keeps FRONT_AND_BACK
+        // (no silent switch to FRONT_ONLY), disables submit and shows missing-back error.
         profilePort.update(FakeTryOnFixtures.personFrontOnlySnapshot)
         advanceUntilIdle()
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(TryOnViewMode.FRONT_AND_BACK, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectDualView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
 
         // Restore dual photos, confirm consent, submit partial-back-failed scenario, then delete result
         profilePort.update(FakeTryOnFixtures.personDualSnapshot)
@@ -232,14 +238,20 @@ class TryOnViewModelTest {
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
 
-        // Adding BOTTOM front photo (without back photo) automatically adds BOTTOM and locks BACK_ONLY -> falls back to FRONT_ONLY
+        // Adding BOTTOM front photo (without back photo) keeps BACK_ONLY selected (no silent fallback),
+        // disables submit with explicit missing-photo error naming Quần.
         val addedBottomWithoutBack = topOnlyGarments.toMutableMap().apply {
             put("item-trouser-noir", ImagePair(front = FakeTryOnFixtures.bottomFrontRef, back = null))
         }
         vm.updateGarmentImages(addedBottomWithoutBack)
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
         assertEquals(listOf("Quần"), vm.uiState.value.missingBackSlotLabels)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Quần.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
     }
 
     @Test
@@ -390,10 +402,16 @@ class TryOnViewModelTest {
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
 
-        // Removing BOTTOM back while in BACK_ONLY auto-falls back to FRONT_ONLY cleanly
+        // Removing BOTTOM back while in BACK_ONLY keeps BACK_ONLY selected (no silent switch to FRONT_ONLY),
+        // surfaces explicit error and locks submit until restored or switched by user.
         vm.updateGarmentImages(withTopBackOnly)
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Quần.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
     }
 
     @Test
@@ -626,13 +644,14 @@ class TryOnViewModelTest {
     }
 
     @Test
-    fun `missingBackSlotLabels explicitly names Mu and Giay when HAT or SHOES lack rear photos`() = runTest(testDispatcher) {
+    fun `optional rear photos on HAT and SHOES keep BACK view unlocked, surface inference notice, and submit cleanly`() = runTest(testDispatcher) {
         val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
         mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
         mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(512) { 0x22 })
         val privacy = TryOnPrivacyCoordinator(mediaStore)
         val fakeService = FakeVirtualTryOnService(
             initialCapability = FakeTryOnFixtures.fostaCapability.copy(executionMode = "AI_LIVE"),
+            initialScenario = FakeTryOnScenario.SUCCEED_REQUESTED_VIEWS,
             mediaStore = mediaStore,
             privacyCoordinator = privacy,
             stepDelayMs = 0L,
@@ -653,11 +672,124 @@ class TryOnViewModelTest {
         )
         advanceUntilIdle()
 
-        assertFalse(vm.uiState.value.canSelectBackView)
-        assertEquals(listOf("Mũ", "Giày"), vm.uiState.value.missingBackSlotLabels)
+        assertTrue(vm.uiState.value.canSelectBackView)
+        assertEquals(emptyList<String>(), vm.uiState.value.missingBackSlotLabels)
+        assertNull(vm.uiState.value.backViewUnavailableReason)
+        assertNull(vm.uiState.value.optionalBackInferenceNotice)
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(listOf("Mũ", "Giày"), vm.uiState.value.inferredBackSlotLabels)
         assertEquals(
-            "Một số món đồ đã chọn chưa có ảnh mặt sau trong Tủ đồ.",
-            vm.uiState.value.backViewUnavailableReason,
+            "Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật.",
+            vm.uiState.value.optionalBackInferenceNotice,
+        )
+        assertNull(vm.uiState.value.viewMissingPhotosError)
+
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+        vm.submitTryOn()
+        advanceUntilIdle()
+
+        val result = vm.uiState.value.activeOrLatestResult
+        assertNotNull(result)
+        assertEquals(TryOnJobStatus.SUCCEEDED, result!!.status)
+        assertTrue(result.views.containsKey(ImageView.BACK))
+    }
+
+    @Test
+    fun `strict view missing-photo errors lock submit for missing person or garment photos across FRONT and BACK`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val profilePort = FakeTryOnProfilePort(
+            FakeTryOnFixtures.personDualSnapshot.copy(bodyImages = ImagePair(front = null, back = null)),
+        )
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        // FRONT selected, person has NO front photo, TOP has ONLY back photo (so TOP is selected, missing FRONT)
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = profilePort,
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.editorialWorkOutfit,
+            initialGarmentImages = mapOf(
+                "item-top-linen" to ImagePair(front = null, back = FakeTryOnFixtures.topBackRef),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            "Không thể tạo mặt trước: thiếu ảnh người mặt trước và ảnh trước của Áo.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
+        vm.setConsentConfirmed(true)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+
+        // Restore person.front & TOP.front -> FRONT_ONLY ready; switch to BACK_ONLY then clear person.back -> error without silent fallback
+        profilePort.update(FakeTryOnFixtures.personDualSnapshot)
+        vm.updateGarmentImages(
+            mapOf("item-top-linen" to ImagePair(front = FakeTryOnFixtures.topFrontRef, back = FakeTryOnFixtures.topBackRef)),
+        )
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.viewMissingPhotosError)
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        profilePort.update(FakeTryOnFixtures.personDualSnapshot.copy(bodyImages = ImagePair(front = FakeTryOnFixtures.personFrontRef, back = null)))
+        advanceUntilIdle()
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
+    }
+
+    @Test
+    fun `removeGarmentPhoto BACK mid-session keeps BACK_ONLY selected and surfaces TOP missing-back error`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.allFourSlotsOutfit,
+            initialGarmentImages = mapOf(
+                "item-top-linen" to FakeTryOnFixtures.defaultGarmentImages.getValue("item-top-linen"),
+                "item-hat-cap" to ImagePair(front = FakeTryOnFixtures.hatFrontRef, back = null),
+            ),
+        )
+        advanceUntilIdle()
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+
+        // User removes Áo back photo while in BACK_ONLY -> stays in BACK_ONLY, shows error, disables submit
+        vm.removeGarmentPhoto(TryOnGarmentSlot.TOP, ImageView.BACK)
+        advanceUntilIdle()
+
+        val afterRemoveBack = vm.uiState.value
+        assertEquals(TryOnViewMode.BACK_ONLY, afterRemoveBack.selectedViewMode)
+        assertFalse(afterRemoveBack.consentConfirmed)
+        assertFalse(afterRemoveBack.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Áo.",
+            afterRemoveBack.viewMissingPhotosError,
         )
     }
 }

@@ -316,4 +316,55 @@ class TryOnPrivacyCoordinatorTest {
             (overRes.exceptionOrNull() as TryOnException).tryOnError.code,
         )
     }
+
+    @Test
+    fun `optional HAT and SHOES front fallback succeeds in BACK view while missing TOP back rejects with NEEDS_INPUT`() = runTest {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(1024) { 0x11 })
+        mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(1024) { 0x22 })
+        val coordinator = TryOnPrivacyCoordinator(mediaStore = mediaStore)
+        val cap = FakeTryOnFixtures.fostaCapability
+
+        val consentOk = coordinator.createPerRequestConsentGrant(
+            capability = cap,
+            selectedMediaIds = setOf(
+                FakeTryOnFixtures.personBackRef.id,
+                FakeTryOnFixtures.topBackRef.id,
+                FakeTryOnFixtures.hatFrontRef.id,
+                FakeTryOnFixtures.shoesFrontRef.id,
+            ),
+            allowedViews = setOf(ImageView.BACK),
+            confirmedByUser = true,
+        )
+        val backOptReq = FakeTryOnFixtures.sampleDualRequest(
+            idempotencyKey = "opt-back-ok",
+            requestedViews = setOf(ImageView.BACK),
+            selectedItemIds = listOf("item-top-linen", "item-hat-cap", "item-shoes-loafer"),
+        ).copy(
+            outfitSnapshot = FakeTryOnFixtures.allFourSlotsOutfit,
+            garmentImages = mapOf(
+                "item-top-linen" to ImagePair(front = FakeTryOnFixtures.topFrontRef, back = FakeTryOnFixtures.topBackRef),
+                "item-hat-cap" to ImagePair(front = FakeTryOnFixtures.hatFrontRef, back = null),
+                "item-shoes-loafer" to ImagePair(front = FakeTryOnFixtures.shoesFrontRef, back = null),
+            ),
+            consentGrant = consentOk,
+            providerConfigVersion = cap.providerConfigVersion,
+        )
+        val slice = coordinator.prepareAuthorizedUploadSlice(backOptReq, cap).getOrThrow()
+        assertEquals(1, slice.personUploads.size)
+        assertEquals(FakeTryOnFixtures.topBackRef.id, slice.garmentUploads.getValue("item-top-linen").getValue(ImageView.BACK).mediaRef.id)
+        assertEquals(FakeTryOnFixtures.hatFrontRef.id, slice.garmentUploads.getValue("item-hat-cap").getValue(ImageView.FRONT).mediaRef.id)
+        assertEquals(FakeTryOnFixtures.shoesFrontRef.id, slice.garmentUploads.getValue("item-shoes-loafer").getValue(ImageView.FRONT).mediaRef.id)
+
+        // Missing TOP back MUST still reject with NEEDS_INPUT
+        val missingTopBackReq = backOptReq.copy(
+            idempotencyKey = "req-top-back-missing",
+            garmentImages = backOptReq.garmentImages + (
+                "item-top-linen" to ImagePair(front = FakeTryOnFixtures.topFrontRef, back = null)
+                ),
+        )
+        val failRes = coordinator.prepareAuthorizedUploadSlice(missingTopBackReq, cap)
+        assertTrue(failRes.isFailure)
+        assertEquals(TryOnErrorCode.NEEDS_INPUT, (failRes.exceptionOrNull() as TryOnException).tryOnError.code)
+    }
 }

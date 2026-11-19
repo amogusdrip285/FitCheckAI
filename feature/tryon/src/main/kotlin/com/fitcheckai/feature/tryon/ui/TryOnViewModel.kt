@@ -54,6 +54,9 @@ data class TryOnGarmentSlotUi(
     val hasFrontPhoto: Boolean
         get() = images.front != null
 
+    val isBackPhotoOptional: Boolean
+        get() = slot == TryOnGarmentSlot.HAT || slot == TryOnGarmentSlot.SHOES
+
     val hasDistinctBackPhoto: Boolean
         get() = images.back != null &&
             (images.front == null || images.front.contentHash != images.back.contentHash)
@@ -228,10 +231,12 @@ data class TryOnUiState(
             activeSlots.isNotEmpty() &&
             activeSlots.all { it.hasFrontPhoto }
 
+    /** Required rear photos: only non-optional slots (TOP/BOTTOM) must supply a rear photo; HAT/SHOES rear is optional. */
     val hasAllSelectedGarmentBacks: Boolean
         get() = selectedItemIds.isNotEmpty() &&
             activeSlots.isNotEmpty() &&
-            activeSlots.all { it.images.back != null }
+            activeSlots.filterNot { it.isBackPhotoOptional }.all { it.images.back != null } &&
+            activeSlots.filter { it.isBackPhotoOptional }.all { it.images.back != null || it.images.front != null }
 
     val hasGenuineBackHashes: Boolean
         get() {
@@ -264,8 +269,78 @@ data class TryOnUiState(
                 add("Người (mặt sau)")
             }
             activeSlots
+                .filterNot { it.isBackPhotoOptional }
                 .filterNot { it.hasDistinctBackPhoto }
                 .forEach { add(it.titleVi) }
+        }
+
+    val inferredBackSlotLabels: List<String>
+        get() = activeSlots
+            .filter { it.isBackPhotoOptional && it.images.back == null && it.images.front != null }
+            .map { it.titleVi }
+
+    val optionalBackInferenceNotice: String?
+        get() = if (ImageView.BACK in requestedViews && inferredBackSlotLabels.isNotEmpty()) {
+            "Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật."
+        } else {
+            null
+        }
+
+    val viewMissingPhotosError: String?
+        get() {
+            if (!isCapabilityAvailable || selectedItemIds.isEmpty()) return null
+            if (ImageView.FRONT in requestedViews) {
+                val clauses = buildList {
+                    if (!hasPersonFront) add("ảnh người mặt trước")
+                    val missingFront = missingFrontSlotLabels
+                    if (missingFront.isNotEmpty()) add("ảnh trước của ${missingFront.joinToString(", ")}")
+                }
+                if (clauses.isNotEmpty()) {
+                    return "Không thể tạo mặt trước: thiếu ${clauses.joinToString(" và ")}."
+                }
+            }
+            if (ImageView.BACK in requestedViews) {
+                val clauses = buildList {
+                    if (!hasPersonBack) add("ảnh người mặt sau")
+                    val missingReqBacks = activeSlots
+                        .filterNot { it.isBackPhotoOptional }
+                        .filter { it.images.back == null }
+                        .map { it.titleVi }
+                    if (missingReqBacks.isNotEmpty()) {
+                        add("ảnh sau của ${missingReqBacks.joinToString(", ")}")
+                    }
+                    val missingOptAny = activeSlots
+                        .filter { it.isBackPhotoOptional && it.images.back == null && it.images.front == null }
+                        .map { it.titleVi }
+                    if (missingOptAny.isNotEmpty()) {
+                        add("ảnh của ${missingOptAny.joinToString(", ")}")
+                    }
+                }
+                if (clauses.isNotEmpty()) {
+                    return "Không thể tạo mặt sau: thiếu ${clauses.joinToString(" và ")}."
+                }
+                if (!hasGenuineBackHashes) {
+                    return "Không thể tạo mặt sau: ảnh mặt sau không được trùng với ảnh mặt trước."
+                }
+            }
+            return null
+        }
+
+    val consentedGarmentPhotoCount: Int
+        get() = activeSlots.sumOf { slotUi ->
+            val uniqueRefs = buildSet {
+                requestedViews.forEach { view ->
+                    when (view) {
+                        ImageView.FRONT -> slotUi.images.front?.id?.let(::add)
+                        ImageView.BACK -> {
+                            val ref = slotUi.images.back
+                                ?: if (slotUi.isBackPhotoOptional) slotUi.images.front else null
+                            ref?.id?.let(::add)
+                        }
+                    }
+                }
+            }
+            uniqueRefs.size
         }
 
     val backViewUnavailableReason: String?
@@ -331,6 +406,7 @@ data class TryOnUiState(
         get() {
             if (!isCapabilityAvailable || isSubmitting || isJobActive) return false
             if (!consentConfirmed || selectedItemIds.isEmpty()) return false
+            if (viewMissingPhotosError != null) return false
             if (ImageView.FRONT in requestedViews && (!hasPersonFront || !hasAllSelectedGarmentFronts)) {
                 return false
             }
@@ -699,16 +775,71 @@ class TryOnViewModel(
         }
     }
 
-    private fun normalizeViewAfterSelectionChange(nextState: TryOnUiState): TryOnUiState {
-        val backInvalidated =
-            (nextState.selectedViewMode == TryOnViewMode.BACK_ONLY && !nextState.canSelectBackView) ||
-                (nextState.selectedViewMode == TryOnViewMode.FRONT_AND_BACK && !nextState.canSelectDualView)
-        return if (backInvalidated) {
-            nextState.copy(selectedViewMode = TryOnViewMode.FRONT_ONLY)
-        } else {
-            nextState
+    /**
+     * Clears only a single view ([ImageView.FRONT] or [ImageView.BACK]) of [slot] without silently
+     * switching the selected view mode, so missing-photo validation surfaces clearly.
+     */
+    fun removeGarmentPhoto(slot: TryOnGarmentSlot, view: ImageView) {
+        val snapshot = _uiState.value
+        if (snapshot.isSubmitting || snapshot.isJobActive) return
+        val slotUi = snapshot.garmentSlots.firstOrNull { it.slot == slot } ?: return
+        val itemId = slotUi.itemSummary.itemId
+        val existingPair = snapshot.garmentImages[itemId] ?: ImagePair()
+        val removedRef = existingPair.refFor(view) ?: return
+        val nextPair = when (view) {
+            ImageView.FRONT -> existingPair.copy(front = null)
+            ImageView.BACK -> existingPair.copy(back = null)
+        }
+        val updatedImages = snapshot.garmentImages.toMutableMap().apply {
+            if (nextPair.front == null && nextPair.back == null) {
+                remove(itemId)
+            } else {
+                put(itemId, nextPair)
+            }
+        }
+        val nextSelectedIds = derivePhotoDrivenSelectedItemIds(
+            outfitSnapshot = snapshot.outfitSnapshot,
+            garmentImages = updatedImages,
+            capability = snapshot.capability,
+        )
+        val previousResult = snapshot.activeOrLatestResult
+        val affectsPreviousResult = previousResult != null && (
+            previousResult.appliedItemIds.isEmpty() ||
+                itemId in previousResult.appliedItemIds ||
+                previousResult.appliedItemIds.any { it !in nextSelectedIds } ||
+                removedRef.id.isNotBlank()
+            )
+        if (affectsPreviousResult) {
+            activeObserverJob?.cancel()
+        }
+        pendingIdempotencyKey = "idem-${idGenerator()}"
+
+        _uiState.update { cur ->
+            val recomputedSelectedIds = derivePhotoDrivenSelectedItemIds(
+                outfitSnapshot = cur.outfitSnapshot,
+                garmentImages = updatedImages,
+                capability = cur.capability,
+            )
+            cur.copy(
+                garmentImages = updatedImages,
+                selectedItemIds = recomputedSelectedIds,
+                consentConfirmed = false,
+                activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
+                compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
+                bannerError = null,
+                statusNotice = null,
+            )
+        }
+
+        if (affectsPreviousResult) {
+            viewModelScope.launch {
+                tryOnService.delete(previousResult.jobId)
+            }
         }
     }
+
+    /** Preserve user-chosen view mode even if photos change so missing-photo error is shown transparently instead of silently flipping to FRONT. */
+    private fun normalizeViewAfterSelectionChange(nextState: TryOnUiState): TryOnUiState = nextState
 
     fun setConsentConfirmed(confirmed: Boolean) {
         _uiState.update { cur ->
@@ -783,12 +914,28 @@ class TryOnViewModel(
             return
         }
         val views = snapshot.requestedViews
+        snapshot.viewMissingPhotosError?.let { viewErr ->
+            val errCode = if (ImageView.BACK in views && !snapshot.hasGenuineBackHashes) {
+                TryOnErrorCode.INVALID_REQUEST
+            } else {
+                TryOnErrorCode.NEEDS_INPUT
+            }
+            _uiState.update {
+                it.copy(
+                    bannerError = TryOnError(
+                        code = errCode,
+                        message = viewErr,
+                    ),
+                )
+            }
+            return
+        }
         if (ImageView.FRONT in views && !snapshot.hasPersonFront) {
             _uiState.update {
                 it.copy(
                     bannerError = TryOnError(
                         code = TryOnErrorCode.NEEDS_INPUT,
-                        message = "Cần bổ sung ảnh toàn thân mặt trước trong Hồ sơ trước khi thử đồ.",
+                        message = "Không thể tạo mặt trước: thiếu ảnh người mặt trước.",
                     ),
                 )
             }
@@ -801,9 +948,9 @@ class TryOnViewModel(
                     bannerError = TryOnError(
                         code = TryOnErrorCode.NEEDS_INPUT,
                         message = if (missing.isNotEmpty()) {
-                            "Bổ sung ảnh mặt trước cho: $missing."
+                            "Không thể tạo mặt trước: thiếu ảnh trước của $missing."
                         } else {
-                            "Cần bổ sung ảnh mặt trước cho các món trang phục đã chọn."
+                            "Không thể tạo mặt trước: thiếu ảnh mặt trước cho các món trang phục đã chọn."
                         },
                     ),
                 )
@@ -815,7 +962,7 @@ class TryOnViewModel(
                 it.copy(
                     bannerError = TryOnError(
                         code = TryOnErrorCode.NEEDS_INPUT,
-                        message = "Cần bổ sung ảnh toàn thân mặt sau thật sự trong Hồ sơ trước khi thử góc nhìn BACK.",
+                        message = "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
                     ),
                 )
             }
@@ -866,11 +1013,19 @@ class TryOnViewModel(
             outfit.copy(items = outfit.items + extraSlotItems)
         }
 
+        val activeSlotsById = snapshot.activeSlots.associateBy { it.itemSummary.itemId }
         val selectedMediaIds = buildSet {
             views.forEach { v ->
                 profile.bodyImages.refFor(v)?.id?.let(::add)
                 canonicalSelectedIds.forEach { itemId ->
-                    snapshot.garmentImages[itemId]?.refFor(v)?.id?.let(::add)
+                    val pair = snapshot.garmentImages[itemId]
+                    val slotUi = activeSlotsById[itemId]
+                    val ref = when (v) {
+                        ImageView.FRONT -> pair?.front
+                        ImageView.BACK -> pair?.back
+                            ?: if (slotUi?.isBackPhotoOptional == true) pair?.front else null
+                    }
+                    ref?.id?.let(::add)
                 }
             }
         }
