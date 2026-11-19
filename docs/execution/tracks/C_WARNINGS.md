@@ -1,8 +1,10 @@
 # Track C — Cảnh báo Vận hành & Tích hợp Virtual Try-On (VTO)
 
+> **Hướng dẫn tự thử MOCK & LIVE cho người kiểm thử:** [C_TRY_IT.md](C_TRY_IT.md) · **Tài liệu bàn giao:** [C_HANDOFF.md](C_HANDOFF.md)
+
 - **Phạm vi:** `:feature:tryon`, `proxy/src/tryon/**`, `proxy/scripts/*tryon*`, `eval/tryon/**`
 - **Điểm đối chiếu `origin/main`:** `fdf75e6` (`fdf75e630c14cfdc2feceb31f72f5bbb3554ff37`)
-- **Cập nhật:** `2026-11-13`
+- **Cập nhật:** `2026-11-19`
 
 ---
 
@@ -40,7 +42,7 @@
 
 ## 4. Ràng buộc Kiểm thử Giao diện (17 bài Instrumentation phụ thuộc)
 
-- **Giữ nguyên 50 `TryOnTestTags`:** Không đổi tên, gộp hoặc xóa bất kỳ hằng số nào trong `TryOnTestTags` (`feature/tryon/src/main/kotlin/com/fitcheckai/feature/tryon/ui/TryOnScreen.kt`), gồm trọn vẹn 36 tag gốc và 14 tag cộng thêm cho 4 ô (`PICK_GARMENT_HAT_INLINE`, `PICK_GARMENT_HAT_BACK_INLINE`, `PICK_GARMENT_SHOES_INLINE`, `PICK_GARMENT_SHOES_BACK_INLINE`, `REMOVE_GARMENT_TOP_INLINE`, `REMOVE_GARMENT_BOTTOM_INLINE`, `REMOVE_GARMENT_HAT_INLINE`, `REMOVE_GARMENT_SHOES_INLINE`, `PREVIEW_GARMENT_HAT_FRONT`, `PREVIEW_GARMENT_HAT_BACK`, `PREVIEW_GARMENT_SHOES_FRONT`, `PREVIEW_GARMENT_SHOES_BACK`, `TRYON_SUMMARY_TEXT`, `SHOES_FOOT_HINT`).
+- **Giữ nguyên 56 `TryOnTestTags`:** Không đổi tên, gộp hoặc xóa bất kỳ hằng số nào trong `TryOnTestTags` (`feature/tryon/src/main/kotlin/com/fitcheckai/feature/tryon/ui/TryOnScreen.kt`), gồm trọn vẹn 36 tag gốc, 14 tag 4 ô ACC (`PICK_GARMENT_HAT_INLINE`, `PICK_GARMENT_HAT_BACK_INLINE`, `PICK_GARMENT_SHOES_INLINE`, `PICK_GARMENT_SHOES_BACK_INLINE`, `REMOVE_GARMENT_{TOP,BOTTOM,HAT,SHOES}_INLINE`, `PREVIEW_GARMENT_{HAT,SHOES}_{FRONT,BACK}`, `TRYON_SUMMARY_TEXT`, `SHOES_FOOT_HINT`) và **6 tag cộng thêm ACC2** (`REMOVE_GARMENT_{TOP,BOTTOM,HAT,SHOES}_BACK_INLINE`, `VIEW_MISSING_PHOTO_ERROR`, `OPTIONAL_BACK_INFERENCE_NOTICE`).
 - **Chiều cao chạm tối thiểu `>= 48.dp`:** Mọi node mang `testTag` tương tác bắt buộc có vùng chạm semantics tối thiểu `48.dp` (ví dụ `TryOnChoiceChip` đặt pill `40.dp` bên trong `Box(Modifier.heightIn(min = 48.dp).selectable(...))` để qua `assertHeightIsAtLeast(48.dp)`).
 - **Nằm trong vùng cuộn `verticalScroll`:** `CONSENT_CHECKBOX_ROW` và `SUBMIT_BUTTON` phải giữ **bên trong** vùng cuộn chính (không ghim thành thanh footer cố định ngoài vùng cuộn) để `performScrollTo()` hoạt động trên màn nhỏ `360×640` và `fontScale = 1.85f`.
 
@@ -52,7 +54,9 @@
 
 ## 6. Giới hạn Kỹ thuật đã biết
 
-- **Chất lượng ghép nhiều món (`Mũ` / `Giày` / 3–4 món) chưa kiểm chứng trên LIVE:** Toàn bộ luồng 4 ô (`Áo`, `Quần`, `Mũ`, `Giày`) và 15 tổ hợp khác rỗng theo cơ chế *"có ảnh thì ghép"* đã được kiểm chứng E2E qua backend Mock (`FOSTA` + `OpenAI`), nhưng **chất lượng ảnh ghép nhiều món (`Mũ`, `Giày`, 3–4 món) chưa kiểm chứng trên LIVE** (trên FOSTA `LIVE` mới xác minh `FRONT + TOP`). Ngoài ra, `Mũ` và `Giày` **không bao giờ tự nạp ảnh mẫu sẵn**, và khi ghép `Giày` UI hiển thị lưu ý *"Ảnh người cần thấy rõ chân để ghép giày đẹp hơn"*.
+- **Quy tắc nghiêm Mặt trước / Mặt sau (KHÔNG tự rơi ngầm về `FRONT`):** Khi chọn `"Chỉ mặt sau"` hoặc `"Trước và sau"` mà thiếu ảnh người mặt sau hoặc thiếu ảnh sau của `Áo`/`Quần`, `TryOnViewModel` **giữ nguyên góc nhìn đang chọn**, khóa nút tạo và hiển thị `VIEW_MISSING_PHOTO_ERROR` nêu đích danh các ảnh còn thiếu (ví dụ `"Không thể tạo mặt sau: thiếu ảnh sau của Áo."`). Proxy cũng chặn ở bước kiểm tra trước khi trừ quota (`NEEDS_INPUT` = `0` lượt).
+- **Ảnh mặt sau của `Mũ` / `Giày` là tùy chọn (AI tự suy ra):** Khi thử góc `BACK` mà `Mũ` hoặc `Giày` chưa có ảnh mặt sau, backend dùng ảnh mặt trước và yêu cầu AI tự suy ra mặt sau (`FOSTA v2.3` / `OpenAI v1.2`) kèm cảnh báo `OPTIONAL_BACK_INFERENCE_NOTICE` (*"Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật."*). Phần mặt sau suy diễn có thể sai khác chi tiết phía sau (logo sau nón, khóa gài, gót giày).
+- **Chất lượng ghép nhiều món (`Mũ` / `Giày` / 3–4 món) chưa kiểm chứng trên LIVE:** Toàn bộ luồng 4 ô (`Áo`, `Quần`, `Mũ`, `Giày`), 15 tổ hợp *"có ảnh thì ghép"* và suy diễn mặt sau `Mũ`/`Giày` đã được kiểm chứng E2E qua backend Mock (`FOSTA` + `OpenAI`), nhưng **chất lượng ảnh ghép nhiều món (`Mũ`, `Giày`, 3–4 món) chưa kiểm chứng trên LIVE** (trên FOSTA `LIVE` mới xác minh `FRONT + TOP`). Ngoài ra, `Mũ` và `Giày` **không bao giờ tự nạp ảnh mẫu sẵn**, và khi ghép `Giày` UI hiển thị lưu ý *"Ảnh người cần thấy rõ chân để ghép giày đẹp hơn"*.
 - **Góc `BACK` ở chế độ LIVE mới thử sơ bộ:** Luồng chọn ảnh mặt sau cho người và cả 4 ô đồ, kiểm tra thiếu ảnh (`missingBackSlotLabels` gọi rõ tên `Mũ`/`Giày` nếu thiếu) và gọi mock đã kiểm chứng E2E; trên FOSTA `LIVE` chưa xác minh đầy đủ góc `BACK`.
 - **Ảnh mẫu demo chỉ `480×640`:** Bộ ảnh PNG tự tạo trong `proxy/scripts/demo_install_and_launch.sh` chỉ phục vụ kiểm thử luồng UI/Gallery, không phản ánh chất lượng ảnh chụp thật độ phân giải cao.
 - **`eval/tryon/poc_runner.py` nuốt JSON cắt cụt:** Script POC Python độc lập có thể bỏ qua lỗi JSON bị cắt ngang ở một số ca biên (không ảnh hưởng tới `proxy/src/tryon/fosta_provider.ts`).
