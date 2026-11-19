@@ -2,12 +2,13 @@
 
 import type { Category, FostaGarmentKind, ImageView } from "./types";
 
-export const OPENAI_VTO_PROMPT_VERSION = "openai-vto-edit-v1.1";
+export const OPENAI_VTO_PROMPT_VERSION = "openai-vto-edit-v1.2";
 
 export interface OpenAiTryOnPromptGarment {
   category: Category;
   slot?: FostaGarmentKind;
   colors?: readonly string[];
+  inferredRear?: boolean;
 }
 
 export interface OpenAiTryOnPromptInput {
@@ -133,11 +134,28 @@ export function buildOpenAiTryOnPrompt(input: OpenAiTryOnPromptInput): OpenAiBui
 
   const roleLines = [
     `- Image 1 (first attached image): Base photograph of the real person (${viewDescription}). Use Image 1 as the base image.`,
-    ...scopes.map(
-      (s) =>
-        `- Image ${s.imageNum}: Reference photograph of the ${s.scope.garmentRole} (${viewDescription}). Use Image ${s.imageNum} strictly as the item reference; ignore any hanger, hand, flat-lay surface, or background clutter.`,
-    ),
+    ...scopes.map((s) => {
+      const refViewNote =
+        input.view === "BACK" && s.garment.inferredRear === true
+          ? "front-view reference photo only — no rear photo provided"
+          : viewDescription;
+      return `- Image ${s.imageNum}: Reference photograph of the ${s.scope.garmentRole} (${refViewNote}). Use Image ${s.imageNum} strictly as the item reference; ignore any hanger, hand, flat-lay surface, or background clutter.`;
+    }),
   ];
+
+  const inferredRearNouns = input.view === "BACK"
+    ? Array.from(
+        new Set(
+          scopes
+            .filter((s) => s.garment.inferredRear === true && (s.scope.slotKey === "HAT" || s.scope.slotKey === "SHOES"))
+            .map((s) => (s.scope.slotKey === "HAT" ? "hat" : "shoes")),
+        ),
+      )
+    : [];
+  const inferredRearInstruction =
+    inferredRearNouns.length > 0
+      ? [`- No rear photo for the ${inferredRearNouns.join("/")}: infer a plausible rear view consistent with the front photo.`]
+      : [];
 
   const colorLines = scopes
     .map((s) => {
@@ -161,6 +179,7 @@ export function buildOpenAiTryOnPrompt(input: OpenAiTryOnPromptInput): OpenAiBui
     "",
     "Editing Instructions:",
     ...scopes.map((s) => `- ${s.scope.replaceRegion}, fitting naturally onto the person's body posture in Image 1.`),
+    ...inferredRearInstruction,
     ...(input.view === "FRONT"
       ? ["- Preserve the person's exact identity and facial appearance from Image 1."]
       : ["- Preserve the person's exact head shape, rear hair appearance, and identity cues from Image 1 without turning the person around."]),

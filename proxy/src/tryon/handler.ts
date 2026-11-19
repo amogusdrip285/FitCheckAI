@@ -1128,11 +1128,80 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       }
     }
 
+    const outfitItemsById = new Map(
+      body.outfitSnapshot.items.map((item) => [item.itemId, item]),
+    );
+    const slotLabelVi = (slotKind: FostaGarmentKind | null, category: Category): string => {
+      switch (slotKind) {
+        case "TOP":
+          return "Áo";
+        case "BOTTOM":
+          return "Quần";
+        case "HAT":
+          return "Mũ";
+        case "SHOES":
+          return "Giày";
+        default:
+          return category === "DRESS" ? "Váy" : String(category);
+      }
+    };
+
+    // Strict friendly Vietnamese completeness check BEFORE image decoding/quota deduction:
+    // - FRONT requires person.front + every selected garment front.
+    // - BACK requires person.back + every selected TOP/BOTTOM/DRESS back; HAT/SHOES back is optional (falls back to front).
+    for (const view of requestedViews) {
+      const viewVi = view === "BACK" ? "mặt sau" : "mặt trước";
+      const missingClauses: string[] = [];
+      const rawPerson = view === "FRONT" ? body.personImages?.front : body.personImages?.back;
+      if (rawPerson == null) {
+        missingClauses.push(`ảnh người ${viewVi}`);
+      }
+      const missingGarmentLabels: string[] = [];
+      const missingOptionalAnyLabels: string[] = [];
+      for (const itemId of selectedItemIds) {
+        const summary = outfitItemsById.get(itemId)!;
+        const slotKind = mapCategoryToFostaGarmentKind(summary.category as Category, summary.slot);
+        const pair = body.garmentImages?.[itemId];
+        const label = slotLabelVi(slotKind, summary.category as Category);
+        if (view === "FRONT") {
+          if (pair?.front == null) {
+            missingGarmentLabels.push(label);
+          }
+        } else {
+          const isOptionalBack = slotKind === "HAT" || slotKind === "SHOES";
+          if (!isOptionalBack && pair?.back == null) {
+            missingGarmentLabels.push(label);
+          } else if (isOptionalBack && pair?.back == null && pair?.front == null) {
+            missingOptionalAnyLabels.push(label);
+          }
+        }
+      }
+      if (missingGarmentLabels.length > 0) {
+        const sideWord = view === "FRONT" ? "trước" : "sau";
+        missingClauses.push(`ảnh ${sideWord} của ${missingGarmentLabels.join(", ")}`);
+      }
+      if (missingOptionalAnyLabels.length > 0) {
+        missingClauses.push(`ảnh của ${missingOptionalAnyLabels.join(", ")}`);
+      }
+      if (missingClauses.length > 0) {
+        return makeTypedError(
+          "NEEDS_INPUT",
+          `Không thể tạo ${viewVi}: thiếu ${missingClauses.join(" và ")}.`,
+          rawReqId,
+        );
+      }
+    }
+
     // Validate required person & garment images per requested view + decoded byte caps
     const consentedMediaIds = new Set(consent.selectedMediaIds);
     let totalDecodedBytes = 0;
+    const countedDecodedKeys = new Set<string>();
     const validatedPerson: Partial<Record<ImageView, WireImageInput>> = {};
-    const validatedGarments: Record<string, Partial<Record<ImageView, WireImageInput>>> = {};
+    const validatedGarmentsForView: Record<
+      string,
+      Partial<Record<ImageView, { image: WireImageInput; inferredRear: boolean }>>
+    > = {};
+    const inferredOptionalSlots = new Set<string>();
 
     for (const view of requestedViews) {
       const rawPersonImg =
@@ -1154,16 +1223,29 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
         );
       }
       validatedPerson[view] = personCheck.image;
-      totalDecodedBytes += personCheck.decodedBytes;
+      const personCountKey = `person:${view}`;
+      if (!countedDecodedKeys.has(personCountKey)) {
+        countedDecodedKeys.add(personCountKey);
+        totalDecodedBytes += personCheck.decodedBytes;
+      }
 
       for (const itemId of selectedItemIds) {
+        const summary = outfitItemsById.get(itemId)!;
+        const slotKind = mapCategoryToFostaGarmentKind(summary.category as Category, summary.slot);
+        const isOptionalBack = view === "BACK" && (slotKind === "HAT" || slotKind === "SHOES");
         const pair = body.garmentImages?.[itemId];
-        const rawGarmentImg = view === "FRONT" ? pair?.front : pair?.back;
+        const useFrontFallback = isOptionalBack && pair?.back == null;
+        const expectedImageView: ImageView = useFrontFallback ? "FRONT" : view;
+        const rawGarmentImg = useFrontFallback
+          ? pair?.front
+          : view === "FRONT"
+            ? pair?.front
+            : pair?.back;
         const garmentCheck = validateWireImage(
           rawGarmentImg,
-          view,
+          expectedImageView,
           MAX_GARMENT_IMAGE_BYTES,
-          `garment.${itemId}.${view}`,
+          `garment.${itemId}.${expectedImageView}`,
         );
         if (!garmentCheck.ok) {
           return makeTypedError(garmentCheck.code, garmentCheck.message, rawReqId);
@@ -1175,9 +1257,19 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
             rawReqId,
           );
         }
-        validatedGarments[itemId] = validatedGarments[itemId] ?? {};
-        validatedGarments[itemId]![view] = garmentCheck.image;
-        totalDecodedBytes += garmentCheck.decodedBytes;
+        validatedGarmentsForView[itemId] = validatedGarmentsForView[itemId] ?? {};
+        validatedGarmentsForView[itemId]![view] = {
+          image: garmentCheck.image,
+          inferredRear: useFrontFallback,
+        };
+        if (useFrontFallback) {
+          inferredOptionalSlots.add(slotLabelVi(slotKind, summary.category as Category));
+        }
+        const garmentCountKey = `garment:${itemId}:${expectedImageView}`;
+        if (!countedDecodedKeys.has(garmentCountKey)) {
+          countedDecodedKeys.add(garmentCountKey);
+          totalDecodedBytes += garmentCheck.decodedBytes;
+        }
       }
     }
 
@@ -1205,13 +1297,34 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
           rawReqId,
         );
       }
+      const gSummary = outfitItemsById.get(key);
+      const gSlotKind = gSummary
+        ? mapCategoryToFostaGarmentKind(gSummary.category as Category, gSummary.slot)
+        : null;
+      const gPair = body.garmentImages?.[key];
+      const allowsFrontWithoutFrontView =
+        (gSlotKind === "HAT" || gSlotKind === "SHOES") && gPair?.back == null;
+      if (!requestedViews.includes("FRONT") && gPair?.front != null && !allowsFrontWithoutFrontView) {
+        return makeTypedError(
+          "INVALID_REQUEST",
+          `Không được gửi kèm ảnh mặt trước cho '${key}' khi chỉ yêu cầu xử lý BACK.`,
+          rawReqId,
+        );
+      }
+      if (!requestedViews.includes("BACK") && gPair?.back != null) {
+        return makeTypedError(
+          "INVALID_REQUEST",
+          `Không được gửi kèm ảnh mặt sau cho '${key}' khi chỉ yêu cầu xử lý FRONT.`,
+          rawReqId,
+        );
+      }
     }
 
-    // CT-01 / CT-06: Front & Back must NOT be cloned duplicates when both are requested
+    // CT-01 / CT-06: Front & Back must NOT be cloned duplicates when both are supplied (including optional HAT/SHOES back)
     if (
-      validatedPerson.FRONT &&
-      validatedPerson.BACK &&
-      validatedPerson.FRONT.contentHash === validatedPerson.BACK.contentHash
+      body.personImages?.front &&
+      body.personImages?.back &&
+      body.personImages.front.contentHash === body.personImages.back.contentHash
     ) {
       return makeTypedError(
         "INVALID_REQUEST",
@@ -1220,11 +1333,11 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       );
     }
     for (const itemId of selectedItemIds) {
-      const gPair = validatedGarments[itemId];
+      const gPair = body.garmentImages?.[itemId];
       if (
-        gPair?.FRONT &&
-        gPair?.BACK &&
-        gPair.FRONT.contentHash === gPair.BACK.contentHash
+        gPair?.front &&
+        gPair?.back &&
+        gPair.front.contentHash === gPair.back.contentHash
       ) {
         return makeTypedError(
           "INVALID_REQUEST",
@@ -1242,10 +1355,6 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       );
     }
 
-    const outfitItemsById = new Map(
-      body.outfitSnapshot.items.map((item) => [item.itemId, item]),
-    );
-
     // Run provider-level local input & image checks BEFORE reserving job/budget/live quota
     // so invalid inputs (e.g. dimension < minInputDimensionPx, MIME mismatch, byte cap)
     // never consume `usedLiveRequests` or trigger any upstream call.
@@ -1253,12 +1362,14 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       for (const view of requestedViews) {
         const garmentsForView = selectedItemIds.map((itemId) => {
           const itemSummary = outfitItemsById.get(itemId)!;
+          const resolvedEntry = validatedGarmentsForView[itemId]![view]!;
           return {
             itemId,
             category: itemSummary.category as Category,
             slot: itemSummary.slot,
             colors: itemSummary.colors,
-            image: validatedGarments[itemId]![view]!,
+            image: resolvedEntry.image,
+            inferredRear: resolvedEntry.inferredRear,
           };
         });
         try {
@@ -1304,9 +1415,10 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       consentId: consent.id,
       personHashes: requestedViews.map((v) => `${v}:${validatedPerson[v]!.contentHash}@${validatedPerson[v]!.revision}`),
       garmentHashes: selectedItemIds.flatMap((id) =>
-        requestedViews.map(
-          (v) => `${id}:${v}:${validatedGarments[id]![v]!.contentHash}@${validatedGarments[id]![v]!.revision}`,
-        ),
+        requestedViews.map((v) => {
+          const entry = validatedGarmentsForView[id]![v]!;
+          return `${id}:${v}:${entry.inferredRear ? "inf" : "direct"}:${entry.image.contentHash}@${entry.image.revision}`;
+        }),
       ),
     });
     const payloadHash = await sha256Hex(canonicalSummary);
@@ -1381,6 +1493,11 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
     if (unappliedItemIds.length > 0) {
       warnings.push(
         `SUBSET_GARMENTS_ONLY: Chỉ mô phỏng ${selectedItemIds.length}/${body.outfitSnapshot.items.length} món trong outfit.`,
+      );
+    }
+    if (inferredOptionalSlots.size > 0) {
+      warnings.push(
+        `INFERRED_OPTIONAL_REAR: ${Array.from(inferredOptionalSlots).join("/")} chưa có ảnh sau nên AI tự suy từ ảnh trước, kết quả có thể chỉ gần đúng.`,
       );
     }
 
@@ -1557,12 +1674,14 @@ export function createTryOnRouter(deps: TryOnRouterDependencies = {}): TryOnRout
       for (const view of requestedViews) {
         const garmentsForView = selectedItemIds.map((itemId) => {
           const itemSummary = outfitItemsById.get(itemId)!;
+          const resolvedEntry = validatedGarmentsForView[itemId]![view]!;
           return {
             itemId,
             category: itemSummary.category as Category,
             slot: itemSummary.slot,
             colors: itemSummary.colors,
-            image: validatedGarments[itemId]![view]!,
+            image: resolvedEntry.image,
+            inferredRear: resolvedEntry.inferredRear,
           };
         });
         try {

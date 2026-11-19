@@ -1,5 +1,6 @@
-// OWNER: Track C (Experimental FOSTA Luna `gpt-6-luna` Composable 4-Slot Prompt Matrix v2.2)
-// Adapted into strict TypeScript module supporting TOP, BOTTOM, HAT, and SHOES (15 non-empty subsets x 2 modes x 2 views = 60 prompts).
+// OWNER: Track C (Experimental FOSTA Luna `gpt-6-luna` Composable 4-Slot Prompt Matrix v2.3)
+// Adapted into strict TypeScript module supporting TOP, BOTTOM, HAT, and SHOES
+// (15 non-empty subsets x 2 modes x [1 FRONT + optional HAT/SHOES rear-inference combinations in BACK] = 100 prompts <= 620 chars).
 // Back, bottom-only, hat, shoes, and multi-item combinations remain UNVALIDATED_EXPERIMENTAL until live AI quality gates pass.
 
 import { UpstreamDeterministicError } from "./providers";
@@ -10,7 +11,7 @@ import type {
   TryOnPresentationMode,
 } from "./types";
 
-export const FOSTA_VTO_PROMPT_VERSION = "v2.2";
+export const FOSTA_VTO_PROMPT_VERSION = "v2.3";
 export const MAX_FOSTA_PROMPT_LENGTH = 620;
 
 export const CANONICAL_FOSTA_GARMENT_ORDER: readonly FostaGarmentKind[] = [
@@ -86,21 +87,24 @@ export function mapCategoryToFostaGarmentKind(
   }
 }
 
+export type OptionalRearGarmentKind = "HAT" | "SHOES";
+
 export interface BuildFostaPromptInput {
   mode?: TryOnPresentationMode;
   view?: ImageView;
   garmentKinds?: readonly FostaGarmentKind[];
+  inferredRearKinds?: readonly FostaGarmentKind[];
 }
 
 /**
- * Composes the deterministic `v2.2` FOSTA prompt across all 60 valid combinations:
+ * Composes the deterministic `v2.3` FOSTA prompt across all 100 valid combinations:
  * - 2 presentation modes: `ORIGINAL_PHOTO` | `STUDIO_WHITE`
- * - 2 views: `FRONT` | `BACK`
  * - 15 non-empty subsets of `[TOP, BOTTOM, HAT, SHOES]`
+ * - `FRONT` (30) + `BACK` with optional rear-view inference for `HAT` / `SHOES` (70) = 100 prompts
  *
  * Canonical reference image numbering:
  * - `Image 1` = base `PERSON` photograph
- * - `image 2..N` = selected items in strict `TOP -> BOTTOM -> HAT -> SHOES` order
+ * - `image 2..N` = selected items actually sent in strict `TOP -> BOTTOM -> HAT -> SHOES` order
  *
  * Every generated prompt is guaranteed <= 620 characters to avoid upstream length/timeout issues.
  */
@@ -108,6 +112,7 @@ export function buildFostaTryOnPrompt({
   mode = "ORIGINAL_PHOTO",
   view = "FRONT",
   garmentKinds = ["TOP"],
+  inferredRearKinds = [],
 }: BuildFostaPromptInput = {}): string {
   if (mode !== "ORIGINAL_PHOTO" && mode !== "STUDIO_WHITE") {
     throw new UpstreamDeterministicError(
@@ -144,16 +149,34 @@ export function buildFostaTryOnPrompt({
     );
   }
 
+  const inferredSet = new Set<OptionalRearGarmentKind>();
+  if (view === "BACK") {
+    for (const infKind of inferredRearKinds) {
+      if (infKind === "TOP" || infKind === "BOTTOM") {
+        throw new UpstreamDeterministicError(
+          "NEEDS_INPUT",
+          `${infKind} requires a real rear photo in BACK view.`,
+        );
+      }
+      if ((infKind === "HAT" || infKind === "SHOES") && seen.has(infKind)) {
+        inferredSet.add(infKind);
+      }
+    }
+  }
+
   const active = CANONICAL_FOSTA_GARMENT_ORDER.filter((k) => seen.has(k));
   const hasTop = seen.has("TOP");
   const hasBottom = seen.has("BOTTOM");
   const hasHat = seen.has("HAT");
   const hasShoes = seen.has("SHOES");
+  const compact = inferredSet.size > 0;
 
   const viewLabel = view === "BACK" ? "back-view" : "front-view";
   const personDesc =
     view === "BACK"
-      ? "the person from behind (back view)"
+      ? compact
+        ? "the person from behind"
+        : "the person from behind (back view)"
       : "the person (front view)";
 
   const imgClauses = active.map((k, idx) =>
@@ -164,7 +187,11 @@ export function buildFostaTryOnPrompt({
 
   const actions: string[] = [];
   if (hasTop && hasBottom) {
-    actions.push("wear the top and bottom with natural waist layering");
+    actions.push(
+      compact
+        ? "wear the top and bottom naturally"
+        : "wear the top and bottom with natural waist layering",
+    );
   } else if (hasTop) {
     actions.push("wear the reference top");
   } else if (hasBottom) {
@@ -173,14 +200,20 @@ export function buildFostaTryOnPrompt({
 
   if (hasHat) {
     actions.push(
-      view === "BACK"
-        ? "wear the hat naturally on the head with unoccluded hair visible"
-        : "wear the hat naturally on the head, keeping face and unoccluded hair visible",
+      compact
+        ? "wear the hat naturally with unoccluded hair"
+        : view === "BACK"
+          ? "wear the hat naturally on the head with unoccluded hair visible"
+          : "wear the hat naturally on the head, keeping face and unoccluded hair visible",
     );
   }
 
   if (hasShoes) {
-    actions.push("replace only the shoes, keeping stance and ground natural");
+    actions.push(
+      compact
+        ? "replace only the shoes naturally"
+        : "replace only the shoes, keeping stance and ground natural",
+    );
   }
 
   const keepUnchanged = CANONICAL_FOSTA_GARMENT_ORDER.filter(
@@ -191,20 +224,32 @@ export function buildFostaTryOnPrompt({
       ? ` Keep existing ${keepUnchanged.join("/")} unchanged.`
       : "";
 
+  const inferredNouns = (["HAT", "SHOES"] as const)
+    .filter((k) => inferredSet.has(k))
+    .map((k) => GARMENT_NOUN[k]);
+  const inferClause =
+    inferredNouns.length > 0
+      ? ` No rear photo for the ${inferredNouns.join("/")}: infer a plausible rear view consistent with the front photo.`
+      : "";
+
   const detailDir = view === "BACK" ? "rear" : "front";
   const poseClause =
     view === "BACK"
-      ? "Keep the person facing away, preserving identity, hair, skin tone, body, pose"
+      ? compact
+        ? "Keep the person facing away, preserving identity, hair, skin, body, pose"
+        : "Keep the person facing away, preserving identity, hair, skin tone, body, pose"
       : "Preserve identity, face, hair, skin tone, body proportions, pose";
   const bgClause =
     mode === "STUDIO_WHITE"
-      ? " on a clean white studio background with soft even lighting."
+      ? compact
+        ? " on a white studio background with soft lighting."
+        : " on a clean white studio background with soft even lighting."
       : ", lighting, and original background.";
 
   const prompt =
     `Create one photorealistic ${viewLabel} virtual try-on image. ` +
     `Image 1 is ${personDesc}; ${imgClauses.join(", ")}. ` +
-    `Dress the person to ${actions.join("; ")}, matching exact colors, textures, logos, and ${detailDir} details.${keepClause} ` +
+    `Dress the person to ${actions.join("; ")}, matching exact colors, textures, logos, and ${detailDir} details.${inferClause}${keepClause} ` +
     `${poseClause}${bgClause}`;
 
   if (prompt.length > MAX_FOSTA_PROMPT_LENGTH) {

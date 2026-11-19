@@ -135,18 +135,17 @@ function makeFostaSubmitRequest(
   return { ...base, ...overrides };
 }
 
-describe("FOSTA Luna Prompt Matrix — All 60 (15 Subsets x 2 Modes x 2 Views) Combinations v2.2", () => {
+describe("FOSTA Luna Prompt Matrix — All 100 (15 Subsets x 2 Modes x Front + Optional-Rear Back) Combinations v2.3", () => {
   const modes: TryOnPresentationMode[] = ["ORIGINAL_PHOTO", "STUDIO_WHITE"];
-  const views: ImageView[] = ["FRONT", "BACK"];
   const allSubsets: FostaGarmentKind[][] = [];
   for (let mask = 1; mask < 16; mask += 1) {
     const subset = CANONICAL_FOSTA_GARMENT_ORDER.filter((_, idx) => (mask & (1 << idx)) !== 0);
     allSubsets.push(subset);
   }
 
-  it("stays strictly <= 620 chars across all 60 (Mode x View x Subset) combinations with canonical Image numbering", () => {
+  it("stays strictly <= 620 chars across all 100 combinations with canonical Image numbering and optional rear inference", () => {
     expect(allSubsets).toHaveLength(15);
-    expect(FOSTA_VTO_PROMPT_VERSION).toBe("v2.2");
+    expect(FOSTA_VTO_PROMPT_VERSION).toBe("v2.3");
 
     const nounByKind: Record<FostaGarmentKind, string> = {
       TOP: "top",
@@ -155,24 +154,35 @@ describe("FOSTA Luna Prompt Matrix — All 60 (15 Subsets x 2 Modes x 2 Views) C
       SHOES: "shoes",
     };
 
+    let combinationCount = 0;
     for (const mode of modes) {
-      for (const view of views) {
-        for (const kinds of allSubsets) {
-          const prompt = buildFostaTryOnPrompt({ mode, view, garmentKinds: kinds });
+      for (const kinds of allSubsets) {
+        // FRONT view (30 combinations)
+        const frontPrompt = buildFostaTryOnPrompt({ mode, view: "FRONT", garmentKinds: kinds });
+        combinationCount += 1;
+        expect(frontPrompt.length).toBeLessThanOrEqual(MAX_FOSTA_PROMPT_LENGTH);
+        expect(frontPrompt.length).toBeLessThanOrEqual(620);
+        expect(frontPrompt).toContain("front-view virtual try-on image");
+        expect(frontPrompt).toContain("Image 1 is the person (front view)");
+        expect(frontPrompt).not.toContain("No rear photo for the");
 
+        // BACK view with all real rear photos + optional inferred rear subsets for HAT/SHOES (70 combinations)
+        const optInKinds = kinds.filter((k): k is "HAT" | "SHOES" => k === "HAT" || k === "SHOES");
+        const infMasks = 1 << optInKinds.length;
+        for (let infMask = 0; infMask < infMasks; infMask += 1) {
+          const inferredRearKinds = optInKinds.filter((_, idx) => (infMask & (1 << idx)) !== 0);
+          const prompt = buildFostaTryOnPrompt({
+            mode,
+            view: "BACK",
+            garmentKinds: kinds,
+            inferredRearKinds,
+          });
+          combinationCount += 1;
           expect(prompt.length).toBeLessThanOrEqual(MAX_FOSTA_PROMPT_LENGTH);
           expect(prompt.length).toBeLessThanOrEqual(620);
-          expect(prompt).toContain("Create one photorealistic");
-          expect(prompt).toContain(
-            view === "BACK" ? "back-view virtual try-on image" : "front-view virtual try-on image",
-          );
-          expect(prompt).toContain(
-            view === "BACK"
-              ? "Image 1 is the person from behind (back view)"
-              : "Image 1 is the person (front view)",
-          );
+          expect(prompt).toContain("back-view virtual try-on image");
+          expect(prompt).toContain("Image 1 is the person from behind");
 
-          // Exact canonical Image 2..N numbering
           kinds.forEach((kind, idx) => {
             const imgNum = idx + 2;
             const expectedRef =
@@ -184,21 +194,42 @@ describe("FOSTA Luna Prompt Matrix — All 60 (15 Subsets x 2 Modes x 2 Views) C
           expect(prompt).not.toContain(`image ${kinds.length + 2}`);
 
           if (kinds.includes("HAT")) {
-            expect(prompt).toContain("hat naturally on the head");
+            expect(prompt).toContain("wear the hat naturally");
           }
           if (kinds.includes("SHOES")) {
             expect(prompt).toContain("replace only the shoes");
           }
+          if (inferredRearKinds.length > 0) {
+            const expectedNoun = inferredRearKinds.map((k) => nounByKind[k]).join("/");
+            expect(prompt).toContain(
+              `No rear photo for the ${expectedNoun}: infer a plausible rear view consistent with the front photo.`,
+            );
+          } else {
+            expect(prompt).not.toContain("No rear photo for the");
+            if (mode === "STUDIO_WHITE") {
+              expect(prompt).toContain("clean white studio background with soft even lighting.");
+            } else {
+              expect(prompt).toContain("lighting, and original background.");
+            }
+          }
           if (mode === "STUDIO_WHITE") {
-            expect(prompt).toContain("clean white studio background with soft even lighting.");
+            expect(prompt).toContain("white studio background");
             expect(prompt).not.toContain("original background");
           } else {
             expect(prompt).toContain("lighting, and original background.");
-            expect(prompt).not.toContain("white studio background");
           }
         }
       }
     }
+    expect(combinationCount).toBe(100);
+
+    // Reject inferred rear for required slots TOP / BOTTOM
+    expect(() =>
+      buildFostaTryOnPrompt({ view: "BACK", garmentKinds: ["TOP"], inferredRearKinds: ["TOP"] }),
+    ).toThrow(/TOP requires a real rear photo/);
+    expect(() =>
+      buildFostaTryOnPrompt({ view: "BACK", garmentKinds: ["BOTTOM"], inferredRearKinds: ["BOTTOM"] }),
+    ).toThrow(/BOTTOM requires a real rear photo/);
   });
 });
 
@@ -1628,7 +1659,7 @@ describe("FOSTA 4-Slot Multi-Item (TOP, BOTTOM, HAT, SHOES) End-to-End, Canonica
     }
   });
 
-  it("rejects empty set, missing HAT/SHOES back photo, cloned front/back hash, >4 items, duplicate slot, and unknown category BEFORE quota deduction", async () => {
+  it("rejects empty set, missing person/TOP/BOTTOM view photos, missing all photos for HAT, cloned front/back hash, >4 items, duplicate slot, and unknown category BEFORE quota deduction", async () => {
     const durableStore = makeMemoryBackedDurableStore();
     const mockUpstream = createFostaResponsesMock("success");
     const liveProvider = new FostaTryOnProvider({
@@ -1678,20 +1709,56 @@ describe("FOSTA 4-Slot Multi-Item (TOP, BOTTOM, HAT, SHOES) End-to-End, Canonica
     // 1. Empty selectedItemIds
     expect((await send("empty", { selectedItemIds: [] })).status).toBe(400);
 
-    // 2. Missing BACK on HAT when BACK is requested
-    const hatFront = makePngWireImage("hat_f", "FRONT");
-    const rMissingHatBack = await send("missing_hat_back", {
-      selectedItemIds: ["h1"],
+    // 2a. Missing BACK on TOP when BACK is requested -> friendly Vietnamese NEEDS_INPUT, 0 quota
+    const rMissingTopBack = await send("missing_top_back", {
+      selectedItemIds: ["t1", "b1"],
       requestedViews: ["BACK"],
       personImages: { back: makePngWireImage("p_back", "BACK") },
-      garmentImages: { h1: { front: hatFront } },
+      garmentImages: {
+        t1: {},
+        b1: {},
+      },
       consentGrant: {
         ...makeFostaSubmitRequest().consentGrant,
         allowedViews: ["BACK"],
         selectedMediaIds: ["p_back"],
       },
     });
-    expect(rMissingHatBack.status).toBe(400);
+    expect(rMissingTopBack.status).toBe(400);
+    const missingTopErr = (await rMissingTopBack.json()) as TryOnErrorEnvelope;
+    expect(missingTopErr.error.code).toBe("NEEDS_INPUT");
+    expect(missingTopErr.error.message).toContain("Không thể tạo mặt sau: thiếu ảnh sau của Áo, Quần.");
+
+    // 2b. Missing person.FRONT on FRONT request -> friendly Vietnamese NEEDS_INPUT, 0 quota
+    const rMissingPersonFront = await send("missing_p_front", {
+      selectedItemIds: ["t1"],
+      requestedViews: ["FRONT"],
+      personImages: {},
+      garmentImages: { t1: { front: makePngWireImage("t1_f", "FRONT") } },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["FRONT"],
+        selectedMediaIds: ["t1_f"],
+      },
+    });
+    expect(rMissingPersonFront.status).toBe(400);
+    const missingPersonFrontErr = (await rMissingPersonFront.json()) as TryOnErrorEnvelope;
+    expect(missingPersonFrontErr.error.code).toBe("NEEDS_INPUT");
+    expect(missingPersonFrontErr.error.message).toContain("Không thể tạo mặt trước: thiếu ảnh người mặt trước.");
+
+    // 2c. HAT without ANY front OR back photo in BACK view -> NEEDS_INPUT
+    const rMissingHatAny = await send("missing_hat_any", {
+      selectedItemIds: ["h1"],
+      requestedViews: ["BACK"],
+      personImages: { back: makePngWireImage("p_back", "BACK") },
+      garmentImages: { h1: {} },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["BACK"],
+        selectedMediaIds: ["p_back"],
+      },
+    });
+    expect(rMissingHatAny.status).toBe(400);
 
     // 3. Cloned front/back hash on SHOES
     const shoesFront = makePngWireImage("shoes_f", "FRONT");
@@ -1739,6 +1806,81 @@ describe("FOSTA 4-Slot Multi-Item (TOP, BOTTOM, HAT, SHOES) End-to-End, Canonica
     );
     const preflight = (await preflightRes.json()) as { usedLiveRequests: number };
     expect(preflight.usedLiveRequests).toBe(0);
+  });
+
+  it("allows BACK view when HAT and/or SHOES lack rear photos (sends front photo, canonical count, and v2.3 rear-inference prompt)", async () => {
+    const store = new InMemoryTryOnJobStore();
+    const mockUpstream = createFostaResponsesMock("success");
+    const mockProvider = new FostaTryOnProvider({
+      apiKey: "offline-mock-fosta-key",
+      endpoint: "https://mock.fosta.local/v1/responses",
+      offlineMockMode: true,
+      fetchImpl: mockUpstream.fetchImpl,
+    });
+    const router = createTryOnRouter({ store, provider: mockProvider });
+    const mockEnv: TryOnEnvConfig = {
+      TRYON_PROVIDER: "fosta",
+      TRYON_LIVE_ENABLED: "false",
+      TRYON_OFFLINE_MOCK_FOSTA: "true",
+      VTO_FEASIBILITY_DECISION: "GO_DUAL",
+      VTO_PROVIDER_CONFIG_VERSION: "v2-fosta-poc-1",
+    };
+
+    const items = [
+      { itemId: "t1", category: "TOP" as const, slot: "TOP" as const, revision: 1 },
+      { itemId: "h1", category: "ACCESSORY" as const, slot: "HAT" as const, revision: 1 },
+      { itemId: "s1", category: "SHOES" as const, slot: "SHOES" as const, revision: 1 },
+    ];
+    const req = makeFostaSubmitRequest({
+      requestId: "req_back_opt_rear",
+      idempotencyKey: "idem_back_opt_rear",
+      requestedViews: ["BACK"],
+      outfitSnapshot: { outfitId: "o_opt", wardrobeSnapshotId: "w_opt", items },
+      selectedItemIds: ["s1", "t1", "h1"], // intentionally out of order -> canonical t1, h1, s1
+      personImages: {
+        back: makePngWireImage("p_back", "BACK"),
+      },
+      garmentImages: {
+        t1: { back: makePngWireImage("t1_back", "BACK") },
+        h1: { front: makePngWireImage("h1_front", "FRONT"), back: null },
+        s1: { front: makePngWireImage("s1_front", "FRONT"), back: null },
+      },
+      consentGrant: {
+        ...makeFostaSubmitRequest().consentGrant,
+        allowedViews: ["BACK"],
+        selectedMediaIds: ["p_back", "t1_back", "h1_front", "s1_front"],
+      },
+    });
+
+    const submitRes = await router.handle(
+      new Request("https://fitcheck.local/v2/tryon/jobs", {
+        method: "POST",
+        body: JSON.stringify(req),
+      }),
+      mockEnv,
+      { sessionId: "sess_back_opt" },
+    );
+    expect(submitRes.status).toBe(202);
+    const submitJson = (await submitRes.json()) as TryOnJobSubmitResponse;
+    expect(submitJson.status).toBe("SUCCEEDED");
+
+    expect(mockUpstream.callCount).toBe(1);
+    expect(mockUpstream.lastCapturedRequest?.imageCount).toBe(4); // person + top + hat(front) + shoes(front)
+    expect(mockUpstream.lastCapturedRequest?.prompt).toContain("image 2 is the reference top");
+    expect(mockUpstream.lastCapturedRequest?.prompt).toContain("image 3 is the hat");
+    expect(mockUpstream.lastCapturedRequest?.prompt).toContain("image 4 is the shoes");
+    expect(mockUpstream.lastCapturedRequest?.prompt).toContain(
+      "No rear photo for the hat/shoes: infer a plausible rear view consistent with the front photo.",
+    );
+
+    const pollRes = await router.handle(
+      new Request(`https://fitcheck.local/v2/tryon/jobs/${submitJson.jobId}`),
+      mockEnv,
+      { sessionId: "sess_back_opt" },
+    );
+    const pollJson = (await pollRes.json()) as TryOnResultWire;
+    expect(pollJson.appliedItemIds).toEqual(["t1", "h1", "s1"]);
+    expect(pollJson.warnings.some((w) => w.startsWith("INFERRED_OPTIONAL_REAR:"))).toBe(true);
   });
 
   it("enforces MAX_TOTAL_DECODED_BYTES (8 MiB) on worst-case 10-image DUAL 4-item request and rejects > 8 MiB with 413 (0 quota)", async () => {

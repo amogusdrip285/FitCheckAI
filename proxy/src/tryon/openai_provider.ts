@@ -555,6 +555,17 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
         );
       }
       const resolvedSlot = mapCategoryToFostaGarmentKind(garment.category, garment.slot);
+      if (
+        input.view === "BACK" &&
+        garment.inferredRear === true &&
+        (resolvedSlot === "TOP" || resolvedSlot === "BOTTOM")
+      ) {
+        const slotVi = resolvedSlot === "TOP" ? "Áo" : "Quần";
+        throw new UpstreamDeterministicError(
+          "NEEDS_INPUT",
+          `Không thể tạo mặt sau: thiếu ảnh sau của ${slotVi}.`,
+        );
+      }
       if (resolvedSlot !== null) {
         if (seenSlots.has(resolvedSlot)) {
           throw new UpstreamDeterministicError(
@@ -605,6 +616,7 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
         category: g.garment.category,
         slot: g.slot ?? undefined,
         colors: g.garment.colors,
+        inferredRear: g.garment.inferredRear,
       })),
       personExifOrientation: personValidated.metadata.exifOrientation,
       garmentExifOrientation: garmentsValidated[0]?.validated.metadata.exifOrientation,

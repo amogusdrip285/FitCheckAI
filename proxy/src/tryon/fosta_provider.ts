@@ -110,7 +110,8 @@ export interface BuildFostaPayloadInput {
   bottomBytes?: Uint8Array | null;
   hatBytes?: Uint8Array | null;
   shoesBytes?: Uint8Array | null;
-  garments?: ReadonlyArray<{ kind: FostaGarmentKind; bytes: Uint8Array }>;
+  garments?: ReadonlyArray<{ kind: FostaGarmentKind; bytes: Uint8Array; inferredRear?: boolean }>;
+  inferredRearKinds?: readonly FostaGarmentKind[];
 }
 
 /**
@@ -178,7 +179,7 @@ function assertValidImageSlice(bytes: Uint8Array | undefined | null, label: stri
 
 /**
  * Builds the exact FOSTA `/v1/responses` JSON payload in canonical order:
- * 1. `input_text` (`v2.2` composable prompt)
+ * 1. `input_text` (`v2.3` composable prompt)
  * 2. `input_image` #1: `PERSON`
  * 3. `input_image` #2..N: selected items sorted strictly `TOP -> BOTTOM -> HAT -> SHOES`
  */
@@ -192,6 +193,7 @@ export function buildFostaResponsesPayload({
   hatBytes,
   shoesBytes,
   garments,
+  inferredRearKinds,
 }: BuildFostaPayloadInput): FostaResponsesRequestWire {
   if (mode !== "ORIGINAL_PHOTO" && mode !== "STUDIO_WHITE") {
     throw new UpstreamDeterministicError(
@@ -206,8 +208,15 @@ export function buildFostaResponsesPayload({
     );
   }
 
-  const byKind = new Map<FostaGarmentKind, { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime }>();
-  const registerGarment = (kind: FostaGarmentKind, bytes: Uint8Array | undefined | null): void => {
+  const byKind = new Map<
+    FostaGarmentKind,
+    { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime; inferredRear: boolean }
+  >();
+  const registerGarment = (
+    kind: FostaGarmentKind,
+    bytes: Uint8Array | undefined | null,
+    inferredRear = false,
+  ): void => {
     if (bytes === undefined || bytes === null) return;
     if (byKind.has(kind)) {
       throw new UpstreamDeterministicError(
@@ -219,21 +228,22 @@ export function buildFostaResponsesPayload({
       kind,
       bytes,
       mime: assertValidImageSlice(bytes, kind),
+      inferredRear,
     });
   };
 
-  registerGarment("TOP", topBytes);
-  registerGarment("BOTTOM", bottomBytes);
-  registerGarment("HAT", hatBytes);
-  registerGarment("SHOES", shoesBytes);
+  registerGarment("TOP", topBytes, false);
+  registerGarment("BOTTOM", bottomBytes, false);
+  registerGarment("HAT", hatBytes, false);
+  registerGarment("SHOES", shoesBytes, false);
   if (garments) {
     for (const entry of garments) {
-      registerGarment(entry.kind, entry.bytes);
+      registerGarment(entry.kind, entry.bytes, Boolean(entry.inferredRear));
     }
   }
 
   const orderedGarments = CANONICAL_FOSTA_GARMENT_ORDER.map((kind) => byKind.get(kind)).filter(
-    (entry): entry is { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime } =>
+    (entry): entry is { kind: FostaGarmentKind; bytes: Uint8Array; mime: SupportedTryOnMime; inferredRear: boolean } =>
       entry !== undefined,
   );
 
@@ -255,10 +265,18 @@ export function buildFostaResponsesPayload({
     );
   }
 
+  const collectedInferredRear = new Set<FostaGarmentKind>(inferredRearKinds ?? []);
+  for (const g of orderedGarments) {
+    if (g.inferredRear) {
+      collectedInferredRear.add(g.kind);
+    }
+  }
+
   const prompt = buildFostaTryOnPrompt({
     mode,
     view,
     garmentKinds: orderedGarments.map((g) => g.kind),
+    inferredRearKinds: Array.from(collectedInferredRear),
   });
 
   const toDataUrl = (bytes: Uint8Array, mime: SupportedTryOnMime): string =>
@@ -641,7 +659,7 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
     }
 
     // Map & validate TOP / BOTTOM / HAT / SHOES slots; reject duplicate slot in a single request
-    const bytesByKind = new Map<FostaGarmentKind, Uint8Array>();
+    const entryByKind = new Map<FostaGarmentKind, { bytes: Uint8Array; inferredRear: boolean }>();
 
     for (const garment of input.garments) {
       const kind = mapCategoryToFostaGarmentKind(garment.category, garment.slot);
@@ -652,10 +670,18 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
           false,
         );
       }
-      if (bytesByKind.has(kind)) {
+      if (entryByKind.has(kind)) {
         throw new UpstreamDeterministicError(
           "INVALID_REQUEST",
           `Không được gửi nhiều món cùng ô '${kind}' trong cùng một lượt thử FOSTA; chỉ chọn tối đa 1 món cho mỗi ô (TOP, BOTTOM, HAT, SHOES).`,
+          false,
+        );
+      }
+      if (input.view === "BACK" && garment.inferredRear === true && (kind === "TOP" || kind === "BOTTOM")) {
+        const slotVi = kind === "TOP" ? "Áo" : "Quần";
+        throw new UpstreamDeterministicError(
+          "NEEDS_INPUT",
+          `Không thể tạo mặt sau: thiếu ảnh sau của ${slotVi}.`,
           false,
         );
       }
@@ -664,12 +690,12 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
       if (!gBytes) {
         throw new UpstreamDeterministicError(
           "INVALID_REQUEST",
-          `Ảnh trang phục '${garment.itemId}' (${input.view}) không phải base64 hợp lệ.`,
+          `Ảnh trang phục '${garment.itemId}' (${garment.image.view}) không phải base64 hợp lệ.`,
           false,
         );
       }
       const gValidated = validateTryOnImageBuffer(gBytes, {
-        label: `garment.${garment.itemId}.${input.view}`,
+        label: `garment.${garment.itemId}.${garment.image.view}`,
         declaredMimeType: garment.image.mimeType,
         strictMimeMatch: true,
         maxBytes: MAX_FOSTA_SINGLE_IMAGE_BYTES,
@@ -684,12 +710,15 @@ export class FostaTryOnProvider implements UpstreamVtoProvider {
         );
       }
 
-      bytesByKind.set(kind, gBytes);
+      entryByKind.set(kind, {
+        bytes: gBytes,
+        inferredRear: input.view === "BACK" && Boolean(garment.inferredRear),
+      });
     }
 
     const canonicalGarments = CANONICAL_FOSTA_GARMENT_ORDER.flatMap((kind) => {
-      const bytes = bytesByKind.get(kind);
-      return bytes ? [{ kind, bytes }] : [];
+      const item = entryByKind.get(kind);
+      return item ? [{ kind, bytes: item.bytes, inferredRear: item.inferredRear }] : [];
     });
 
     return buildFostaResponsesPayload({

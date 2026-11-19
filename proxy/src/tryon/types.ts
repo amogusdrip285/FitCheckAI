@@ -306,6 +306,7 @@ export interface UpstreamViewSubmitInput {
     slot?: FostaGarmentKind;
     colors?: string[];
     image: WireImageInput;
+    inferredRear?: boolean;
   }>;
 }
 

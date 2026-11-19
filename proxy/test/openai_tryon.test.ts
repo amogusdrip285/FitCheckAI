@@ -803,5 +803,51 @@ describe("Track C OpenAI Virtual Try-On Scaffold (Sections 3–15)", () => {
       expect(out.initialState).toBe("SUCCEEDED");
       expect(mock.lastCapturedRequest?.imageCount).toBe(4);
     });
+
+    it("supports BACK view with inferredRear HAT/SHOES in OpenAI mock and rejects inferredRear on TOP", async () => {
+      const mock = createOpenAiImageEditsMock("success");
+      const provider = new OpenAITryOnProvider({
+        apiKey: "sk-test-openai-back-opt-12345",
+        model: "gpt-image-2",
+        offlineMockMode: true,
+        fetchImpl: mock.fetchImpl,
+      });
+
+      const out = await provider.submitView({
+        jobId: "job_openai_back_opt",
+        requestId: "req_openai_back_opt",
+        view: "BACK",
+        personImage: makePngWireImage("p_back", "BACK"),
+        garments: [
+          { itemId: "hat_1", category: "ACCESSORY", slot: "HAT", image: makePngWireImage("h_f", "FRONT"), inferredRear: true },
+          { itemId: "top_1", category: "TOP", slot: "TOP", image: makePngWireImage("t_b", "BACK") },
+        ],
+      });
+      expect(out.initialState).toBe("SUCCEEDED");
+      expect(mock.lastCapturedRequest?.imageCount).toBe(3);
+      expect(mock.lastCapturedRequest?.promptMentionsBothReferenceImages).toBe(true);
+      const builtPrompt = buildOpenAiTryOnPrompt({
+        view: "BACK",
+        garments: [
+          { category: "TOP", slot: "TOP" },
+          { category: "ACCESSORY", slot: "HAT", inferredRear: true },
+        ],
+      });
+      expect(builtPrompt.promptVersion).toBe("openai-vto-edit-v1.2");
+      expect(builtPrompt.prompt).toContain("front-view reference photo only — no rear photo provided");
+      expect(builtPrompt.prompt).toContain("No rear photo for the hat: infer a plausible rear view consistent with the front photo.");
+
+      await expect(
+        provider.submitView({
+          jobId: "job_openai_back_bad_top",
+          requestId: "req_openai_back_bad_top",
+          view: "BACK",
+          personImage: makePngWireImage("p_back", "BACK"),
+          garments: [
+            { itemId: "top_1", category: "TOP", slot: "TOP", image: makePngWireImage("t_f", "FRONT"), inferredRear: true },
+          ],
+        }),
+      ).rejects.toThrow(/Không thể tạo mặt sau: thiếu ảnh sau của Áo/);
+    });
   });
 });
