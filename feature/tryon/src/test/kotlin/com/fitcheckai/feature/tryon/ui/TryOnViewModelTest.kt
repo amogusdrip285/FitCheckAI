@@ -2,6 +2,7 @@ package com.fitcheckai.feature.tryon.ui
 
 import com.fitcheckai.feature.tryon.contract.ImagePair
 import com.fitcheckai.feature.tryon.contract.ImageView
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
 import com.fitcheckai.feature.tryon.contract.TryOnPresentationMode
 import com.fitcheckai.feature.tryon.fake.FakeTryOnFixtures
@@ -110,11 +111,17 @@ class TryOnViewModelTest {
         // Changing view scope MUST reset consentConfirmed so user explicitly consents to back upload!
         assertFalse(vm.uiState.value.consentConfirmed)
 
-        // If user deletes person back photo from ProfileStorage, ViewModel falls back to FRONT_ONLY
+        // If user deletes person back photo from ProfileStorage, ViewModel keeps FRONT_AND_BACK
+        // (no silent switch to FRONT_ONLY), disables submit and shows missing-back error.
         profilePort.update(FakeTryOnFixtures.personFrontOnlySnapshot)
         advanceUntilIdle()
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(TryOnViewMode.FRONT_AND_BACK, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectDualView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
 
         // Restore dual photos, confirm consent, submit partial-back-failed scenario, then delete result
         profilePort.update(FakeTryOnFixtures.personDualSnapshot)
@@ -156,15 +163,15 @@ class TryOnViewModelTest {
         )
         advanceUntilIdle()
 
-        // Default FOSTA selection is FRONT_ONLY + ORIGINAL_PHOTO + TOP_ONLY (validated single-example baseline)
+        // Default FOSTA photo-driven selection applies all slots that currently have photos (TOP + BOTTOM)
         val init = vm.uiState.value
         assertTrue(init.isFostaProvider)
         assertTrue(init.isFakeEnvironment)
         assertEquals(TryOnViewMode.FRONT_ONLY, init.selectedViewMode)
         assertEquals(TryOnPresentationMode.ORIGINAL_PHOTO, init.selectedPresentationMode)
-        assertEquals(listOf("item-top-linen"), init.selectedItemIds)
-        assertEquals(TryOnGarmentCombo.TOP_ONLY, init.activeGarmentCombo)
-        assertFalse(init.hasExperimentalSelection)
+        assertEquals(listOf("item-top-linen", "item-trouser-noir"), init.selectedItemIds)
+        assertEquals("Sẽ thử: Áo + Quần", init.tryOnSummaryText)
+        assertTrue(init.hasExperimentalSelection)
 
         // Switching to STUDIO_WHITE resets consentConfirmed
         vm.setConsentConfirmed(true)
@@ -172,18 +179,18 @@ class TryOnViewModelTest {
         assertEquals(TryOnPresentationMode.STUDIO_WHITE, vm.uiState.value.selectedPresentationMode)
         assertFalse(vm.uiState.value.consentConfirmed)
 
-        // Selecting BOTTOM_ONLY or TOP_AND_BOTTOM marks experimental selection and resets consent
+        // Removing TOP slot leaves only BOTTOM active, marks single non-TOP experimental, and resets consent
         vm.setConsentConfirmed(true)
-        vm.selectGarmentCombo(TryOnGarmentCombo.BOTTOM_ONLY)
+        vm.removeGarmentSlot(TryOnGarmentSlot.TOP)
         assertEquals(listOf("item-trouser-noir"), vm.uiState.value.selectedItemIds)
-        assertEquals(TryOnGarmentCombo.BOTTOM_ONLY, vm.uiState.value.activeGarmentCombo)
+        assertEquals("Sẽ thử: Quần", vm.uiState.value.tryOnSummaryText)
         assertTrue(vm.uiState.value.hasExperimentalSelection)
         assertFalse(vm.uiState.value.consentConfirmed)
 
-        vm.selectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM)
+        // Re-adding TOP restores TOP + BOTTOM canonically without experimental notice (1-2 basic slots ok vs 3+ or SHOES/HAT)
+        vm.updateGarmentImages(FakeTryOnFixtures.defaultGarmentImages)
         assertEquals(listOf("item-top-linen", "item-trouser-noir"), vm.uiState.value.selectedItemIds)
-        assertEquals(TryOnGarmentCombo.TOP_AND_BOTTOM, vm.uiState.value.activeGarmentCombo)
-        assertTrue(vm.uiState.value.hasExperimentalSelection)
+        assertEquals("Sẽ thử: Áo + Quần", vm.uiState.value.tryOnSummaryText)
 
         // Selecting BACK_ONLY with real rear person + rear garment photos succeeds and sets activeResultTab = BACK
         assertTrue(vm.uiState.value.canSelectBackView)
@@ -213,32 +220,42 @@ class TryOnViewModelTest {
             stepDelayMs = 0L,
             scope = TestScope(testDispatcher),
         )
-        // Bottom item lacks rear photo
-        val garmentsMissingBottomBack = FakeTryOnFixtures.defaultGarmentImages.toMutableMap().apply {
-            put("item-trouser-noir", ImagePair(front = FakeTryOnFixtures.bottomFrontRef, back = null))
-        }
+        // Only TOP has photos initially (with rear photo) -> BACK_ONLY is unlocked
+        val topOnlyGarments = mapOf(
+            "item-top-linen" to FakeTryOnFixtures.defaultGarmentImages.getValue("item-top-linen"),
+            "item-trouser-noir" to ImagePair(),
+        )
         val vm = TryOnViewModel(
             tryOnService = fakeService,
             profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
             privacyCoordinator = privacy,
             initialOutfit = FakeTryOnFixtures.editorialWorkOutfit,
-            initialGarmentImages = garmentsMissingBottomBack,
+            initialGarmentImages = topOnlyGarments,
         )
         advanceUntilIdle()
 
-        // TOP has rear photo -> BACK_ONLY is allowed for TOP_ONLY
         assertTrue(vm.uiState.value.canSelectBackView)
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
 
-        // Switching to TOP_AND_BOTTOM where BOTTOM lacks rear photo auto-fallbacks to FRONT_ONLY!
-        vm.selectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM)
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        // Adding BOTTOM front photo (without back photo) keeps BACK_ONLY selected (no silent fallback),
+        // disables submit with explicit missing-photo error naming Quần.
+        val addedBottomWithoutBack = topOnlyGarments.toMutableMap().apply {
+            put("item-trouser-noir", ImagePair(front = FakeTryOnFixtures.bottomFrontRef, back = null))
+        }
+        vm.updateGarmentImages(addedBottomWithoutBack)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(listOf("Quần"), vm.uiState.value.missingBackSlotLabels)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Quần.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
     }
 
     @Test
-    fun `updateGarmentImages preserves selected combo and view mode while invalidating consent and replaced garment result`() = runTest(testDispatcher) {
+    fun `updateGarmentImages preserves view and presentation mode while invalidating consent and replaced garment result`() = runTest(testDispatcher) {
         val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
         val privacy = TryOnPrivacyCoordinator(mediaStore)
         val fakeService = FakeVirtualTryOnService(
@@ -259,7 +276,6 @@ class TryOnViewModelTest {
         advanceUntilIdle()
 
         vm.selectPresentationMode(TryOnPresentationMode.STUDIO_WHITE)
-        vm.selectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM)
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         vm.setConsentConfirmed(true)
         vm.submitTryOn()
@@ -271,7 +287,7 @@ class TryOnViewModelTest {
         assertNotNull(firstOutputId)
         assertTrue(mediaStore.hasMedia(firstOutputId!!))
 
-        // Replace top back photo in place -> combo, presentation mode, and BACK_ONLY stay intact
+        // Replace top back photo in place -> active slots, presentation mode, and BACK_ONLY stay intact
         val newTopBackRef = FakeTryOnFixtures.topBackRef.copy(
             id = "top-back-picked-2",
             contentHash = "sha256:new-top-back-2",
@@ -288,7 +304,7 @@ class TryOnViewModelTest {
         advanceUntilIdle()
 
         val afterUpdate = vm.uiState.value
-        assertEquals(TryOnGarmentCombo.TOP_AND_BOTTOM, afterUpdate.activeGarmentCombo)
+        assertEquals(listOf("item-top-linen", "item-trouser-noir"), afterUpdate.selectedItemIds)
         assertEquals(TryOnPresentationMode.STUDIO_WHITE, afterUpdate.selectedPresentationMode)
         assertEquals(TryOnViewMode.BACK_ONLY, afterUpdate.selectedViewMode)
         assertFalse(afterUpdate.consentConfirmed)
@@ -302,26 +318,20 @@ class TryOnViewModelTest {
         advanceUntilIdle()
         assertEquals(TryOnJobStatus.SUCCEEDED, vm.uiState.value.activeOrLatestResult?.status)
 
-        // When only TOP_ONLY was applied, replacing an unselected BOTTOM item preserves TOP_ONLY result
-        vm.selectGarmentCombo(TryOnGarmentCombo.TOP_ONLY)
+        // Removing BOTTOM -> runs TOP-only; empty updates on inactive BOTTOM preserve TOP-only result
+        vm.removeGarmentSlot(TryOnGarmentSlot.BOTTOM)
+        advanceUntilIdle()
         vm.setConsentConfirmed(true)
         vm.submitTryOn()
         advanceUntilIdle()
         val topOnlyJobId = vm.uiState.value.activeOrLatestResult?.jobId
         assertNotNull(topOnlyJobId)
 
-        val newBottomBackRef = FakeTryOnFixtures.bottomBackRef.copy(
-            id = "bottom-back-picked-2",
-            contentHash = "sha256:new-bottom-back-2",
-            revision = 2L,
+        val sameActiveMap = mapOf(
+            "item-top-linen" to ImagePair(front = FakeTryOnFixtures.topFrontRef, back = newTopBackRef),
+            "item-trouser-noir" to ImagePair(),
         )
-        val updatedUnselectedBottom = updatedWithNewTopBack.toMutableMap().apply {
-            put(
-                "item-trouser-noir",
-                ImagePair(front = FakeTryOnFixtures.bottomFrontRef, back = newBottomBackRef),
-            )
-        }
-        vm.updateGarmentImages(updatedUnselectedBottom)
+        vm.updateGarmentImages(sameActiveMap)
         advanceUntilIdle()
         assertEquals(topOnlyJobId, vm.uiState.value.activeOrLatestResult?.jobId)
     }
@@ -360,40 +370,48 @@ class TryOnViewModelTest {
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
 
-        // Add person back photo -> still locked because garment back photo is missing
+        // Add person back photo -> still locked because TOP and BOTTOM lack back photos
         profilePort.update(FakeTryOnFixtures.personDualSnapshot)
         advanceUntilIdle()
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertEquals(listOf("Áo", "Quần"), vm.uiState.value.missingBackSlotLabels)
         assertEquals(
             "Một số món đồ đã chọn chưa có ảnh mặt sau trong Tủ đồ.",
             vm.uiState.value.backViewUnavailableReason,
         )
 
-        // Select TOP_AND_BOTTOM and supply only TOP back -> combo kept, BACK_ONLY still locked
-        vm.selectGarmentCombo(TryOnGarmentCombo.TOP_AND_BOTTOM)
+        // Supply TOP back only -> still locked naming only Quần
         val withTopBackOnly = liveFrontOnlyGarments.toMutableMap().apply {
             put("item-top-linen", ImagePair(front = FakeTryOnFixtures.topFrontRef, back = FakeTryOnFixtures.topBackRef))
         }
         vm.updateGarmentImages(withTopBackOnly)
-        assertEquals(TryOnGarmentCombo.TOP_AND_BOTTOM, vm.uiState.value.activeGarmentCombo)
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertEquals(listOf("Quần"), vm.uiState.value.missingBackSlotLabels)
+        assertEquals(
+            "Một số món đồ đã chọn chưa có ảnh mặt sau trong Tủ đồ.",
+            vm.uiState.value.backViewUnavailableReason,
+        )
 
-        // Supply BOTTOM back -> BACK_ONLY unlocks while preserving TOP_AND_BOTTOM
+        // Supply BOTTOM back -> BACK_ONLY unlocks!
         val withAllBacks = withTopBackOnly.toMutableMap().apply {
             put("item-trouser-noir", ImagePair(front = FakeTryOnFixtures.bottomFrontRef, back = FakeTryOnFixtures.bottomBackRef))
         }
         vm.updateGarmentImages(withAllBacks)
-        assertEquals(TryOnGarmentCombo.TOP_AND_BOTTOM, vm.uiState.value.activeGarmentCombo)
         assertTrue(vm.uiState.value.canSelectBackView)
         assertNull(vm.uiState.value.backViewUnavailableReason)
         vm.selectViewMode(TryOnViewMode.BACK_ONLY)
         assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
 
-        // Removing BOTTOM back while in BACK_ONLY auto-falls back to FRONT_ONLY cleanly
+        // Removing BOTTOM back while in BACK_ONLY keeps BACK_ONLY selected (no silent switch to FRONT_ONLY),
+        // surfaces explicit error and locks submit until restored or switched by user.
         vm.updateGarmentImages(withTopBackOnly)
-        assertEquals(TryOnGarmentCombo.TOP_AND_BOTTOM, vm.uiState.value.activeGarmentCombo)
-        assertEquals(TryOnViewMode.FRONT_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
         assertFalse(vm.uiState.value.canSelectBackView)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Quần.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
     }
 
     @Test
@@ -511,5 +529,267 @@ class TryOnViewModelTest {
         assertNull(vm.uiState.value.activeOrLatestResult)
         assertEquals(TryOnJobStatus.DELETED, fakeService.observe(backJobId!!).first().status)
         assertFalse(mediaStore.hasMedia(backOutputRef.id))
+    }
+
+    @Test
+    fun `photo-driven 4-slot selection supports all 15 non-empty subsets in canonical order and disables submit at 0 slots`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(512) { 0x22 })
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            initialScenario = FakeTryOnScenario.SUCCEED_REQUESTED_VIEWS,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.allFourSlotsOutfit,
+            initialGarmentImages = emptyMap(),
+        )
+        advanceUntilIdle()
+
+        // 0 slots -> summary warns and submit cannot enable even after consent
+        assertEquals(emptyList<String>(), vm.uiState.value.selectedItemIds)
+        assertEquals("Chọn ít nhất một món", vm.uiState.value.tryOnSummaryText)
+        assertFalse(vm.uiState.value.hasShoesImage)
+        vm.setConsentConfirmed(true)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+
+        val slotMeta = listOf(
+            Triple(TryOnGarmentSlot.TOP, "item-top-linen", "Áo") to ImagePair(front = FakeTryOnFixtures.topFrontRef),
+            Triple(TryOnGarmentSlot.BOTTOM, "item-trouser-noir", "Quần") to ImagePair(front = FakeTryOnFixtures.bottomFrontRef),
+            Triple(TryOnGarmentSlot.HAT, "item-hat-cap", "Mũ") to ImagePair(front = FakeTryOnFixtures.hatFrontRef),
+            Triple(TryOnGarmentSlot.SHOES, "item-shoes-loafer", "Giày") to ImagePair(front = FakeTryOnFixtures.shoesFrontRef),
+        )
+
+        // Check all 15 non-empty subsets (bitmask 1..15)
+        for (mask in 1..15) {
+            val map = linkedMapOf<String, ImagePair>()
+            val expectedIds = mutableListOf<String>()
+            val expectedNames = mutableListOf<String>()
+            var expectShoes = false
+            slotMeta.forEachIndexed { idx, (meta, pair) ->
+                if ((mask and (1 shl idx)) != 0) {
+                    map[meta.second] = pair
+                    expectedIds += meta.second
+                    expectedNames += meta.third
+                    if (meta.first == TryOnGarmentSlot.SHOES) expectShoes = true
+                }
+            }
+            vm.updateGarmentImages(map)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals(expectedIds, state.selectedItemIds)
+            assertEquals("Sẽ thử: ${expectedNames.joinToString(" + ")}", state.tryOnSummaryText)
+            assertEquals(expectShoes, state.hasShoesImage)
+            vm.setConsentConfirmed(true)
+            assertTrue("Expected canSubmitTryOn for mask=$mask", vm.uiState.value.canSubmitTryOn)
+        }
+    }
+
+    @Test
+    fun `removeGarmentSlot clears slot photos, resets consent, deletes prior result, and toggles shoes hint`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(512) { 0x22 })
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            initialScenario = FakeTryOnScenario.SUCCEED_REQUESTED_VIEWS,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.allFourSlotsOutfit,
+            initialGarmentImages = FakeTryOnFixtures.allFourSlotsGarmentImages,
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.hasShoesImage)
+        assertEquals("Sẽ thử: Áo + Quần + Mũ + Giày", vm.uiState.value.tryOnSummaryText)
+        vm.setConsentConfirmed(true)
+        vm.submitTryOn()
+        advanceUntilIdle()
+
+        val jobId = vm.uiState.value.activeOrLatestResult?.jobId
+        val outId = vm.uiState.value.activeOrLatestResult?.views?.get(ImageView.FRONT)?.outputRef?.id
+        assertNotNull(jobId)
+        assertNotNull(outId)
+        assertTrue(mediaStore.hasMedia(outId!!))
+
+        vm.removeGarmentSlot(TryOnGarmentSlot.SHOES)
+        advanceUntilIdle()
+
+        val afterRemove = vm.uiState.value
+        assertFalse(afterRemove.hasShoesImage)
+        assertEquals("Sẽ thử: Áo + Quần + Mũ", afterRemove.tryOnSummaryText)
+        assertTrue(afterRemove.garmentImages["item-shoes-loafer"] == null || afterRemove.garmentImages["item-shoes-loafer"] == ImagePair())
+        assertFalse("item-shoes-loafer" in afterRemove.selectedItemIds)
+        assertFalse(afterRemove.consentConfirmed)
+        assertNull(afterRemove.activeOrLatestResult)
+        assertEquals(TryOnJobStatus.DELETED, fakeService.observe(jobId!!).first().status)
+        assertFalse(mediaStore.hasMedia(outId))
+    }
+
+    @Test
+    fun `optional rear photos on HAT and SHOES keep BACK view unlocked, surface inference notice, and submit cleanly`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        mediaStore.putMedia(FakeTryOnFixtures.shoesFrontRef, ByteArray(512) { 0x22 })
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability.copy(executionMode = "AI_LIVE"),
+            initialScenario = FakeTryOnScenario.SUCCEED_REQUESTED_VIEWS,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        val hatAndShoesFrontOnly = mapOf(
+            "item-top-linen" to FakeTryOnFixtures.defaultGarmentImages.getValue("item-top-linen"),
+            "item-trouser-noir" to FakeTryOnFixtures.defaultGarmentImages.getValue("item-trouser-noir"),
+            "item-hat-cap" to ImagePair(front = FakeTryOnFixtures.hatFrontRef, back = null),
+            "item-shoes-loafer" to ImagePair(front = FakeTryOnFixtures.shoesFrontRef, back = null),
+        )
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.allFourSlotsOutfit,
+            initialGarmentImages = hatAndShoesFrontOnly,
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.canSelectBackView)
+        assertEquals(emptyList<String>(), vm.uiState.value.missingBackSlotLabels)
+        assertNull(vm.uiState.value.backViewUnavailableReason)
+        assertNull(vm.uiState.value.optionalBackInferenceNotice)
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
+        assertEquals(listOf("Mũ", "Giày"), vm.uiState.value.inferredBackSlotLabels)
+        assertEquals(
+            "Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật.",
+            vm.uiState.value.optionalBackInferenceNotice,
+        )
+        assertNull(vm.uiState.value.viewMissingPhotosError)
+
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+        vm.submitTryOn()
+        advanceUntilIdle()
+
+        val result = vm.uiState.value.activeOrLatestResult
+        assertNotNull(result)
+        assertEquals(TryOnJobStatus.SUCCEEDED, result!!.status)
+        assertTrue(result.views.containsKey(ImageView.BACK))
+    }
+
+    @Test
+    fun `strict view missing-photo errors lock submit for missing person or garment photos across FRONT and BACK`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val profilePort = FakeTryOnProfilePort(
+            FakeTryOnFixtures.personDualSnapshot.copy(bodyImages = ImagePair(front = null, back = null)),
+        )
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        // FRONT selected, person has NO front photo, TOP has ONLY back photo (so TOP is selected, missing FRONT)
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = profilePort,
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.editorialWorkOutfit,
+            initialGarmentImages = mapOf(
+                "item-top-linen" to ImagePair(front = null, back = FakeTryOnFixtures.topBackRef),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            "Không thể tạo mặt trước: thiếu ảnh người mặt trước và ảnh trước của Áo.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
+        vm.setConsentConfirmed(true)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+
+        // Restore person.front & TOP.front -> FRONT_ONLY ready; switch to BACK_ONLY then clear person.back -> error without silent fallback
+        profilePort.update(FakeTryOnFixtures.personDualSnapshot)
+        vm.updateGarmentImages(
+            mapOf("item-top-linen" to ImagePair(front = FakeTryOnFixtures.topFrontRef, back = FakeTryOnFixtures.topBackRef)),
+        )
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.viewMissingPhotosError)
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        profilePort.update(FakeTryOnFixtures.personDualSnapshot.copy(bodyImages = ImagePair(front = FakeTryOnFixtures.personFrontRef, back = null)))
+        advanceUntilIdle()
+        assertEquals(TryOnViewMode.BACK_ONLY, vm.uiState.value.selectedViewMode)
+        assertFalse(vm.uiState.value.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
+            vm.uiState.value.viewMissingPhotosError,
+        )
+    }
+
+    @Test
+    fun `removeGarmentPhoto BACK mid-session keeps BACK_ONLY selected and surfaces TOP missing-back error`() = runTest(testDispatcher) {
+        val mediaStore = FakeTryOnFixtures.createPopulatedMediaStore()
+        mediaStore.putMedia(FakeTryOnFixtures.hatFrontRef, ByteArray(512) { 0x11 })
+        val privacy = TryOnPrivacyCoordinator(mediaStore)
+        val fakeService = FakeVirtualTryOnService(
+            initialCapability = FakeTryOnFixtures.fostaCapability,
+            mediaStore = mediaStore,
+            privacyCoordinator = privacy,
+            stepDelayMs = 0L,
+            scope = TestScope(testDispatcher),
+        )
+        val vm = TryOnViewModel(
+            tryOnService = fakeService,
+            profilePort = FakeTryOnProfilePort(FakeTryOnFixtures.personDualSnapshot),
+            privacyCoordinator = privacy,
+            initialOutfit = FakeTryOnFixtures.allFourSlotsOutfit,
+            initialGarmentImages = mapOf(
+                "item-top-linen" to FakeTryOnFixtures.defaultGarmentImages.getValue("item-top-linen"),
+                "item-hat-cap" to ImagePair(front = FakeTryOnFixtures.hatFrontRef, back = null),
+            ),
+        )
+        advanceUntilIdle()
+
+        vm.selectViewMode(TryOnViewMode.BACK_ONLY)
+        vm.setConsentConfirmed(true)
+        assertTrue(vm.uiState.value.canSubmitTryOn)
+
+        // User removes Áo back photo while in BACK_ONLY -> stays in BACK_ONLY, shows error, disables submit
+        vm.removeGarmentPhoto(TryOnGarmentSlot.TOP, ImageView.BACK)
+        advanceUntilIdle()
+
+        val afterRemoveBack = vm.uiState.value
+        assertEquals(TryOnViewMode.BACK_ONLY, afterRemoveBack.selectedViewMode)
+        assertFalse(afterRemoveBack.consentConfirmed)
+        assertFalse(afterRemoveBack.canSubmitTryOn)
+        assertEquals(
+            "Không thể tạo mặt sau: thiếu ảnh sau của Áo.",
+            afterRemoveBack.viewMissingPhotosError,
+        )
     }
 }

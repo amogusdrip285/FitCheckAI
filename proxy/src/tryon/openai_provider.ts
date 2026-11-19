@@ -13,10 +13,15 @@ import {
   sha256HexBytes,
   validateTryOnImageBuffer,
 } from "./image_pipeline";
+import {
+  CANONICAL_FOSTA_GARMENT_ORDER,
+  mapCategoryToFostaGarmentKind,
+} from "./fosta_prompt";
 import { buildOpenAiTryOnPrompt, OPENAI_VTO_PROMPT_VERSION } from "./openai_prompt";
 import { UpstreamAmbiguousTimeoutError, UpstreamDeterministicError } from "./providers";
 import type {
   Category,
+  FostaGarmentKind,
   OpenAiUsageReport,
   RemoteDeletionState,
   SupportedTryOnMime,
@@ -423,13 +428,15 @@ function mapOpenAiHttpError(
 export class OpenAITryOnProvider implements UpstreamVtoProvider {
   public readonly providerId = "openai";
   public readonly source: TryOnSource;
-  public readonly supportsMultiGarment = false;
-  public readonly maxGarmentsPerJob = 1; // Milestone 1 & 2: single garment per edit pass
+  public readonly supportsMultiGarment = true;
+  public readonly maxGarmentsPerJob = 4; // Canonical multi-slot single-turn edit pass (TOP, BOTTOM, HAT, SHOES)
   public readonly supportedCategories = new Set<Category>([
     "TOP",
     "BOTTOM",
     "DRESS",
     "OUTERWEAR",
+    "SHOES",
+    "ACCESSORY",
   ]);
 
   public readonly modelId: string;
@@ -505,22 +512,20 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
   }
 
   private validateAndInspectInputs(input: UpstreamViewSubmitInput) {
-    if (input.garments.length !== 1) {
+    if (input.garments.length === 0) {
+      throw new UpstreamDeterministicError(
+        "NEEDS_INPUT",
+        "Cần chọn ít nhất 1 món trang phục để thử đồ với OpenAI.",
+      );
+    }
+    if (input.garments.length > this.maxGarmentsPerJob) {
       throw new UpstreamDeterministicError(
         "UNSUPPORTED_CAPABILITY",
-        `OpenAI VTO Milestone hiện tại chỉ xử lý đúng 1 món trang phục mỗi lượt (nhận ${input.garments.length}).`,
+        `OpenAI VTO chỉ hỗ trợ tối đa ${this.maxGarmentsPerJob} món trang phục mỗi lượt (nhận ${input.garments.length}).`,
       );
     }
 
-    const primaryGarment = input.garments[0]!;
-    if (!this.supportedCategories.has(primaryGarment.category)) {
-      throw new UpstreamDeterministicError(
-        "UNSUPPORTED_CAPABILITY",
-        `Danh mục '${primaryGarment.category}' không nằm trong phạm vi hỗ trợ của OpenAI VTO.`,
-      );
-    }
-
-    // 1. Decode & validate Person Image (Image 1) and Garment Image (Image 2)
+    // 1. Decode & validate Person Image (Image 1)
     const rawPersonBytes = decodeStrictBase64(input.personImage.base64Data);
     const personValidated = validateTryOnImageBuffer(rawPersonBytes, {
       label: `person.${input.view}`,
@@ -534,20 +539,67 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
       throw new UpstreamDeterministicError(personValidated.code, personValidated.message, false);
     }
 
-    const rawGarmentBytes = decodeStrictBase64(primaryGarment.image.base64Data);
-    const garmentValidated = validateTryOnImageBuffer(rawGarmentBytes, {
-      label: `garment.${primaryGarment.itemId}.${input.view}`,
-      declaredMimeType: primaryGarment.image.mimeType,
-      strictMimeMatch: true,
-      maxBytes: MAX_OPENAI_GARMENT_BYTES,
-      minDimensionPx: this.minInputDimensionPx,
-      maxDimensionPx: MAX_IMAGE_DIMENSION_PX,
-    });
-    if (!garmentValidated.ok) {
-      throw new UpstreamDeterministicError(garmentValidated.code, garmentValidated.message, false);
+    // 2. Validate & canonically order Garments (TOP -> BOTTOM -> HAT -> SHOES; or DRESS first)
+    const seenSlots = new Set<FostaGarmentKind>();
+    const validatedGarmentsList: Array<{
+      garment: UpstreamViewSubmitInput["garments"][number];
+      slot: FostaGarmentKind | null;
+      validated: Extract<ReturnType<typeof validateTryOnImageBuffer>, { ok: true }>;
+    }> = [];
+
+    for (const garment of input.garments) {
+      if (!this.supportedCategories.has(garment.category)) {
+        throw new UpstreamDeterministicError(
+          "UNSUPPORTED_CAPABILITY",
+          `Danh mục '${garment.category}' không nằm trong phạm vi hỗ trợ của OpenAI VTO.`,
+        );
+      }
+      const resolvedSlot = mapCategoryToFostaGarmentKind(garment.category, garment.slot);
+      if (
+        input.view === "BACK" &&
+        garment.inferredRear === true &&
+        (resolvedSlot === "TOP" || resolvedSlot === "BOTTOM")
+      ) {
+        const slotVi = resolvedSlot === "TOP" ? "Áo" : "Quần";
+        throw new UpstreamDeterministicError(
+          "NEEDS_INPUT",
+          `Không thể tạo mặt sau: thiếu ảnh sau của ${slotVi}.`,
+        );
+      }
+      if (resolvedSlot !== null) {
+        if (seenSlots.has(resolvedSlot)) {
+          throw new UpstreamDeterministicError(
+            "INVALID_REQUEST",
+            `Không được gửi nhiều món cùng ô '${resolvedSlot}' trong cùng một lượt OpenAI VTO.`,
+          );
+        }
+        seenSlots.add(resolvedSlot);
+      }
+      const rawGarmentBytes = decodeStrictBase64(garment.image.base64Data);
+      const garmentValidated = validateTryOnImageBuffer(rawGarmentBytes, {
+        label: `garment.${garment.itemId}.${input.view}`,
+        declaredMimeType: garment.image.mimeType,
+        strictMimeMatch: true,
+        maxBytes: MAX_OPENAI_GARMENT_BYTES,
+        minDimensionPx: this.minInputDimensionPx,
+        maxDimensionPx: MAX_IMAGE_DIMENSION_PX,
+      });
+      if (!garmentValidated.ok) {
+        throw new UpstreamDeterministicError(garmentValidated.code, garmentValidated.message, false);
+      }
+      validatedGarmentsList.push({ garment, slot: resolvedSlot, validated: garmentValidated });
     }
 
-    return { primaryGarment, personValidated, garmentValidated };
+    validatedGarmentsList.sort((a, b) => {
+      const idxA = a.slot ? CANONICAL_FOSTA_GARMENT_ORDER.indexOf(a.slot) : 99;
+      const idxB = b.slot ? CANONICAL_FOSTA_GARMENT_ORDER.indexOf(b.slot) : 99;
+      return idxA - idxB;
+    });
+
+    return {
+      personValidated,
+      garmentsValidated: validatedGarmentsList,
+    };
   }
 
   public validateViewInput(input: UpstreamViewSubmitInput): void {
@@ -555,38 +607,44 @@ export class OpenAITryOnProvider implements UpstreamVtoProvider {
   }
 
   async submitView(input: UpstreamViewSubmitInput): Promise<UpstreamViewSubmitOutput> {
-    const { primaryGarment, personValidated, garmentValidated } =
-      this.validateAndInspectInputs(input);
+    const { personValidated, garmentsValidated } = this.validateAndInspectInputs(input);
 
     // 2. Build versioned VTO prompt with zero PII
     const builtPrompt = buildOpenAiTryOnPrompt({
       view: input.view,
-      category: primaryGarment.category,
-      colors: primaryGarment.colors,
+      garments: garmentsValidated.map((g) => ({
+        category: g.garment.category,
+        slot: g.slot ?? undefined,
+        colors: g.garment.colors,
+        inferredRear: g.garment.inferredRear,
+      })),
       personExifOrientation: personValidated.metadata.exifOrientation,
-      garmentExifOrientation: garmentValidated.metadata.exifOrientation,
+      garmentExifOrientation: garmentsValidated[0]?.validated.metadata.exifOrientation,
     });
 
     // 3. Construct official `multipart/form-data` payload for `POST /v1/images/edits`
     const formData = new FormData();
     const personExt = extensionForMime(personValidated.metadata.mimeType);
-    const garmentExt = extensionForMime(garmentValidated.metadata.mimeType);
 
     const personCopy = new Uint8Array(personValidated.bytes.byteLength);
     personCopy.set(personValidated.bytes);
-    const garmentCopy = new Uint8Array(garmentValidated.bytes.byteLength);
-    garmentCopy.set(garmentValidated.bytes);
 
     formData.append(
       "image[]",
       new Blob([personCopy.buffer], { type: personValidated.metadata.mimeType }),
       `person_${input.view.toLowerCase()}.${personExt}`,
     );
-    formData.append(
-      "image[]",
-      new Blob([garmentCopy.buffer], { type: garmentValidated.metadata.mimeType }),
-      `garment_${input.view.toLowerCase()}.${garmentExt}`,
-    );
+    for (let idx = 0; idx < garmentsValidated.length; idx += 1) {
+      const item = garmentsValidated[idx]!;
+      const garmentExt = extensionForMime(item.validated.metadata.mimeType);
+      const garmentCopy = new Uint8Array(item.validated.bytes.byteLength);
+      garmentCopy.set(item.validated.bytes);
+      formData.append(
+        "image[]",
+        new Blob([garmentCopy.buffer], { type: item.validated.metadata.mimeType }),
+        `garment_${idx + 1}_${input.view.toLowerCase()}.${garmentExt}`,
+      );
+    }
     formData.append("model", this.modelId);
     formData.append("prompt", builtPrompt.prompt);
     formData.append("n", "1"); // Cost-guard hard invariant: single output image only

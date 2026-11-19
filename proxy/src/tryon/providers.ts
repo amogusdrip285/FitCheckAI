@@ -79,10 +79,10 @@ export class FakeUpstreamVtoProvider implements UpstreamVtoProvider {
     this.frontScenario = options?.defaultFrontScenario ?? "SUCCEED_AFTER_ONE_POLL";
     this.backScenario = options?.defaultBackScenario ?? "SUCCEED_AFTER_ONE_POLL";
     this.supportsMultiGarment = options?.supportsMultiGarment ?? true;
-    this.maxGarmentsPerJob = options?.maxGarmentsPerJob ?? 3;
+    this.maxGarmentsPerJob = options?.maxGarmentsPerJob ?? 4;
     this.supportedCategories =
       options?.supportedCategories ??
-      new Set<Category>(["TOP", "BOTTOM", "DRESS", "OUTERWEAR"]);
+      new Set<Category>(["TOP", "BOTTOM", "DRESS", "OUTERWEAR", "SHOES", "ACCESSORY"]);
   }
 
   public setScenarios(front: FakeViewScenario, back?: FakeViewScenario): void {

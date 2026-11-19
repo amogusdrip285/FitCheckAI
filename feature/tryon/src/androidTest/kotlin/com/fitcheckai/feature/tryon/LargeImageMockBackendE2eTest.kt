@@ -163,10 +163,15 @@ class LargeImageMockBackendE2eTest {
                 composeRule.onAllNodesWithTag(TryOnTestTags.FAKE_MODE_BADGE).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Ensure FRONT + TOP_ONLY selection before consent & submit
-        composeRule.onNodeWithTag(TryOnTestTags.GARMENT_COMBO_TOP)
+        // Remove pre-seeded BOTTOM sample under photo-driven "có ảnh thì ghép" so TOP-only runs cleanly
+        if (composeRule.onAllNodesWithTag(TryOnTestTags.REMOVE_GARMENT_BOTTOM_INLINE).fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag(TryOnTestTags.REMOVE_GARMENT_BOTTOM_INLINE)
+                .performScrollTo()
+                .performClick()
+        }
+        composeRule.onNodeWithTag(TryOnTestTags.TRYON_SUMMARY_TEXT)
             .performScrollTo()
-            .performClick()
+            .assertIsDisplayed()
         composeRule.onNodeWithTag(TryOnTestTags.MODE_FRONT_ONLY)
             .performScrollTo()
             .performClick()

@@ -1,12 +1,12 @@
 > [!IMPORTANT]
-> **Đọc trước khi tích hợp hoặc bật backend:** [Cảnh báo vận hành & tích hợp (`C_WARNINGS.md`)](C_WARNINGS.md) · [Hướng dẫn nối vào `:app` & `proxy` (`C_INTEGRATION.md`)](C_INTEGRATION.md)
+> **Đọc trước khi tích hợp, bật backend hoặc tự kiểm thử:** [Hướng dẫn tự thử MOCK & LIVE (`C_TRY_IT.md`)](C_TRY_IT.md) · [Cảnh báo vận hành & tích hợp (`C_WARNINGS.md`)](C_WARNINGS.md) · [Hướng dẫn nối vào `:app` & `proxy` (`C_INTEGRATION.md`)](C_INTEGRATION.md)
 
 # Track C — Tài liệu Bàn giao Virtual Try-On (VTO)
 
 - **Nhánh làm việc:** `lamb`
 - **Owner:** Track C (`:feature:tryon`, `proxy/src/tryon`, `proxy/scripts`, `eval/tryon`)
-- **Tương thích với `origin/main`:** `3488654` (`0` xung đột, `0` file sửa trùng)
-- **Cập nhật:** `2026-11-13`
+- **Tương thích với `origin/main`:** `fdf75e6` (`0` xung đột, `0` file sửa trùng)
+- **Cập nhật:** `2026-11-19`
 
 ---
 
@@ -46,7 +46,7 @@
    - Nhánh FOSTA (`fosta_provider.ts`, `fosta_prompt.ts`, `fosta_mock.ts`) và nhánh OpenAI (`openai_provider.ts`, `openai_prompt.ts`, `openai_mock.ts`).
 3. **Scripts Demo & Local Server (`proxy/scripts/`):**
    - `tryon_local_server.ts` (server HTTP tại `127.0.0.1:8788`, Emulator gọi qua `10.0.2.2:8788`).
-   - `demo_build_apk.sh`, `demo_start_mock_backend.sh`, `demo_start_fosta_live_backend.sh`, `demo_install_and_launch.sh`, `demo_run_all_mock.sh`, `demo_stop_backend.sh`, `tryon.env.example`.
+   - **`demo_build_apk.sh`, `demo_start_mock_backend.sh`, `demo_start_fosta_live_backend.sh`, `demo_install_and_launch.sh`, `demo_run_all_mock.sh`, `demo_try_cases.sh`, `demo_stop_backend.sh`, `tryon.env.example`**.
 
 ### 2.2. Các nhóm thay đổi từ `d55c0bb` trở đi
 
@@ -77,6 +77,32 @@
    - Áp trọn bộ token màu Sáng/Tối, typography, `Shapes`, bo góc và khoảng cách chuẩn Track A (`WardrobeDesign.kt`); thay bảng màu/panel cũ bằng `TryOnPanel`, `TryOnChoiceChip`, `TryOnPrimaryAction`, `TryOnInfoNotice`/`TryOnErrorNotice`, khung ảnh `20.dp` và khung kết quả `3:4` `ContentScale.Fit`.
    - Thêm `sanitizeUserFacingText` lọc tiền tố mã lỗi kỹ thuật và tên enum trước khi hiển thị; cập nhật chữ chờ xử lý thành `"Có thể mất 1–2 phút. Bạn có thể để màn hình mở trong lúc chờ."` phù hợp thời gian chạy FOSTA thực tế.
 
+### 2.3. Mở rộng 4 ô trang phục (`Áo`, `Quần`, `Mũ`, `Giày` — *"Có ảnh thì ghép"*)
+
+1. **Cơ chế *"có ảnh thì ghép"* theo mọi tập con khác rỗng (15 tổ hợp):**
+   - Mở rộng lên `4` ô theo thứ tự chuẩn `TryOnGarmentSlot.CANONICAL_ORDER = [TOP, BOTTOM, HAT, SHOES]` (`Áo`, `Quần`, `Mũ`, `Giày`). Ô nào có ảnh sẽ tự động được ghép; ô nào chưa có ảnh không bị đụng tới (`1` đến `4` món = `15` tổ hợp hợp lệ; `0` món sẽ khóa nút gửi với thông báo *"Chọn ít nhất một món"*).
+2. **Nút `"Bỏ ảnh"`, tóm tắt phạm vi & lưu ý giày (`TryOnScreen.kt`, `TryOnViewModel.kt`, `TryOnDemoActivity.kt`):**
+   - Mỗi ô đồ có nút `"Bỏ ảnh"` (`REMOVE_GARMENT_{TOP,BOTTOM,HAT,SHOES}_INLINE`) để xóa nhanh ảnh của ô đó, tự reset consent và xóa kết quả thử đồ trước đó.
+   - Bổ sung card `"Phạm vi thử đồ"` (`TRYON_SUMMARY_TEXT`, ví dụ `"Sẽ thử: Áo + Quần + Mũ + Giày"`) và `SHOES_FOOT_HINT` (*"Ảnh người cần thấy rõ chân để ghép giày đẹp hơn"*) chỉ hiện khi ô `Giày` đang có ảnh.
+   - Dòng nhắc thiếu ảnh mặt sau (`missingBackSlotLabels`) gọi đích danh từng ô còn thiếu kể cả **`Mũ`** và **`Giày`**. Ở mọi chế độ (kể cả Demo/Mock), `Mũ` và `Giày` **không bao giờ tự nạp ảnh mẫu sẵn**.
+3. **Prompt `FOSTA v2.2` & `OpenAI openai-vto-edit-v1.1` (`fosta_prompt.ts`, `openai_prompt.ts`):**
+   - Nâng cấp `FOSTA_VTO_PROMPT_VERSION = "v2.2"` hỗ trợ đủ 60 tổ hợp (`2` chế độ khung hình × `2` góc nhìn × `15` tập con 4 ô) với độ dài **`<= 620` ký tự**, sắp ảnh chuẩn `Image 1` = người, sau đó `Áo → Quần → Mũ → Giày`. Nhánh OpenAI cập nhật `OPENAI_VTO_PROMPT_VERSION = "openai-vto-edit-v1.1"`.
+   - Kiểm tra dữ liệu hợp lệ (rỗng, `> 4` món, trùng ô, thiếu ảnh sau `Mũ`/`Giày`, ảnh trước/sau giống nhau) trước khi trừ quota (`0` lượt nếu lỗi đầu vào).
+4. **Hạn mức truyền tải adaptive cho tối đa 10 ảnh (`TryOnPrivacyCoordinator.kt:347-358`, `LocalDiskTryOnMediaStore.kt`):**
+   - Khi tổng ảnh gửi lên `> 4` (tối đa `10` ảnh khi thử cả 4 món × 2 góc), áp dụng ngưỡng adaptive: ảnh người tối đa `1_000_000` bytes/góc, mỗi ảnh đồ tối đa `minOf(1 MiB, 4_400_000 / garmentImageSlotsCount)`, đảm bảo tổng payload giải mã giữ chặt **`<= 8 MiB`** (`MAX_TOTAL_DECODED_BYTES`).
+
+### 2.4. Quy tắc Mặt trước/Sau nghiêm & Ảnh sau tùy chọn cho `Mũ`/`Giày` (ACC2)
+
+1. **Không tự rơi ngầm về `FRONT` (`TryOnViewModel.kt`, `TryOnScreen.kt`):**
+   - Với góc nhìn đang chọn (`FRONT`, `BACK` hoặc `DUAL`), ảnh người và ảnh của mọi món `Áo` (`TOP`), `Quần` (`BOTTOM`) đang thử đều **bắt buộc** ở góc đó. Nếu thiếu, `TryOnViewModel` giữ nguyên góc đang chọn, khóa nút tạo (`canSubmitTryOn = false`) và hiện lỗi đỏ **`VIEW_MISSING_PHOTO_ERROR`** (ví dụ *"Không thể tạo mặt sau: thiếu ảnh sau của Áo."*). Đã gỡ bỏ hoàn toàn hành vi tự fallback ngầm `BACK -> FRONT` khi thay/xóa ảnh.
+2. **Ảnh sau tùy chọn cho `Mũ`/`Giày` & nút `"Bỏ ảnh sau"` (`HAT`/`SHOES`):**
+   - Cột mặt sau của `Mũ`/`Giày` ghi rõ *"Mặt sau (không bắt buộc, AI sẽ tự đoán)"* và có nút **`"Bỏ ảnh sau"`** (`REMOVE_GARMENT_*_BACK_INLINE`, `removeGarmentPhoto`) để xóa riêng ảnh mặt sau mà vẫn giữ ảnh mặt trước.
+   - Nếu thiếu ảnh sau của `Mũ`/`Giày`, chip `"Chỉ mặt sau"` vẫn mở bình thường, UI hiện thông báo **`OPTIONAL_BACK_INFERENCE_NOTICE`** (*"Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật."*), client gửi ảnh `front` của món đó trong wire (`back = null`) và AI suy diễn mặt sau. Nếu người dùng tự chọn ảnh sau cho `Mũ`/`Giày`, hệ thống vẫn kiểm tra khác hash với mặt trước.
+3. **Prompt `FOSTA v2.3` (`100` tổ hợp `<= 596` ký tự) & `OpenAI openai-vto-edit-v1.2` (`fosta_prompt.ts`, `openai_prompt.ts`):**
+   - Bổ sung chỉ dẫn suy diễn mặt sau `Mũ`/`Giày` (`v2.3` giữ nguyên `100%` nội dung `v2.2` khi không có món suy diễn, rút gọn câu nối khi có món suy diễn để toàn bộ `100` tổ hợp nằm dưới trần `<= 620` ký tự — thực tế tối đa `596` ký tự). Proxy cũng trả `NEEDS_INPUT` (`0` lượt quota) nếu thiếu ảnh bắt buộc của người/`Áo`/`Quần` hoặc trùng hash trước/sau.
+4. **Công cụ tự kiểm thử & hướng dẫn (`proxy/scripts/demo_try_cases.sh`, `C_TRY_IT.md`):**
+   - Bổ sung script `demo_try_cases.sh` (`check`, `mock`, `live` hỏi `YES` + kiểm tra quota còn lại, `snap <tên>`, `stop`) và tài liệu từng bước [C_TRY_IT.md](C_TRY_IT.md).
+
 ---
 
 ## 3. Cách chạy nhanh (MOCK & LIVE)
@@ -84,6 +110,11 @@
 ### 3.1. Chế độ MOCK (`$0.00` — không gọi AI thật, không tốn quota)
 
 ```bash
+# Cách gọn nhất qua trợ lý tự thử (giữ nguyên 8 album trên Pixel_6):
+./proxy/scripts/demo_try_cases.sh check
+./proxy/scripts/demo_try_cases.sh mock
+
+# Hoặc từng bước thủ công:
 # 1. Dựng APK demo độc lập (tạo feature/tryon/build/outputs/apk/FitCheck-VTO-Demo-debug.apk)
 ./proxy/scripts/demo_build_apk.sh
 
@@ -94,7 +125,7 @@
 ./proxy/scripts/demo_install_and_launch.sh
 ```
 
-> Có thể chạy gộp cả 3 bước bằng 1 lệnh: `./proxy/scripts/demo_run_all_mock.sh`.
+> Xem hướng dẫn đầy đủ 5 ca MOCK (`M1..M5`) và các ca LIVE (`L1..L4`) tại [C_TRY_IT.md](C_TRY_IT.md). Có thể chụp kiểm chứng bất kỳ lúc nào bằng `./proxy/scripts/demo_try_cases.sh snap <tên>`.
 
 ### 3.2. Chế độ LIVE (Có gọi upstream thật & trừ quota)
 
@@ -163,22 +194,26 @@
 - `DELETE /v2/tryon/jobs/:jobId` — xóa job và ảnh kết quả trên backend.
 - `GET /v2/tryon/outputs/:jobId/:view` — tải ảnh kết quả (`FRONT` / `BACK`).
 
-### 4.3. Tình trạng module ở `origin/main` (`3488654`)
+- **Hợp đồng 4 ô (`Áo`, `Quần`, `Mũ`, `Giày`) & `TryOnContracts.kt`:**
+  - `TryOnGarmentSlot` (`TOP`, `BOTTOM`, `HAT`, `SHOES`; `CANONICAL_ORDER = [TOP, BOTTOM, HAT, SHOES]`), `TryOnItemSummary(..., slot: TryOnGarmentSlot? = null)` cùng `resolvedGarmentSlot()` hoàn toàn cộng thêm (tương thích ngược với `:app`).
+  - `TryOnRoute(..., onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = viewModel::removeGarmentSlot)` có giá trị mặc định.
+
+### 4.3. Tình trạng module ở `origin/main` (`fdf75e6`)
 
 - Đã xác minh ở Bước 3D (`:app:assembleDebug` thành công): nhánh `origin/main` **đã có** `include(":feature:tryon")` trong `settings.gradle.kts` và `implementation(project(":feature:tryon"))` trong `app/build.gradle.kts`, đồng thời đã nối khung `CORE` offline qua `CoreModeVirtualTryOn`, `TryOnBridge`, `TryOnDestination` và nút thử đồ ở `TodayScreen`.
 
 ### 4.4. Giao diện theo chuẩn Track A và lưu ý khi nâng Theme lên `:core:ui`
 
-- **Nguồn token (`TryOnDesign.kt`):** Là bản sao cục bộ đối chiếu chính xác từng hex màu Sáng/Tối, typography, `Shapes`, bo góc component và khoảng cách từ `feature/wardrobe/src/main/kotlin/com/fitcheckai/feature/wardrobe/WardrobeDesign.kt` (cùng `core/ui/.../Theme.kt`, `core/ui/.../GarmentPhoto.kt`, `WardrobeScreens.kt` `BackTopBar`, `v2/WardrobeEditorScreen.kt`) tại commit `origin/main` `3488654` (`348865475e40b40f3c10b63fdc3e6c3c8340b30f`, giữ nguyên `WardrobeDesign.kt` từ `f96712f`).
+- **Nguồn token (`TryOnDesign.kt`):** Là bản sao cục bộ đối chiếu chính xác từng hex màu Sáng/Tối, typography, `Shapes`, bo góc component và khoảng cách từ `feature/wardrobe/src/main/kotlin/com/fitcheckai/feature/wardrobe/WardrobeDesign.kt` (cùng `core/ui/.../Theme.kt`, `core/ui/.../GarmentPhoto.kt`, `WardrobeScreens.kt` `BackTopBar`, `v2/WardrobeEditorScreen.kt`) trên `origin/main` (`fdf75e6`, giữ nguyên `WardrobeDesign.kt` từ `f96712f`).
 - **Vì sao không phụ thuộc `:feature:wardrobe`:** Các helper `WardrobeTheme`, `WardrobePanel`, `ChoiceChip`, `PrimaryAction`, `InfoNotice`, `ErrorNotice`, `BackTopBar` đều khai báo `internal` trong `:feature:wardrobe`, đồng thời kiến trúc Gradle module tránh phụ thuộc ngang giữa hai `:feature:*`.
 - **Việc cần làm khi Track D nâng theme chuẩn lên `:core:ui`:**
   - Tại `TryOnScreen` (`feature/tryon/src/main/kotlin/com/fitcheckai/feature/tryon/ui/TryOnScreen.kt`), đổi wrapper `TryOnEditorialTheme { ... }` sang theme chung của `:core:ui` (ví dụ `FitCheckTheme`).
   - Có thể hợp nhất các component `TryOnPanel`, `TryOnSectionHeading`, `TryOnChoiceChip`, `TryOnPrimaryAction`, `TryOnInfoNotice`, `TryOnErrorNotice`, `TryOnPhotoFrame`, `TryOnBackTopBar` về `:core:ui` sau này mà **không** cần sửa `TryOnViewModel`, `TryOnPrivacyCoordinator` hay `TryOnContracts`.
-- **Danh sách `TryOnTestTags` bắt buộc giữ nguyên (36 hằng số):**
-  - Màn hình & trạng thái chung: `SCREEN_ROOT`, `FAKE_MODE_BADGE`, `CAPABILITY_UNAVAILABLE_CARD`, `REFRESH_CONNECTION_BUTTON`, `EXPERIMENTAL_NOTICE`.
+- **Danh sách `TryOnTestTags` bắt buộc giữ nguyên (56 hằng số — gồm 36 tag gốc + 14 tag 4 ô + 6 tag ACC2):**
+  - Màn hình & trạng thái chung: `SCREEN_ROOT`, `FAKE_MODE_BADGE`, `CAPABILITY_UNAVAILABLE_CARD`, `REFRESH_CONNECTION_BUTTON`, `EXPERIMENTAL_NOTICE`, `TRYON_SUMMARY_TEXT`, `SHOES_FOOT_HINT`, `VIEW_MISSING_PHOTO_ERROR`, `OPTIONAL_BACK_INFERENCE_NOTICE`.
   - Chọn góc nhìn & khung hình: `MODE_FRONT_ONLY`, `MODE_BACK_ONLY`, `MODE_DUAL_VIEW`, `PRESENTATION_ORIGINAL_PHOTO`, `PRESENTATION_STUDIO_WHITE`.
-  - Chọn phối đồ: `GARMENT_COMBO_TOP`, `GARMENT_COMBO_BOTTOM`, `GARMENT_COMBO_TOP_BOTTOM`.
-  - Chọn & xem trước ảnh: `PROFILE_PHOTO_CTA`, `PICK_PERSON_FRONT_INLINE`, `PICK_PERSON_BACK_INLINE`, `PICK_GARMENT_TOP_INLINE`, `PICK_GARMENT_TOP_BACK_INLINE`, `PICK_GARMENT_BOTTOM_INLINE`, `PICK_GARMENT_BOTTOM_BACK_INLINE`, `PREVIEW_PERSON_FRONT`, `PREVIEW_PERSON_BACK`, `PREVIEW_GARMENT_TOP_FRONT`, `PREVIEW_GARMENT_TOP_BACK`, `PREVIEW_GARMENT_BOTTOM_FRONT`, `PREVIEW_GARMENT_BOTTOM_BACK`.
+  - Chọn phối đồ (legacy/backward-compat tags): `GARMENT_COMBO_TOP`, `GARMENT_COMBO_BOTTOM`, `GARMENT_COMBO_TOP_BOTTOM`.
+  - Chọn, bỏ & xem trước ảnh (người + 4 ô đồ): `PROFILE_PHOTO_CTA`, `PICK_PERSON_FRONT_INLINE`, `PICK_PERSON_BACK_INLINE`, `PICK_GARMENT_TOP_INLINE`, `PICK_GARMENT_TOP_BACK_INLINE`, `PICK_GARMENT_BOTTOM_INLINE`, `PICK_GARMENT_BOTTOM_BACK_INLINE`, `PICK_GARMENT_HAT_INLINE`, `PICK_GARMENT_HAT_BACK_INLINE`, `PICK_GARMENT_SHOES_INLINE`, `PICK_GARMENT_SHOES_BACK_INLINE`, `REMOVE_GARMENT_TOP_INLINE`, `REMOVE_GARMENT_BOTTOM_INLINE`, `REMOVE_GARMENT_HAT_INLINE`, `REMOVE_GARMENT_SHOES_INLINE`, `REMOVE_GARMENT_TOP_BACK_INLINE`, `REMOVE_GARMENT_BOTTOM_BACK_INLINE`, `REMOVE_GARMENT_HAT_BACK_INLINE`, `REMOVE_GARMENT_SHOES_BACK_INLINE`, `PREVIEW_PERSON_FRONT`, `PREVIEW_PERSON_BACK`, `PREVIEW_GARMENT_TOP_FRONT`, `PREVIEW_GARMENT_TOP_BACK`, `PREVIEW_GARMENT_BOTTOM_FRONT`, `PREVIEW_GARMENT_BOTTOM_BACK`, `PREVIEW_GARMENT_HAT_FRONT`, `PREVIEW_GARMENT_HAT_BACK`, `PREVIEW_GARMENT_SHOES_FRONT`, `PREVIEW_GARMENT_SHOES_BACK`.
   - Đồng ý, gửi/hủy & kết quả: `CONSENT_CHECKBOX_ROW`, `SUBMIT_BUTTON`, `CANCEL_BUTTON`, `RESULT_SECTION`, `PARTIAL_BADGE`, `TAB_FRONT`, `TAB_BACK`, `COMPARE_ORIGINAL_TOGGLE`, `DELETE_RESULT_BUTTON`, `DISCLAIMER_TEXT`.
 - **Ràng buộc test bắt buộc khi chỉnh UI sau này:**
   - Mọi node mang `testTag` tương tác phải có vùng chạm semantics tối thiểu `>= 48.dp` (`TryOnChoiceChip` bọc pill hiển thị `40.dp` trong `Box(heightIn(min = 48.dp).selectable(...))` để qua `assertHeightIsAtLeast(48.dp)`).
@@ -203,27 +238,28 @@
 2. **Ảnh mẫu nạp vào Gallery máy ảo chỉ `480×640`:** Bộ ảnh PNG tạo sẵn trong `demo_install_and_launch.sh` dùng để kiểm thử luồng UI, không phản ánh độ sắc nét của ảnh chụp thật độ phân giải cao.
 3. **`eval/tryon/poc_runner.py` nuốt JSON cắt cụt:** Script Python POC thử nghiệm độc lập có thể bỏ qua lỗi JSON bị cắt ngang ở một số ca biên (không ảnh hưởng tới `proxy/src/tryon/fosta_provider.ts`).
 4. **Giao diện Demo Workbench (`TryOnDemoActivity`) chưa trau chuốt:** Thanh chọn chế độ backend/kịch bản trong bản APK demo độc lập chỉ phục vụ QA kỹ thuật; bản tích hợp trong `:app` dùng `TryOnRoute` thuần.
-5. **`BACK` LIVE chưa kiểm chứng:** Mới xác minh thành công FOSTA LIVE cho `FRONT + TOP`; tổ hợp `BACK` với ảnh mặt sau thật (cũng như `BOTTOM` và `TOP+BOTTOM` LIVE) chưa được kiểm chứng trên AI thật.
+5. **Chất lượng ghép nhiều món (`Mũ`, `Giày`, 3–4 món) và góc `BACK` chưa kiểm chứng trên LIVE:** Mới xác minh thành công FOSTA LIVE cho `FRONT + TOP`; cơ chế 4 ô (`15` tổ hợp *"có ảnh thì ghép"*) và góc `BACK` đã kiểm chứng E2E qua Mock (`FOSTA` & `OpenAI`), **chưa kiểm chứng chất lượng ảnh ghép `Mũ`/`Giày`/3–4 món trên AI LIVE thật**.
 
 ---
 
 ## 7. Kiểm thử
 
-Tổng số test hiện có: **Proxy `51`**, **Unit Android `27`**, **Instrumentation Android `13`** (`0` lỗi lint).
+Tổng số test hiện có: **Proxy `184`** (10 test files), **Unit Android `:feature:tryon` `35`** (toàn repo JVM **`254`**), **Instrumentation `:feature:tryon` `17`** (`0` lỗi lint).
 
 ```bash
-# 1. Backend Proxy Typecheck & Vitest (51/51 tests)
+# 1. Backend Proxy Typecheck & Vitest (184/184 tests)
 npm --prefix proxy run typecheck && npm --prefix proxy test
 
-# 2. Android Unit Tests & Lint (27/27 tests, 0 lint errors)
+# 2. Android Unit Tests & Lint (35/35 tests ở :feature:tryon, 0 lint errors)
 ANDROID_HOME=/home/lamb/Android/Sdk ./gradlew -I feature/tryon/standalone_demo.init.gradle.kts \
   :feature:tryon:testDebugUnitTest :feature:tryon:lintDebug
 
-# 3. Android Instrumentation Tests trên Emulator (13 tests: VisualQA [10] + LargeImage [1] + PhotoReplace/BackUnlock [2])
-# Cần bật trước: ./proxy/scripts/demo_start_mock_backend.sh --daemon
+# 3. Android Instrumentation Tests trên Emulator (17 tests: VisualQA [10] + LargeImage [1] + PhotoReplace/BackUnlock/4Slot [6])
+# Cần bật trước: TRYON_ENABLE_STEP3E_SEED=true ./proxy/scripts/demo_start_mock_backend.sh --daemon
 ANDROID_HOME=/home/lamb/Android/Sdk ./gradlew -I feature/tryon/standalone_demo.init.gradle.kts \
   :feature:tryon:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.requireBackendFostaE2e=true
+  -Pandroid.testInstrumentationRunnerArguments.requireBackendFostaE2e=true \
+  -Pandroid.testInstrumentationRunnerArguments.requireStep3eLargeImageE2e=true
 ```
 
 **Các instrumentation test cần cờ `testInstrumentationRunnerArguments` riêng:**

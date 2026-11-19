@@ -124,7 +124,7 @@ export function createFostaResponsesMock(
         !toolsForcedImageGeneration ||
         firstMsg?.role !== "user" ||
         contentArr.length < 3 ||
-        contentArr.length > 4
+        contentArr.length > 6
       ) {
         return fostaJson(
           { error: { message: "Invalid FOSTA Responses payload shape." } },
@@ -179,14 +179,14 @@ export function createFostaResponsesMock(
           const b2 = decoded[decoded.byteLength - 5] ?? 95;
           const b3 = decoded[decoded.byteLength - 3] ?? 135;
           const isBottomOnly =
-            (prompt.includes("reference bottom") && !prompt.includes("reference top")) ||
+            (prompt.includes("reference bottom") && !prompt.includes("reference top") && !prompt.includes("the top")) ||
             (prompt.includes("BOTTOM garment") && !prompt.includes("TOP garment"));
           if (isBottomOnly) {
             bottomColorSeed = [35 + (b1 % 120), 40 + (b2 % 120), 45 + (b3 % 120)];
           } else {
             topColorSeed = [42 + (b1 % 140), 48 + (b2 % 130), 56 + (b3 % 140)];
           }
-        } else if (i === 3 && decoded.byteLength >= 16) {
+        } else if (i >= 3 && decoded.byteLength >= 16) {
           const b1 = decoded[decoded.byteLength - 6] ?? 50;
           const b2 = decoded[decoded.byteLength - 4] ?? 70;
           const b3 = decoded[decoded.byteLength - 2] ?? 90;

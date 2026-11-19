@@ -332,19 +332,26 @@ describe("C-207 /v2/tryon/jobs server adapter", () => {
     expect(clonedRes.status).toBe(400);
     expect(await clonedRes.json()).toMatchObject({ error: { code: "INVALID_REQUEST" } });
 
-    // 4. Unsupported SHOES category -> 400 UNSUPPORTED_CAPABILITY
-    const shoesReq = makeValidSubmitBody({
-      idempotencyKey: "idem-shoes",
-      selectedItemIds: ["shoes-1"],
+    // 4. Unsupported UNKNOWN category -> 400 UNSUPPORTED_CAPABILITY
+    const unknownCatReq = makeValidSubmitBody({
+      idempotencyKey: "idem-unknown-cat",
+      outfitSnapshot: {
+        outfitId: "outfit-1",
+        wardrobeSnapshotId: "snap-1",
+        items: [
+          { itemId: "unknown-1", revision: 1, category: "UNKNOWN", colors: ["BLACK"] },
+        ],
+      },
+      selectedItemIds: ["unknown-1"],
       garmentImages: {
-        "shoes-1": {
+        "unknown-1": {
           front: {
-            mediaId: "garment-shoes-front",
+            mediaId: "garment-unknown-front",
             view: "FRONT",
             mimeType: "image/png",
             width: 512,
             height: 512,
-            contentHash: "sha256:shoes-front",
+            contentHash: "sha256:unknown-front",
             revision: 1,
             base64Data: DEV_PLACEHOLDER_PNG_BASE64,
           },
@@ -352,19 +359,19 @@ describe("C-207 /v2/tryon/jobs server adapter", () => {
       },
       consentGrant: {
         ...makeValidSubmitBody().consentGrant,
-        selectedMediaIds: ["person-front-1", "garment-shoes-front"],
+        selectedMediaIds: ["person-front-1", "garment-unknown-front"],
       },
     });
-    const shoesRes = await router.handle(
+    const unknownCatRes = await router.handle(
       new Request("https://proxy.test/v2/tryon/jobs", {
         method: "POST",
-        body: JSON.stringify(shoesReq),
+        body: JSON.stringify(unknownCatReq),
       }),
       BASE_ENV,
       { sessionId: "s1" },
     );
-    expect(shoesRes.status).toBe(400);
-    expect(await shoesRes.json()).toMatchObject({
+    expect(unknownCatRes.status).toBe(400);
+    expect(await unknownCatRes.json()).toMatchObject({
       error: { code: "UNSUPPORTED_CAPABILITY" },
     });
     expect(provider.submitCallCount).toBe(0);

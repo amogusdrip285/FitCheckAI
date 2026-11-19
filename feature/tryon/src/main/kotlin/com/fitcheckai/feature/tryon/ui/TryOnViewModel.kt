@@ -10,6 +10,7 @@ import com.fitcheckai.feature.tryon.contract.TryOnCapability
 import com.fitcheckai.feature.tryon.contract.TryOnError
 import com.fitcheckai.feature.tryon.contract.TryOnErrorCode
 import com.fitcheckai.feature.tryon.contract.TryOnException
+import com.fitcheckai.feature.tryon.contract.TryOnGarmentSlot
 import com.fitcheckai.feature.tryon.contract.TryOnItemSummary
 import com.fitcheckai.feature.tryon.contract.TryOnJobStatus
 import com.fitcheckai.feature.tryon.contract.TryOnOutfitSnapshot
@@ -39,6 +40,86 @@ enum class TryOnGarmentCombo {
     TOP_ONLY,
     BOTTOM_ONLY,
     TOP_AND_BOTTOM,
+}
+
+data class TryOnGarmentSlotUi(
+    val slot: TryOnGarmentSlot,
+    val titleVi: String,
+    val itemSummary: TryOnItemSummary,
+    val images: ImagePair,
+) {
+    val hasAnyPhoto: Boolean
+        get() = images.front != null || images.back != null
+
+    val hasFrontPhoto: Boolean
+        get() = images.front != null
+
+    val isBackPhotoOptional: Boolean
+        get() = slot == TryOnGarmentSlot.HAT || slot == TryOnGarmentSlot.SHOES
+
+    val hasDistinctBackPhoto: Boolean
+        get() = images.back != null &&
+            (images.front == null || images.front.contentHash != images.back.contentHash)
+}
+
+internal fun tryOnSlotTitleVi(slot: TryOnGarmentSlot): String = when (slot) {
+    TryOnGarmentSlot.TOP -> "Áo"
+    TryOnGarmentSlot.BOTTOM -> "Quần"
+    TryOnGarmentSlot.HAT -> "Mũ"
+    TryOnGarmentSlot.SHOES -> "Giày"
+}
+
+internal fun defaultSlotItemId(slot: TryOnGarmentSlot): String = when (slot) {
+    TryOnGarmentSlot.TOP -> "tryon-slot-top"
+    TryOnGarmentSlot.BOTTOM -> "tryon-slot-bottom"
+    TryOnGarmentSlot.HAT -> "tryon-slot-hat"
+    TryOnGarmentSlot.SHOES -> "tryon-slot-shoes"
+}
+
+private fun defaultSlotCategory(slot: TryOnGarmentSlot): Category = when (slot) {
+    TryOnGarmentSlot.TOP -> Category.TOP
+    TryOnGarmentSlot.BOTTOM -> Category.BOTTOM
+    TryOnGarmentSlot.HAT -> Category.ACCESSORY
+    TryOnGarmentSlot.SHOES -> Category.SHOES
+}
+
+internal fun buildCanonicalGarmentSlots(
+    outfitSnapshot: TryOnOutfitSnapshot?,
+    garmentImages: Map<String, ImagePair>,
+): List<TryOnGarmentSlotUi> {
+    val existingItems = outfitSnapshot?.items.orEmpty()
+    return TryOnGarmentSlot.CANONICAL_ORDER.map { slot ->
+        val matched = existingItems.firstOrNull { it.resolvedGarmentSlot() == slot }
+        val summary = matched ?: TryOnItemSummary(
+            itemId = defaultSlotItemId(slot),
+            label = tryOnSlotTitleVi(slot),
+            category = defaultSlotCategory(slot),
+            slot = slot,
+            revision = 1L,
+        )
+        TryOnGarmentSlotUi(
+            slot = slot,
+            titleVi = tryOnSlotTitleVi(slot),
+            itemSummary = summary,
+            images = garmentImages[summary.itemId] ?: ImagePair(),
+        )
+    }
+}
+
+internal fun derivePhotoDrivenSelectedItemIds(
+    outfitSnapshot: TryOnOutfitSnapshot?,
+    garmentImages: Map<String, ImagePair>,
+    capability: TryOnCapability?,
+): List<String> {
+    val maxPerJob = capability?.maxGarmentsPerJob ?: TryOnGarmentSlot.CANONICAL_ORDER.size
+    if (maxPerJob <= 0) return emptyList()
+    return buildCanonicalGarmentSlots(outfitSnapshot, garmentImages)
+        .filter { slotUi ->
+            slotUi.hasAnyPhoto &&
+                (capability == null || slotUi.itemSummary.category in capability.supportedCategories)
+        }
+        .take(maxPerJob)
+        .map { it.itemSummary.itemId }
 }
 
 data class TryOnUiState(
@@ -74,6 +155,25 @@ data class TryOnUiState(
     val canSelectStudioWhite: Boolean
         get() = TryOnPresentationMode.STUDIO_WHITE in capability?.supportedPresentationModes.orEmpty()
 
+    val garmentSlots: List<TryOnGarmentSlotUi>
+        get() = buildCanonicalGarmentSlots(outfitSnapshot, garmentImages)
+
+    val activeSlots: List<TryOnGarmentSlotUi>
+        get() {
+            val selectedSet = selectedItemIds.toSet()
+            return garmentSlots.filter { it.itemSummary.itemId in selectedSet }
+        }
+
+    val tryOnSummaryText: String
+        get() = if (activeSlots.isEmpty()) {
+            "Chọn ít nhất một món"
+        } else {
+            "Sẽ thử: ${activeSlots.joinToString(" + ") { it.titleVi }}"
+        }
+
+    val hasShoesImage: Boolean
+        get() = garmentSlots.any { it.slot == TryOnGarmentSlot.SHOES && it.hasAnyPhoto }
+
     val supportedOutfitItems: List<TryOnItemSummary>
         get() {
             val cap = capability ?: return emptyList()
@@ -83,12 +183,10 @@ data class TryOnUiState(
         }
 
     val availableTopItem: TryOnItemSummary?
-        get() = supportedOutfitItems.firstOrNull {
-            it.category == Category.TOP || it.category == Category.OUTERWEAR
-        }
+        get() = garmentSlots.firstOrNull { it.slot == TryOnGarmentSlot.TOP }?.itemSummary
 
     val availableBottomItem: TryOnItemSummary?
-        get() = supportedOutfitItems.firstOrNull { it.category == Category.BOTTOM }
+        get() = garmentSlots.firstOrNull { it.slot == TryOnGarmentSlot.BOTTOM }?.itemSummary
 
     val canChooseGarmentCombos: Boolean
         get() = (capability?.maxGarmentsPerJob ?: 1) >= 2 &&
@@ -97,20 +195,13 @@ data class TryOnUiState(
 
     val activeGarmentCombo: TryOnGarmentCombo?
         get() {
-            val byId = outfitSnapshot?.items?.associateBy { it.itemId }.orEmpty()
-            val selectedItems = selectedItemIds.mapNotNull { byId[it] }
-            if (selectedItems.isEmpty()) return null
-            val topCount = selectedItems.count {
-                it.category == Category.TOP || it.category == Category.OUTERWEAR
-            }
-            val bottomCount = selectedItems.count { it.category == Category.BOTTOM }
-            return when {
-                topCount == 1 && bottomCount == 1 && selectedItems.size == 2 ->
-                    TryOnGarmentCombo.TOP_AND_BOTTOM
-                topCount == 1 && bottomCount == 0 && selectedItems.size == 1 ->
-                    TryOnGarmentCombo.TOP_ONLY
-                topCount == 0 && bottomCount == 1 && selectedItems.size == 1 ->
-                    TryOnGarmentCombo.BOTTOM_ONLY
+            val active = activeSlots
+            if (active.isEmpty()) return null
+            val slots = active.map { it.slot }.toSet()
+            return when (slots) {
+                setOf(TryOnGarmentSlot.TOP) -> TryOnGarmentCombo.TOP_ONLY
+                setOf(TryOnGarmentSlot.BOTTOM) -> TryOnGarmentCombo.BOTTOM_ONLY
+                setOf(TryOnGarmentSlot.TOP, TryOnGarmentSlot.BOTTOM) -> TryOnGarmentCombo.TOP_AND_BOTTOM
                 else -> null
             }
         }
@@ -137,11 +228,15 @@ data class TryOnUiState(
 
     val hasAllSelectedGarmentFronts: Boolean
         get() = selectedItemIds.isNotEmpty() &&
-            selectedItemIds.all { garmentImages[it]?.front != null }
+            activeSlots.isNotEmpty() &&
+            activeSlots.all { it.hasFrontPhoto }
 
+    /** Required rear photos: only non-optional slots (TOP/BOTTOM) must supply a rear photo; HAT/SHOES rear is optional. */
     val hasAllSelectedGarmentBacks: Boolean
         get() = selectedItemIds.isNotEmpty() &&
-            selectedItemIds.all { garmentImages[it]?.back != null }
+            activeSlots.isNotEmpty() &&
+            activeSlots.filterNot { it.isBackPhotoOptional }.all { it.images.back != null } &&
+            activeSlots.filter { it.isBackPhotoOptional }.all { it.images.back != null || it.images.front != null }
 
     val hasGenuineBackHashes: Boolean
         get() {
@@ -150,10 +245,10 @@ data class TryOnUiState(
             if (pFront != null && pBack != null && pFront.contentHash == pBack.contentHash) {
                 return false
             }
-            for (itemId in selectedItemIds) {
-                val pair = garmentImages[itemId]
+            for (slotUi in activeSlots) {
+                val pair = slotUi.images
                 if (
-                    pair?.front != null &&
+                    pair.front != null &&
                     pair.back != null &&
                     pair.front.contentHash == pair.back.contentHash
                 ) {
@@ -163,11 +258,99 @@ data class TryOnUiState(
             return true
         }
 
+    val missingFrontSlotLabels: List<String>
+        get() = activeSlots.filterNot { it.hasFrontPhoto }.map { it.titleVi }
+
+    val missingBackSlotLabels: List<String>
+        get() = buildList {
+            val pFront = personProfile?.bodyImages?.front
+            val pBack = personProfile?.bodyImages?.back
+            if (pBack == null || (pFront != null && pFront.contentHash == pBack.contentHash)) {
+                add("Người (mặt sau)")
+            }
+            activeSlots
+                .filterNot { it.isBackPhotoOptional }
+                .filterNot { it.hasDistinctBackPhoto }
+                .forEach { add(it.titleVi) }
+        }
+
+    val inferredBackSlotLabels: List<String>
+        get() = activeSlots
+            .filter { it.isBackPhotoOptional && it.images.back == null && it.images.front != null }
+            .map { it.titleVi }
+
+    val optionalBackInferenceNotice: String?
+        get() = if (ImageView.BACK in requestedViews && inferredBackSlotLabels.isNotEmpty()) {
+            "Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật."
+        } else {
+            null
+        }
+
+    val viewMissingPhotosError: String?
+        get() {
+            if (!isCapabilityAvailable || selectedItemIds.isEmpty()) return null
+            if (ImageView.FRONT in requestedViews) {
+                val clauses = buildList {
+                    if (!hasPersonFront) add("ảnh người mặt trước")
+                    val missingFront = missingFrontSlotLabels
+                    if (missingFront.isNotEmpty()) add("ảnh trước của ${missingFront.joinToString(", ")}")
+                }
+                if (clauses.isNotEmpty()) {
+                    return "Không thể tạo mặt trước: thiếu ${clauses.joinToString(" và ")}."
+                }
+            }
+            if (ImageView.BACK in requestedViews) {
+                val clauses = buildList {
+                    if (!hasPersonBack) add("ảnh người mặt sau")
+                    val missingReqBacks = activeSlots
+                        .filterNot { it.isBackPhotoOptional }
+                        .filter { it.images.back == null }
+                        .map { it.titleVi }
+                    if (missingReqBacks.isNotEmpty()) {
+                        add("ảnh sau của ${missingReqBacks.joinToString(", ")}")
+                    }
+                    val missingOptAny = activeSlots
+                        .filter { it.isBackPhotoOptional && it.images.back == null && it.images.front == null }
+                        .map { it.titleVi }
+                    if (missingOptAny.isNotEmpty()) {
+                        add("ảnh của ${missingOptAny.joinToString(", ")}")
+                    }
+                }
+                if (clauses.isNotEmpty()) {
+                    return "Không thể tạo mặt sau: thiếu ${clauses.joinToString(" và ")}."
+                }
+                if (!hasGenuineBackHashes) {
+                    return "Không thể tạo mặt sau: ảnh mặt sau không được trùng với ảnh mặt trước."
+                }
+            }
+            return null
+        }
+
+    val consentedGarmentPhotoCount: Int
+        get() = activeSlots.sumOf { slotUi ->
+            val uniqueRefs = buildSet {
+                requestedViews.forEach { view ->
+                    when (view) {
+                        ImageView.FRONT -> slotUi.images.front?.id?.let(::add)
+                        ImageView.BACK -> {
+                            val ref = slotUi.images.back
+                                ?: if (slotUi.isBackPhotoOptional) slotUi.images.front else null
+                            ref?.id?.let(::add)
+                        }
+                    }
+                }
+            }
+            uniqueRefs.size
+        }
+
     val backViewUnavailableReason: String?
         get() {
             val cap = capability ?: return "Đang kiểm tra khả năng mô phỏng."
             if (cap.decision == FeasibilityDecision.GO_FRONT_ONLY || ImageView.BACK !in cap.supportedViews) {
                 return "Mô hình hiện chỉ hỗ trợ mô phỏng mặt trước (FRONT_ONLY)."
+            }
+            if (selectedItemIds.isEmpty()) {
+                return "Chọn ít nhất một món trang phục để mở góc nhìn mặt sau."
             }
             if (!hasPersonBack) {
                 return "Chưa có ảnh toàn thân mặt sau trong Hồ sơ cá nhân."
@@ -209,8 +392,8 @@ data class TryOnUiState(
     val hasExperimentalSelection: Boolean
         get() = isFostaProvider && (
             ImageView.BACK in requestedViews ||
-                activeGarmentCombo == TryOnGarmentCombo.BOTTOM_ONLY ||
-                activeGarmentCombo == TryOnGarmentCombo.TOP_AND_BOTTOM
+                activeSlots.size >= 2 ||
+                activeSlots.any { it.slot != TryOnGarmentSlot.TOP }
             )
 
     val isJobActive: Boolean
@@ -223,6 +406,7 @@ data class TryOnUiState(
         get() {
             if (!isCapabilityAvailable || isSubmitting || isJobActive) return false
             if (!consentConfirmed || selectedItemIds.isEmpty()) return false
+            if (viewMissingPhotosError != null) return false
             if (ImageView.FRONT in requestedViews && (!hasPersonFront || !hasAllSelectedGarmentFronts)) {
                 return false
             }
@@ -269,7 +453,7 @@ class TryOnViewModel(
         viewModelScope.launch {
             val capability = tryOnService.capabilities().getOrNull()
             _uiState.update { cur ->
-                val defaultSelected = computeDefaultSelectedItems(cur.outfitSnapshot, capability)
+                val defaultSelected = computeDefaultSelectedItems(cur.outfitSnapshot, capability, cur.garmentImages)
                 val normalizedMode = if (
                     cur.selectedPresentationMode != TryOnPresentationMode.ORIGINAL_PHOTO &&
                     cur.selectedPresentationMode !in capability?.supportedPresentationModes.orEmpty()
@@ -456,9 +640,9 @@ class TryOnViewModel(
     }
 
     /**
-     * Updates garment reference photos in place without recreating the ViewModel, preserving the
-     * selected combo and view mode (or falling back to FRONT_ONLY when rear inputs are incomplete).
-     * Resets stale consent and purges any prior result bound to a replaced garment item.
+     * Updates garment reference photos in place without recreating the ViewModel.
+     * Selection ("có ảnh thì ghép") is derived automatically in canonical order [TOP, BOTTOM, HAT, SHOES].
+     * Resets stale consent and purges any prior result when active slots or their photos change.
      */
     fun updateGarmentImages(updatedImages: Map<String, ImagePair>) {
         val snapshot = _uiState.value
@@ -470,21 +654,33 @@ class TryOnViewModel(
         }
         if (changedItemIds.isEmpty()) return
 
+        val nextSelectedIds = derivePhotoDrivenSelectedItemIds(
+            outfitSnapshot = snapshot.outfitSnapshot,
+            garmentImages = updatedImages,
+            capability = snapshot.capability,
+        )
+        val selectionChanged = nextSelectedIds != snapshot.selectedItemIds
         val previousResult = snapshot.activeOrLatestResult
         val affectsPreviousResult = previousResult != null && (
-            previousResult.appliedItemIds.isEmpty() ||
-                changedItemIds.any { it in previousResult.appliedItemIds }
+            selectionChanged ||
+                previousResult.appliedItemIds.isEmpty() ||
+                changedItemIds.any { it in previousResult.appliedItemIds } ||
+                previousResult.appliedItemIds.any { it !in nextSelectedIds }
             )
-        val affectsCurrentSelection = changedItemIds.any { it in snapshot.selectedItemIds }
+        val affectsCurrentSelection =
+            selectionChanged || changedItemIds.any { it in snapshot.selectedItemIds || it in nextSelectedIds }
 
         if (affectsPreviousResult) {
             activeObserverJob?.cancel()
         }
 
-        val normalizedPreview = normalizeViewAfterSelectionChange(
-            snapshot.copy(garmentImages = updatedImages),
+        val previewState = normalizeViewAfterSelectionChange(
+            snapshot.copy(
+                garmentImages = updatedImages,
+                selectedItemIds = nextSelectedIds,
+            ),
         )
-        val viewFallbackTriggered = normalizedPreview.selectedViewMode != snapshot.selectedViewMode
+        val viewFallbackTriggered = previewState.selectedViewMode != snapshot.selectedViewMode
         val shouldResetConsent =
             affectsCurrentSelection || affectsPreviousResult || viewFallbackTriggered
 
@@ -493,8 +689,14 @@ class TryOnViewModel(
         }
 
         _uiState.update { cur ->
+            val recomputedSelectedIds = derivePhotoDrivenSelectedItemIds(
+                outfitSnapshot = cur.outfitSnapshot,
+                garmentImages = updatedImages,
+                capability = cur.capability,
+            )
             val updated = cur.copy(
                 garmentImages = updatedImages,
+                selectedItemIds = recomputedSelectedIds,
                 consentConfirmed = if (shouldResetConsent) false else cur.consentConfirmed,
                 activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
                 compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
@@ -516,16 +718,128 @@ class TryOnViewModel(
         }
     }
 
-    private fun normalizeViewAfterSelectionChange(nextState: TryOnUiState): TryOnUiState {
-        val backInvalidated =
-            (nextState.selectedViewMode == TryOnViewMode.BACK_ONLY && !nextState.canSelectBackView) ||
-                (nextState.selectedViewMode == TryOnViewMode.FRONT_AND_BACK && !nextState.canSelectDualView)
-        return if (backInvalidated) {
-            nextState.copy(selectedViewMode = TryOnViewMode.FRONT_ONLY)
-        } else {
-            nextState
+    /**
+     * Clears both front and back photos for [slot], removes it from the current try-on selection,
+     * resets user consent, and invalidates/deletes any prior try-on result.
+     */
+    fun removeGarmentSlot(slot: TryOnGarmentSlot) {
+        val snapshot = _uiState.value
+        if (snapshot.isSubmitting || snapshot.isJobActive) return
+        val slotUi = snapshot.garmentSlots.firstOrNull { it.slot == slot } ?: return
+        val itemId = slotUi.itemSummary.itemId
+        val updatedImages = snapshot.garmentImages - itemId
+        val nextSelectedIds = derivePhotoDrivenSelectedItemIds(
+            outfitSnapshot = snapshot.outfitSnapshot,
+            garmentImages = updatedImages,
+            capability = snapshot.capability,
+        )
+        val previousResult = snapshot.activeOrLatestResult
+        val affectsPreviousResult = previousResult != null && (
+            slotUi.hasAnyPhoto ||
+                previousResult.appliedItemIds.isEmpty() ||
+                itemId in previousResult.appliedItemIds ||
+                previousResult.appliedItemIds.any { it !in nextSelectedIds }
+            )
+
+        if (!slotUi.hasAnyPhoto && itemId !in snapshot.selectedItemIds && previousResult == null) {
+            return
+        }
+
+        if (affectsPreviousResult) {
+            activeObserverJob?.cancel()
+        }
+        pendingIdempotencyKey = "idem-${idGenerator()}"
+
+        _uiState.update { cur ->
+            val recomputedSelectedIds = derivePhotoDrivenSelectedItemIds(
+                outfitSnapshot = cur.outfitSnapshot,
+                garmentImages = updatedImages,
+                capability = cur.capability,
+            )
+            val updated = cur.copy(
+                garmentImages = updatedImages,
+                selectedItemIds = recomputedSelectedIds,
+                consentConfirmed = false,
+                activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
+                compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
+                bannerError = null,
+                statusNotice = null,
+            )
+            normalizeViewAfterSelectionChange(updated)
+        }
+
+        if (affectsPreviousResult) {
+            viewModelScope.launch {
+                tryOnService.delete(previousResult.jobId)
+            }
         }
     }
+
+    /**
+     * Clears only a single view ([ImageView.FRONT] or [ImageView.BACK]) of [slot] without silently
+     * switching the selected view mode, so missing-photo validation surfaces clearly.
+     */
+    fun removeGarmentPhoto(slot: TryOnGarmentSlot, view: ImageView) {
+        val snapshot = _uiState.value
+        if (snapshot.isSubmitting || snapshot.isJobActive) return
+        val slotUi = snapshot.garmentSlots.firstOrNull { it.slot == slot } ?: return
+        val itemId = slotUi.itemSummary.itemId
+        val existingPair = snapshot.garmentImages[itemId] ?: ImagePair()
+        val removedRef = existingPair.refFor(view) ?: return
+        val nextPair = when (view) {
+            ImageView.FRONT -> existingPair.copy(front = null)
+            ImageView.BACK -> existingPair.copy(back = null)
+        }
+        val updatedImages = snapshot.garmentImages.toMutableMap().apply {
+            if (nextPair.front == null && nextPair.back == null) {
+                remove(itemId)
+            } else {
+                put(itemId, nextPair)
+            }
+        }
+        val nextSelectedIds = derivePhotoDrivenSelectedItemIds(
+            outfitSnapshot = snapshot.outfitSnapshot,
+            garmentImages = updatedImages,
+            capability = snapshot.capability,
+        )
+        val previousResult = snapshot.activeOrLatestResult
+        val affectsPreviousResult = previousResult != null && (
+            previousResult.appliedItemIds.isEmpty() ||
+                itemId in previousResult.appliedItemIds ||
+                previousResult.appliedItemIds.any { it !in nextSelectedIds } ||
+                removedRef.id.isNotBlank()
+            )
+        if (affectsPreviousResult) {
+            activeObserverJob?.cancel()
+        }
+        pendingIdempotencyKey = "idem-${idGenerator()}"
+
+        _uiState.update { cur ->
+            val recomputedSelectedIds = derivePhotoDrivenSelectedItemIds(
+                outfitSnapshot = cur.outfitSnapshot,
+                garmentImages = updatedImages,
+                capability = cur.capability,
+            )
+            cur.copy(
+                garmentImages = updatedImages,
+                selectedItemIds = recomputedSelectedIds,
+                consentConfirmed = false,
+                activeOrLatestResult = if (affectsPreviousResult) null else cur.activeOrLatestResult,
+                compareWithOriginal = if (affectsPreviousResult) false else cur.compareWithOriginal,
+                bannerError = null,
+                statusNotice = null,
+            )
+        }
+
+        if (affectsPreviousResult) {
+            viewModelScope.launch {
+                tryOnService.delete(previousResult.jobId)
+            }
+        }
+    }
+
+    /** Preserve user-chosen view mode even if photos change so missing-photo error is shown transparently instead of silently flipping to FRONT. */
+    private fun normalizeViewAfterSelectionChange(nextState: TryOnUiState): TryOnUiState = nextState
 
     fun setConsentConfirmed(confirmed: Boolean) {
         _uiState.update { cur ->
@@ -588,13 +902,56 @@ class TryOnViewModel(
             }
             return
         }
+        if (snapshot.selectedItemIds.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    bannerError = TryOnError(
+                        code = TryOnErrorCode.NEEDS_INPUT,
+                        message = "Chọn ít nhất một món trang phục để thử đồ.",
+                    ),
+                )
+            }
+            return
+        }
         val views = snapshot.requestedViews
+        snapshot.viewMissingPhotosError?.let { viewErr ->
+            val errCode = if (ImageView.BACK in views && !snapshot.hasGenuineBackHashes) {
+                TryOnErrorCode.INVALID_REQUEST
+            } else {
+                TryOnErrorCode.NEEDS_INPUT
+            }
+            _uiState.update {
+                it.copy(
+                    bannerError = TryOnError(
+                        code = errCode,
+                        message = viewErr,
+                    ),
+                )
+            }
+            return
+        }
         if (ImageView.FRONT in views && !snapshot.hasPersonFront) {
             _uiState.update {
                 it.copy(
                     bannerError = TryOnError(
                         code = TryOnErrorCode.NEEDS_INPUT,
-                        message = "Cần bổ sung ảnh toàn thân mặt trước trong Hồ sơ trước khi thử đồ.",
+                        message = "Không thể tạo mặt trước: thiếu ảnh người mặt trước.",
+                    ),
+                )
+            }
+            return
+        }
+        if (ImageView.FRONT in views && !snapshot.hasAllSelectedGarmentFronts) {
+            val missing = snapshot.missingFrontSlotLabels.joinToString(", ")
+            _uiState.update {
+                it.copy(
+                    bannerError = TryOnError(
+                        code = TryOnErrorCode.NEEDS_INPUT,
+                        message = if (missing.isNotEmpty()) {
+                            "Không thể tạo mặt trước: thiếu ảnh trước của $missing."
+                        } else {
+                            "Không thể tạo mặt trước: thiếu ảnh mặt trước cho các món trang phục đã chọn."
+                        },
                     ),
                 )
             }
@@ -605,7 +962,7 @@ class TryOnViewModel(
                 it.copy(
                     bannerError = TryOnError(
                         code = TryOnErrorCode.NEEDS_INPUT,
-                        message = "Cần bổ sung ảnh toàn thân mặt sau thật sự trong Hồ sơ trước khi thử góc nhìn BACK.",
+                        message = "Không thể tạo mặt sau: thiếu ảnh người mặt sau.",
                     ),
                 )
             }
@@ -645,11 +1002,30 @@ class TryOnViewModel(
             return
         }
 
+        val canonicalSelectedIds = snapshot.activeSlots.map { it.itemSummary.itemId }
+        val existingItemIds = outfit.items.map { it.itemId }.toSet()
+        val extraSlotItems = snapshot.activeSlots
+            .map { it.itemSummary }
+            .filter { it.itemId !in existingItemIds }
+        val effectiveOutfit = if (extraSlotItems.isEmpty()) {
+            outfit
+        } else {
+            outfit.copy(items = outfit.items + extraSlotItems)
+        }
+
+        val activeSlotsById = snapshot.activeSlots.associateBy { it.itemSummary.itemId }
         val selectedMediaIds = buildSet {
             views.forEach { v ->
                 profile.bodyImages.refFor(v)?.id?.let(::add)
-                snapshot.selectedItemIds.forEach { itemId ->
-                    snapshot.garmentImages[itemId]?.refFor(v)?.id?.let(::add)
+                canonicalSelectedIds.forEach { itemId ->
+                    val pair = snapshot.garmentImages[itemId]
+                    val slotUi = activeSlotsById[itemId]
+                    val ref = when (v) {
+                        ImageView.FRONT -> pair?.front
+                        ImageView.BACK -> pair?.back
+                            ?: if (slotUi?.isBackPhotoOptional == true) pair?.front else null
+                    }
+                    ref?.id?.let(::add)
                 }
             }
         }
@@ -666,13 +1042,13 @@ class TryOnViewModel(
             requestId = "req-$pendingIdempotencyKey",
             idempotencyKey = pendingIdempotencyKey,
             sessionId = sessionId,
-            outfitSnapshot = outfit,
+            outfitSnapshot = effectiveOutfit,
             profileRevision = profile.revision,
             personImages = profile.bodyImages,
-            garmentImages = snapshot.garmentImages.filterKeys { it in snapshot.selectedItemIds },
+            garmentImages = snapshot.garmentImages.filterKeys { it in canonicalSelectedIds },
             requestedViews = views,
             presentationMode = snapshot.selectedPresentationMode,
-            selectedItemIds = snapshot.selectedItemIds,
+            selectedItemIds = canonicalSelectedIds,
             consentGrant = consentGrant,
             inputGeneration = privacyCoordinator.currentInputGeneration,
             providerConfigVersion = capability.providerConfigVersion,
@@ -786,19 +1162,10 @@ class TryOnViewModel(
     private fun computeDefaultSelectedItems(
         outfit: TryOnOutfitSnapshot?,
         capability: TryOnCapability?,
-    ): List<String> {
-        if (outfit == null || capability == null || capability.maxGarmentsPerJob <= 0) {
-            return emptyList()
-        }
-        val supported = outfit.items.filter { it.category in capability.supportedCategories }
-        if (capability.providerId == "fosta") {
-            val defaultPrimary = supported.firstOrNull {
-                it.category == Category.TOP || it.category == Category.OUTERWEAR
-            } ?: supported.firstOrNull()
-            return listOfNotNull(defaultPrimary?.itemId)
-        }
-        return supported
-            .take(capability.maxGarmentsPerJob)
-            .map { it.itemId }
-    }
+        garmentImages: Map<String, ImagePair> = _uiState.value.garmentImages,
+    ): List<String> = derivePhotoDrivenSelectedItemIds(
+        outfitSnapshot = outfit,
+        garmentImages = garmentImages,
+        capability = capability,
+    )
 }
