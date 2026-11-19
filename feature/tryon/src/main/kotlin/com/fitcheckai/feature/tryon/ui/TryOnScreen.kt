@@ -133,6 +133,10 @@ object TryOnTestTags {
     const val REMOVE_GARMENT_BOTTOM_INLINE = "tryon_remove_garment_bottom_inline"
     const val REMOVE_GARMENT_HAT_INLINE = "tryon_remove_garment_hat_inline"
     const val REMOVE_GARMENT_SHOES_INLINE = "tryon_remove_garment_shoes_inline"
+    const val REMOVE_GARMENT_TOP_BACK_INLINE = "tryon_remove_garment_top_back_inline"
+    const val REMOVE_GARMENT_BOTTOM_BACK_INLINE = "tryon_remove_garment_bottom_back_inline"
+    const val REMOVE_GARMENT_HAT_BACK_INLINE = "tryon_remove_garment_hat_back_inline"
+    const val REMOVE_GARMENT_SHOES_BACK_INLINE = "tryon_remove_garment_shoes_back_inline"
     const val PREVIEW_PERSON_FRONT = "tryon_preview_person_front"
     const val PREVIEW_PERSON_BACK = "tryon_preview_person_back"
     const val PREVIEW_GARMENT_TOP_FRONT = "tryon_preview_garment_top_front"
@@ -145,6 +149,8 @@ object TryOnTestTags {
     const val PREVIEW_GARMENT_SHOES_BACK = "tryon_preview_garment_shoes_back"
     const val TRYON_SUMMARY_TEXT = "tryon_summary_text"
     const val SHOES_FOOT_HINT = "tryon_shoes_foot_hint"
+    const val VIEW_MISSING_PHOTO_ERROR = "tryon_view_missing_photo_error"
+    const val OPTIONAL_BACK_INFERENCE_NOTICE = "tryon_optional_back_inference_notice"
     const val REFRESH_CONNECTION_BUTTON = "tryon_refresh_connection_button"
 }
 
@@ -162,6 +168,7 @@ fun TryOnRoute(
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = viewModel::removeGarmentSlot,
+    onRemoveGarmentPhoto: (TryOnGarmentSlot, ImageView) -> Unit = viewModel::removeGarmentPhoto,
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -185,6 +192,7 @@ fun TryOnRoute(
         onPickPersonPhoto = onPickPersonPhoto,
         onPickGarmentPhoto = onPickGarmentPhoto,
         onRemoveGarmentSlot = onRemoveGarmentSlot,
+        onRemoveGarmentPhoto = onRemoveGarmentPhoto,
         onRefreshConnection = onRefreshConnection,
     )
 }
@@ -210,6 +218,7 @@ fun TryOnScreen(
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
+    onRemoveGarmentPhoto: (TryOnGarmentSlot, ImageView) -> Unit = { _, _ -> },
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     TryOnEditorialTheme {
@@ -265,6 +274,7 @@ fun TryOnScreen(
                                 onPickPersonPhoto = onPickPersonPhoto,
                                 onPickGarmentPhoto = onPickGarmentPhoto,
                                 onRemoveGarmentSlot = onRemoveGarmentSlot,
+                                onRemoveGarmentPhoto = onRemoveGarmentPhoto,
                                 onRefreshConnection = onRefreshConnection,
                             )
                         } else {
@@ -287,6 +297,7 @@ fun TryOnScreen(
                                 onPickPersonPhoto = onPickPersonPhoto,
                                 onPickGarmentPhoto = onPickGarmentPhoto,
                                 onRemoveGarmentSlot = onRemoveGarmentSlot,
+                                onRemoveGarmentPhoto = onRemoveGarmentPhoto,
                                 onRefreshConnection = onRefreshConnection,
                             )
                         }
@@ -317,6 +328,7 @@ private fun CompactSingleColumnLayout(
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
+    onRemoveGarmentPhoto: (TryOnGarmentSlot, ImageView) -> Unit = { _, _ -> },
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
@@ -401,6 +413,7 @@ private fun CompactSingleColumnLayout(
                 state = state,
                 onPickGarmentPhoto = onPickGarmentPhoto,
                 onRemoveGarmentSlot = onRemoveGarmentSlot,
+                onRemoveGarmentPhoto = onRemoveGarmentPhoto,
                 modifier = Modifier.padding(horizontal = TryOnScreenHorizontalPadding),
             )
 
@@ -443,6 +456,7 @@ private fun TwoPaneEditorialLayout(
     onPickPersonPhoto: ((ImageView) -> Unit)? = null,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
+    onRemoveGarmentPhoto: (TryOnGarmentSlot, ImageView) -> Unit = { _, _ -> },
     onRefreshConnection: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -487,6 +501,7 @@ private fun TwoPaneEditorialLayout(
                     state = state,
                     onPickGarmentPhoto = onPickGarmentPhoto,
                     onRemoveGarmentSlot = onRemoveGarmentSlot,
+                    onRemoveGarmentPhoto = onRemoveGarmentPhoto,
                 )
                 if (state.isCapabilityAvailable) {
                     TryOnConfigurationPanel(
@@ -763,6 +778,9 @@ private fun TryOnPhotoSlotColumn(
     previewTag: String? = null,
     pickEmptyLabel: String = "Chọn ảnh",
     pickReplaceLabel: String = "Thay ảnh",
+    onRemovePhoto: (() -> Unit)? = null,
+    removePhotoButtonTag: String? = null,
+    removePhotoLabel: String = "Bỏ ảnh sau",
 ) {
     Column(
         modifier = modifier,
@@ -812,6 +830,23 @@ private fun TryOnPhotoSlotColumn(
                 )
             }
         }
+        if (mediaRef != null && onRemovePhoto != null) {
+            TextButton(
+                onClick = onRemovePhoto,
+                enabled = enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .let { mod -> if (removePhotoButtonTag != null) mod.testTag(removePhotoButtonTag) else mod },
+            ) {
+                Text(
+                    text = removePhotoLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -823,6 +858,7 @@ private fun SelectedGarmentsPanel(
     state: TryOnUiState,
     onPickGarmentPhoto: ((String, ImageView) -> Unit)? = null,
     onRemoveGarmentSlot: (TryOnGarmentSlot) -> Unit = {},
+    onRemoveGarmentPhoto: (TryOnGarmentSlot, ImageView) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val outfit = state.outfitSnapshot ?: return
@@ -839,8 +875,7 @@ private fun SelectedGarmentsPanel(
 
         state.garmentSlots.forEach { slotUi ->
             val selected = slotUi.itemSummary.itemId in state.selectedItemIds
-            val (frontPickTag, backPickTag, frontPreviewTag, backPreviewTag, removeTag) =
-                slotTestTags(slotUi.slot)
+            val tags = slotTestTags(slotUi.slot)
             GarmentThumbnailCard(
                 slotUi = slotUi,
                 selected = selected,
@@ -852,11 +887,13 @@ private fun SelectedGarmentsPanel(
                     { picker(slotUi.itemSummary.itemId, ImageView.BACK) }
                 },
                 onRemoveSlotPhoto = { onRemoveGarmentSlot(slotUi.slot) },
-                frontPickButtonTag = frontPickTag,
-                backPickButtonTag = backPickTag,
-                frontPreviewTag = frontPreviewTag,
-                backPreviewTag = backPreviewTag,
-                removeButtonTag = removeTag,
+                onRemoveSlotBackPhoto = { onRemoveGarmentPhoto(slotUi.slot, ImageView.BACK) },
+                frontPickButtonTag = tags.frontPickTag,
+                backPickButtonTag = tags.backPickTag,
+                frontPreviewTag = tags.frontPreviewTag,
+                backPreviewTag = tags.backPreviewTag,
+                removeButtonTag = tags.removeTag,
+                backRemoveButtonTag = tags.backRemoveTag,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -919,6 +956,7 @@ private data class GarmentSlotTags(
     val frontPreviewTag: String,
     val backPreviewTag: String,
     val removeTag: String,
+    val backRemoveTag: String,
 )
 
 private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) {
@@ -928,6 +966,7 @@ private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) 
         frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_TOP_FRONT,
         backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_TOP_BACK,
         removeTag = TryOnTestTags.REMOVE_GARMENT_TOP_INLINE,
+        backRemoveTag = TryOnTestTags.REMOVE_GARMENT_TOP_BACK_INLINE,
     )
     TryOnGarmentSlot.BOTTOM -> GarmentSlotTags(
         frontPickTag = TryOnTestTags.PICK_GARMENT_BOTTOM_INLINE,
@@ -935,6 +974,7 @@ private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) 
         frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_BOTTOM_FRONT,
         backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_BOTTOM_BACK,
         removeTag = TryOnTestTags.REMOVE_GARMENT_BOTTOM_INLINE,
+        backRemoveTag = TryOnTestTags.REMOVE_GARMENT_BOTTOM_BACK_INLINE,
     )
     TryOnGarmentSlot.HAT -> GarmentSlotTags(
         frontPickTag = TryOnTestTags.PICK_GARMENT_HAT_INLINE,
@@ -942,6 +982,7 @@ private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) 
         frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_HAT_FRONT,
         backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_HAT_BACK,
         removeTag = TryOnTestTags.REMOVE_GARMENT_HAT_INLINE,
+        backRemoveTag = TryOnTestTags.REMOVE_GARMENT_HAT_BACK_INLINE,
     )
     TryOnGarmentSlot.SHOES -> GarmentSlotTags(
         frontPickTag = TryOnTestTags.PICK_GARMENT_SHOES_INLINE,
@@ -949,6 +990,7 @@ private fun slotTestTags(slot: TryOnGarmentSlot): GarmentSlotTags = when (slot) 
         frontPreviewTag = TryOnTestTags.PREVIEW_GARMENT_SHOES_FRONT,
         backPreviewTag = TryOnTestTags.PREVIEW_GARMENT_SHOES_BACK,
         removeTag = TryOnTestTags.REMOVE_GARMENT_SHOES_INLINE,
+        backRemoveTag = TryOnTestTags.REMOVE_GARMENT_SHOES_BACK_INLINE,
     )
 }
 
@@ -958,6 +1000,7 @@ private fun GarmentThumbnailCard(
     selected: Boolean,
     enabled: Boolean,
     onRemoveSlotPhoto: () -> Unit,
+    onRemoveSlotBackPhoto: () -> Unit,
     modifier: Modifier = Modifier,
     onPickFrontPhoto: (() -> Unit)? = null,
     onPickBackPhoto: (() -> Unit)? = null,
@@ -966,6 +1009,7 @@ private fun GarmentThumbnailCard(
     frontPreviewTag: String? = null,
     backPreviewTag: String? = null,
     removeButtonTag: String? = null,
+    backRemoveButtonTag: String? = null,
 ) {
     val item = slotUi.itemSummary
     val imagePair = slotUi.images
@@ -1078,7 +1122,11 @@ private fun GarmentThumbnailCard(
                 modifier = Modifier.weight(1f),
             )
             TryOnPhotoSlotColumn(
-                title = "Mặt sau",
+                title = if (slotUi.isBackPhotoOptional) {
+                    "Mặt sau (không bắt buộc, AI sẽ tự đoán)"
+                } else {
+                    "Mặt sau"
+                },
                 mediaRef = imagePair.back,
                 missingText = "Chưa có ảnh",
                 caption = "${item.label} (Sau)",
@@ -1089,6 +1137,9 @@ private fun GarmentThumbnailCard(
                 previewTag = backPreviewTag,
                 pickEmptyLabel = "Chọn ảnh sau",
                 pickReplaceLabel = "Thay ảnh sau",
+                onRemovePhoto = if (imagePair.back != null) onRemoveSlotBackPhoto else null,
+                removePhotoButtonTag = backRemoveButtonTag,
+                removePhotoLabel = "Bỏ ảnh sau",
                 modifier = Modifier.weight(1f),
             )
         }
@@ -1231,6 +1282,15 @@ private fun TryOnConfigurationPanel(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+
+        state.optionalBackInferenceNotice?.let { inferNotice ->
+            TryOnInfoNotice(
+                text = inferNotice,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TryOnTestTags.OPTIONAL_BACK_INFERENCE_NOTICE),
+            )
+        }
     }
 }
 
@@ -1245,13 +1305,14 @@ private fun PrivacyAndConsentSection(
     modifier: Modifier = Modifier,
 ) {
     val viewCount = state.requestedViews.size
-    val garmentPhotoCount = state.selectedItemIds.size * viewCount
+    val garmentPhotoCount = state.consentedGarmentPhotoCount
     val submitHint = remember(
         state.canSubmitTryOn,
         state.isSubmitting,
         state.isJobActive,
         state.isCapabilityAvailable,
         state.selectedItemIds,
+        state.viewMissingPhotosError,
         state.hasPersonFront,
         state.hasAllSelectedGarmentFronts,
         state.requestedViews,
@@ -1262,7 +1323,13 @@ private fun PrivacyAndConsentSection(
         state.dualViewUnavailableReason,
         state.consentConfirmed,
     ) {
-        if (state.canSubmitTryOn || state.isSubmitting || state.isJobActive || !state.isCapabilityAvailable) {
+        if (
+            state.canSubmitTryOn ||
+            state.isSubmitting ||
+            state.isJobActive ||
+            !state.isCapabilityAvailable ||
+            state.viewMissingPhotosError != null
+        ) {
             null
         } else {
             when {
@@ -1334,6 +1401,15 @@ private fun PrivacyAndConsentSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),
+            )
+        }
+
+        state.viewMissingPhotosError?.let { errorText ->
+            TryOnErrorNotice(
+                text = errorText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TryOnTestTags.VIEW_MISSING_PHOTO_ERROR),
             )
         }
 

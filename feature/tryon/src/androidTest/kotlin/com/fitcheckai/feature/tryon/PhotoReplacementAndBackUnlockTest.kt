@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -37,6 +38,7 @@ import com.fitcheckai.feature.tryon.demo.TryOnDemoWorkbench
 import com.fitcheckai.feature.tryon.ui.TryOnTestTags
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -547,104 +549,107 @@ class PhotoReplacementAndBackUnlockTest {
     }
 
     @Test
-    fun missingHatOrShoesBackLocksBackViewAndNamesMissingSlotsExplicitly() {
-        val stubServer = LocalFostaCapabilityOnlyServer().also { it.start() }
-        try {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            val inputDir = File(context.cacheDir, "acc_back_lock_inputs").apply { mkdirs() }
-            val personBackFile = File(inputDir, "person_back.png").also {
-                writeSolidPng(it, width = 384, height = 512, color = Color.rgb(30, 170, 70))
-            }
-            val topBackFile = File(inputDir, "top_back.png").also {
-                writeSolidPng(it, width = 384, height = 512, color = Color.rgb(150, 40, 190))
-            }
-            val bottomBackFile = File(inputDir, "bottom_back.png").also {
-                writeSolidPng(it, width = 384, height = 512, color = Color.rgb(210, 140, 30))
-            }
-            val hatFrontFile = File(inputDir, "hat_front.png").also {
-                writeSolidPng(it, width = 384, height = 384, color = Color.rgb(180, 90, 40))
-            }
-            val hatBackFile = File(inputDir, "hat_back.png").also {
-                writeSolidPng(it, width = 384, height = 384, color = Color.rgb(90, 50, 150))
-            }
-            val shoesFrontFile = File(inputDir, "shoes_front.png").also {
-                writeSolidPng(it, width = 384, height = 384, color = Color.rgb(45, 70, 150))
-            }
-            val shoesBackFile = File(inputDir, "shoes_back.png").also {
-                writeSolidPng(it, width = 384, height = 384, color = Color.rgb(60, 140, 90))
-            }
+    fun hatWithoutBackUnlocksBackViewShowsOptionalNoticeAndSucceedsAndRemovingTopBackShowsErrorWithoutFallback() {
+        val args = InstrumentationRegistry.getArguments()
+        val requireBackendE2e = args.getString("requireBackendFostaE2e")?.toBoolean() ?: false
+        Assume.assumeTrue("Requires FOSTA Mock Backend on 8788", requireBackendE2e)
+        val backendUrl = args.getString("tryOnBackendUrl") ?: "http://10.0.2.2:8788"
 
-            val pickedDir = File(context.cacheDir, "tryon_demo_picked")
-            pickedDir.listFiles()?.forEach { it.delete() }
-            val pickedPersonBack = File(pickedDir, "local-picked-person-back.png")
-            val pickedTopBack = File(pickedDir, "local-picked-garment-back.png")
-            val pickedBottomBack = File(pickedDir, "local-picked-bottom-back.png")
-            val pickedHatFront = File(pickedDir, "local-picked-hat-front.png")
-            val pickedHatBack = File(pickedDir, "local-picked-hat-back.png")
-            val pickedShoesFront = File(pickedDir, "local-picked-shoes-front.png")
-            val pickedShoesBack = File(pickedDir, "local-picked-shoes-back.png")
-            val pickerRegistryOwner = TestPickerRegistryOwner()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val inputDir = File(context.cacheDir, "acc2_opt_back_inputs").apply { mkdirs() }
+        val personBackFile = File(inputDir, "person_back.png").also {
+            writeSolidPng(it, width = 384, height = 512, color = Color.rgb(30, 170, 70))
+        }
+        val topBackFile = File(inputDir, "top_back.png").also {
+            writeSolidPng(it, width = 384, height = 512, color = Color.rgb(150, 40, 190))
+        }
+        val bottomBackFile = File(inputDir, "bottom_back.png").also {
+            writeSolidPng(it, width = 384, height = 512, color = Color.rgb(210, 140, 30))
+        }
+        val hatFrontFile = File(inputDir, "hat_front.png").also {
+            writeSolidPng(it, width = 384, height = 384, color = Color.rgb(180, 90, 40))
+        }
 
-            composeRule.setContent {
-                CompositionLocalProvider(LocalActivityResultRegistryOwner provides pickerRegistryOwner) {
-                    FitCheckTheme {
-                        TryOnDemoWorkbench(
-                            initialExecutionMode = DemoExecutionMode.BACKEND_FOSTA_E2E,
-                            backendBaseUrl = "http://127.0.0.1:${stubServer.port}",
-                            initialControlsExpanded = false,
-                        )
-                    }
+        val pickedDir = File(context.cacheDir, "tryon_demo_picked")
+        pickedDir.listFiles()?.forEach { it.delete() }
+        val pickedPersonBack = File(pickedDir, "local-picked-person-back.png")
+        val pickedTopBack = File(pickedDir, "local-picked-garment-back.png")
+        val pickedBottomBack = File(pickedDir, "local-picked-bottom-back.png")
+        val pickedHatFront = File(pickedDir, "local-picked-hat-front.png")
+        val pickerRegistryOwner = TestPickerRegistryOwner()
+
+        composeRule.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides pickerRegistryOwner) {
+                FitCheckTheme {
+                    TryOnDemoWorkbench(
+                        initialExecutionMode = DemoExecutionMode.BACKEND_FOSTA_E2E,
+                        backendBaseUrl = backendUrl,
+                        initialControlsExpanded = false,
+                    )
                 }
             }
-
-            composeRule.waitUntil(timeoutMillis = 8_000L) {
-                composeRule.onAllNodesWithTag(TryOnTestTags.MODE_BACK_ONLY).fetchSemanticsNodes().isNotEmpty()
-            }
-
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(personBackFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_PERSON_BACK_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedPersonBack.exists() }
-
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(topBackFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedTopBack.exists() }
-
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(bottomBackFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedBottomBack.exists() }
-
-            // Person + TOP + BOTTOM all have backs -> MODE_BACK_ONLY unlocked!
-            composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).performScrollTo().assertIsEnabled()
-
-            // Pick HAT front + SHOES front without back photos -> MODE_BACK_ONLY locks naming Mũ, Giày
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(hatFrontFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_HAT_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedHatFront.exists() }
-
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(shoesFrontFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_SHOES_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedShoesFront.exists() }
-            composeRule.waitForIdle()
-
-            composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).performScrollTo().assertIsNotEnabled()
-            composeRule.onNodeWithText("Cần chọn thêm cho: Mũ, Giày", substring = true)
-                .performScrollTo()
-                .assertIsDisplayed()
-
-            // Supply HAT back and SHOES back -> MODE_BACK_ONLY unlocks again!
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(hatBackFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_HAT_BACK_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedHatBack.exists() }
-
-            pickerRegistryOwner.nextPickedUri = Uri.fromFile(shoesBackFile)
-            composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_SHOES_BACK_INLINE).performScrollTo().performClick()
-            composeRule.waitUntil(timeoutMillis = 8_000L) { pickedShoesBack.exists() }
-            composeRule.waitForIdle()
-
-            composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).performScrollTo().assertIsEnabled()
-        } finally {
-            stubServer.close()
         }
+
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            composeRule.onAllNodesWithTag(TryOnTestTags.MODE_BACK_ONLY).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Verify optional back label appears on HAT / SHOES cards
+        composeRule.onAllNodesWithText("Mặt sau (không bắt buộc, AI sẽ tự đoán)")
+            .fetchSemanticsNodes()
+            .let { assertTrue("Expected optional rear label on HAT and SHOES cards", it.size >= 2) }
+
+        pickerRegistryOwner.nextPickedUri = Uri.fromFile(personBackFile)
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_PERSON_BACK_INLINE).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000L) { pickedPersonBack.exists() }
+
+        pickerRegistryOwner.nextPickedUri = Uri.fromFile(topBackFile)
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_TOP_BACK_INLINE).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000L) { pickedTopBack.exists() }
+
+        pickerRegistryOwner.nextPickedUri = Uri.fromFile(bottomBackFile)
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_BOTTOM_BACK_INLINE).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000L) { pickedBottomBack.exists() }
+
+        // Pick HAT front ONLY (no HAT back photo) -> MODE_BACK_ONLY stays unlocked!
+        pickerRegistryOwner.nextPickedUri = Uri.fromFile(hatFrontFile)
+        composeRule.onNodeWithTag(TryOnTestTags.PICK_GARMENT_HAT_INLINE).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000L) { pickedHatFront.exists() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).performScrollTo().assertIsEnabled().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).assertIsSelected()
+
+        composeRule.onNodeWithTag(TryOnTestTags.OPTIONAL_BACK_INFERENCE_NOTICE)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Mũ/Giày chưa có ảnh sau: AI sẽ tự suy ra mặt sau, có thể không giống mẫu thật.")
+
+        // Tick consent and submit BACK with HAT front-only -> Mock backend E2E succeeds!
+        composeRule.onNodeWithTag(TryOnTestTags.CONSENT_CHECKBOX_ROW).performScrollTo().performClick()
+        composeRule.onNodeWithTag(TryOnTestTags.SUBMIT_BUTTON).performScrollTo().assertIsEnabled().performClick()
+
+        composeRule.waitUntil(timeoutMillis = 15_000L) {
+            composeRule.onAllNodesWithTag(TryOnTestTags.RESULT_SECTION).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag(TryOnTestTags.DELETE_RESULT_BUTTON).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 8_000L) {
+            composeRule.onAllNodesWithTag(TryOnTestTags.RESULT_SECTION).fetchSemanticsNodes().isEmpty()
+        }
+
+        // Remove Áo back photo while in BACK_ONLY -> stays in BACK_ONLY (no silent fallback), shows error & disables submit!
+        composeRule.onNodeWithTag(TryOnTestTags.REMOVE_GARMENT_TOP_BACK_INLINE)
+            .performScrollTo()
+            .performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(TryOnTestTags.MODE_BACK_ONLY).performScrollTo().assertIsSelected()
+        composeRule.onNodeWithTag(TryOnTestTags.VIEW_MISSING_PHOTO_ERROR)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextContains("Không thể tạo mặt sau: thiếu ảnh sau của Áo.")
+        composeRule.onNodeWithTag(TryOnTestTags.SUBMIT_BUTTON).performScrollTo().assertIsNotEnabled()
     }
 
     private class TestPickerRegistryOwner : ActivityResultRegistryOwner {

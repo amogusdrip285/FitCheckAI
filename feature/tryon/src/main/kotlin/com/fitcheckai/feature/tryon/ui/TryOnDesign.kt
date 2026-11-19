@@ -394,7 +394,7 @@ internal fun TryOnInfoNotice(
     }
 
     Surface(
-        modifier = modifier,
+        modifier = if (action == null) modifier.semantics(mergeDescendants = true) {} else modifier,
         shape = RoundedCornerShape(14.dp),
         color = containerColor,
     ) {
